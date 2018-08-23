@@ -7,9 +7,11 @@ It is expected the driver will be first included in kernel version 4.19.
 
 You can clone the Linux development tree containing kernel from:
 
+```
 git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
 https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
 https://kernel.googlesource.com/pub/scm/linux/kernel/git/torvalds/linux.git
+```
 
 Configuration options you need to enable are:
 CONFIG_MFD_ROHM_BD718XX and CONFIG_REGULATOR_BD718XX
