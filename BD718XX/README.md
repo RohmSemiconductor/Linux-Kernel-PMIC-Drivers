@@ -1,11 +1,15 @@
 #ROHM Power Management IC BD71837 Linux device driver.
 
 Device driver for BD71837 can be found from linux community kernel.
-Now, August 23.rd 2018 the driver can be found from Linus Torwald's
-official linux tree but is not yet included in any released kernel.
-It is expected the driver will be first included in kernel version 4.19.
 
-You can clone the Linux development tree containing kernel from:
+Driver has been included in linux kernel since linux version 4.19-rc1.
+Linux kernel can be obtained from:
+
+```
+https://www.kernel.org/
+```
+
+or by cloning Linus Torvald's official linux development tree from:
 
 ```
 git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
