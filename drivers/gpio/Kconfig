@@ -1065,6 +1065,12 @@ endmenu
 menu "PCI GPIO expanders"
 	depends on PCI
 
+config GPIO_BD7181X
+	tristate "BD7181X GPO"
+	depends on MFD_BD7181X
+	help
+	  Say yes here to access the GPO signals of bd71815/bd71817 chip from ROHM.
+
 config GPIO_AMD8111
 	tristate "AMD 8111 GPIO driver"
 	help
