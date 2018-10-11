@@ -496,6 +496,12 @@ config BATTERY_RT5033
 	  The fuelgauge calculates and determines the battery state of charge
 	  according to battery open circuit voltage.
 
+config BD7181X_POWER
+        tristate "ROHM BD71815/BD71817 Charger for Battery and Adapter Power"
+        depends on MFD_BD7181X
+        help
+          Say Y to enable support for the BD71815/BD71817 charger.
+
 config CHARGER_RT9455
 	tristate "Richtek RT9455 battery charger driver"
 	depends on I2C
