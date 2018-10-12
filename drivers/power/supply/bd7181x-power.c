@@ -19,6 +19,7 @@
 #include <linux/power_supply.h>
 #include <linux/mfd/bd7181x.h>
 #include <linux/delay.h>
+#include <linux/uaccess.h>
 
 #define JITTER_DEFAULT		10000		/* hope 3s is enough */
 #define JITTER_REPORT_CAP	10000		/* 10 seconds */
@@ -133,9 +134,13 @@ static int soc_table[] = {
 struct bd7181x_power {
 	struct device *dev;
 	struct bd7181x *mfd;			/**< parent for access register */
-	struct power_supply ac;			/**< alternating current power */
-	struct power_supply bat;		/**< battery power */
+	struct power_supply *ar;			/**< alternating current power */
+	struct power_supply_desc ac;			/**< alternating current power */
+	struct power_supply *bar;		/**< battery power */
+	struct power_supply_desc bat;		/**< battery power */
 	struct delayed_work bd_work;		/**< delayed work for timed work */
+	struct device_attribute reg_attr;
+	struct device_attribute cal_attr;
 
 	int	reg_index;			/**< register address saved for sysfs */
 
@@ -184,6 +189,7 @@ enum {
 };
 
 static int bd7181x_calc_soc_org(struct bd7181x_power* pwr);
+static int bd7181x_revision_init(void);
 
 /** @brief read a register group once
  *  @param mfd bd7181x device
@@ -1231,8 +1237,8 @@ static void bd_work_callback(struct work_struct *work)
 	bd7181x_charge_status(pwr);
 
 	if (changed || cap_counter++ > JITTER_REPORT_CAP / JITTER_DEFAULT) {
-		power_supply_changed(&pwr->ac);
-		power_supply_changed(&pwr->bat);
+		power_supply_changed(pwr->ar);
+		power_supply_changed(pwr->bar);
 		cap_counter = 0;
 	}
 
@@ -1393,7 +1399,7 @@ static irqreturn_t bd7181x_int_11_interrupt(int irq, void *pwrsys)
 static int bd7181x_charger_get_property(struct power_supply *psy,
 					enum power_supply_property psp, union power_supply_propval *val)
 {
-	struct bd7181x_power *pwr = dev_get_drvdata(psy->dev->parent);
+	struct bd7181x_power *pwr = dev_get_drvdata(psy->dev.parent);
 	u32 vot;
 
 	switch (psp) {
@@ -1422,7 +1428,7 @@ static int bd7181x_charger_get_property(struct power_supply *psy,
 static int bd7181x_battery_get_property(struct power_supply *psy,
 					enum power_supply_property psp, union power_supply_propval *val)
 {
-	struct bd7181x_power *pwr = dev_get_drvdata(psy->dev->parent);
+	struct bd7181x_power *pwr = dev_get_drvdata(psy->dev.parent);
 	// u32 cap, vot, r;
 	// u8 ret;
 
@@ -1571,8 +1577,8 @@ static ssize_t bd7181x_sysfs_set_registers(struct device *dev,
 					   const char *buf,
 					   size_t count)
 {
-	struct power_supply *psy = dev_get_drvdata(dev);
-	struct bd7181x_power *pwr = container_of(psy, struct bd7181x_power, bat);
+	//struct power_supply *psy = dev_get_drvdata(dev);
+	struct bd7181x_power *pwr = container_of(attr, struct bd7181x_power, reg_attr);
 	ssize_t ret = 0;
 	unsigned int reg;
 	unsigned int val;
@@ -1617,8 +1623,9 @@ static ssize_t bd7181x_sysfs_show_registers(struct device *dev,
 					    struct device_attribute *attr,
 					    char *buf)
 {
-	struct power_supply *psy = dev_get_drvdata(dev);
-	struct bd7181x_power *pwr = container_of(psy, struct bd7181x_power, bat);
+	//struct power_supply *psy = dev_get_drvdata(dev);
+	//struct bd7181x_power *pwr = container_of(psy, struct bd7181x_power *, bar);
+	struct bd7181x_power *pwr = container_of(attr, struct bd7181x_power, reg_attr);
 	ssize_t ret = 0;
 	int i;
 
@@ -1876,8 +1883,9 @@ static ssize_t bd7181x_sysfs_set_calibrate(struct device *dev,
 					   const char *buf,
 					   size_t count)
 {
-	struct power_supply *psy = dev_get_drvdata(dev);
-	struct bd7181x_power *pwr = container_of(psy, struct bd7181x_power, bat);
+	//struct power_supply *psy = dev_get_drvdata(dev);
+	//struct bd7181x_power *pwr = container_of(psy, struct bd7181x_power *, bar);
+	struct bd7181x_power *pwr = container_of(attr, struct bd7181x_power, cal_attr);
 	ssize_t ret = 0;
 	unsigned int val, mA;
 	static u8 rA2;
@@ -1938,19 +1946,11 @@ static ssize_t bd7181x_sysfs_show_calibrate(struct device *dev,
 static DEVICE_ATTR(calibrate, S_IWUSR | S_IRUGO,
 		bd7181x_sysfs_show_calibrate, bd7181x_sysfs_set_calibrate);
 
-static struct attribute *bd7181x_sysfs_attributes[] = {
-	/*
-	 * TODO: some (appropriate) of these attrs should be switched to
-	 * use pwr supply class props.
-	 */
-	&dev_attr_registers.attr,
-	&dev_attr_calibrate.attr,
-	NULL,
-};
-
+static struct attribute *bd7181x_sysfs_attributes[3];
 static const struct attribute_group bd7181x_sysfs_attr_group = {
 	.attrs = bd7181x_sysfs_attributes,
 };
+
 
 /** @brief powers supplied by bd7181x_ac */
 static char *bd7181x_ac_supplied_to[] = {
@@ -1966,11 +1966,20 @@ static int __init bd7181x_power_probe(struct platform_device *pdev)
 {
 	struct bd7181x *bd7181x = dev_get_drvdata(pdev->dev.parent);
 	struct bd7181x_power *pwr;
+	struct power_supply_config ac_cfg;
 	int irq, ret, reg;
 
 	pwr = kzalloc(sizeof(*pwr), GFP_KERNEL);
 	if (pwr == NULL)
 		return -ENOMEM;
+
+	memcpy(&pwr->reg_attr, &dev_attr_registers, sizeof(dev_attr_registers));
+	memcpy(&pwr->cal_attr, &dev_attr_calibrate, sizeof(dev_attr_registers));
+
+	bd7181x_sysfs_attributes[0] = &pwr->reg_attr.attr;
+	bd7181x_sysfs_attributes[1] = &pwr->cal_attr.attr;
+	bd7181x_sysfs_attributes[2] = NULL;
+
 
 	pwr->dev = &pdev->dev;
 	pwr->mfd = bd7181x;
@@ -2001,8 +2010,9 @@ static int __init bd7181x_power_probe(struct platform_device *pdev)
 	pwr->bat.num_properties = ARRAY_SIZE(bd7181x_battery_props);
 	pwr->bat.get_property = bd7181x_battery_get_property;
 
-	ret = power_supply_register(&pdev->dev, &pwr->bat);
-	if (ret) {
+	pwr->bar = power_supply_register(&pdev->dev, &pwr->bat, NULL);
+	if (IS_ERR(pwr->bar)) {
+		ret = PTR_ERR(pwr->bar);
 		dev_err(&pdev->dev, "failed to register usb: %d\n", ret);
 		goto fail_register_bat;
 	}
@@ -2010,13 +2020,14 @@ static int __init bd7181x_power_probe(struct platform_device *pdev)
 	pwr->ac.name = AC_NAME;
 	pwr->ac.type = POWER_SUPPLY_TYPE_MAINS;
 	pwr->ac.properties = bd7181x_charger_props;
-	pwr->ac.supplied_to = bd7181x_ac_supplied_to;
-	pwr->ac.num_supplicants = ARRAY_SIZE(bd7181x_ac_supplied_to);
+	ac_cfg.supplied_to = bd7181x_ac_supplied_to;
+	ac_cfg.num_supplicants = ARRAY_SIZE(bd7181x_ac_supplied_to);
 	pwr->ac.num_properties = ARRAY_SIZE(bd7181x_charger_props);
 	pwr->ac.get_property = bd7181x_charger_get_property;
 
-	ret = power_supply_register(&pdev->dev, &pwr->ac);
-	if (ret) {
+	pwr->ar = power_supply_register(&pdev->dev, &pwr->ac, &ac_cfg);
+	if (IS_ERR(pwr->ar)) {
+		ret = PTR_ERR(pwr->ar);
 		dev_err(&pdev->dev, "failed to register ac: %d\n", ret);
 		goto fail_register_ac;
 	}
@@ -2084,7 +2095,7 @@ static int __init bd7181x_power_probe(struct platform_device *pdev)
 	dev_info(&pdev->dev, "BD7181X_REG_INT_EN_11=0x%x\n", reg);
 
 
-	ret = sysfs_create_group(&pwr->bat.dev->kobj, &bd7181x_sysfs_attr_group);
+	ret = sysfs_create_group(&pwr->bar->dev.kobj, &bd7181x_sysfs_attr_group);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "failed to register sysfs interface\n");
 	}
@@ -2100,9 +2111,9 @@ static int __init bd7181x_power_probe(struct platform_device *pdev)
 	return 0;
 
 //error_exit:
-	power_supply_unregister(&pwr->ac);
+	power_supply_unregister(pwr->ar);
 fail_register_ac:
-	power_supply_unregister(&pwr->bat);
+	power_supply_unregister(pwr->bar);
 fail_register_bat:
 	platform_set_drvdata(pdev, NULL);
 	kfree(pwr);
@@ -2129,12 +2140,12 @@ static int __exit bd7181x_power_remove(struct platform_device *pdev)
 	/* Stop Coulomb Counter */
 	/* bd7181x_clear_bits(pwr->mfd, BD7181x_REG_CC_CTRL, CCNTENB); */
 
-	sysfs_remove_group(&pwr->bat.dev->kobj, &bd7181x_sysfs_attr_group);
+	sysfs_remove_group(&pwr->bar->dev.kobj, &bd7181x_sysfs_attr_group);
 
 	cancel_delayed_work(&pwr->bd_work);
 
-	power_supply_unregister(&pwr->bat);
-	power_supply_unregister(&pwr->ac);
+	power_supply_unregister(pwr->bar);
+	power_supply_unregister(pwr->ar);
 	platform_set_drvdata(pdev, NULL);
 	kfree(pwr);
 
@@ -2150,15 +2161,19 @@ static struct platform_driver bd7181x_power_driver = {
 };
 
 /** @brief module initialize function */
-static int __init bd7181x_power_init(void)
+static int bd7181x_power_init(void)
 {
+	int r;
+	r = bd7181x_revision_init();
+	if(r)
+		return r;
 	return platform_driver_probe(&bd7181x_power_driver, bd7181x_power_probe);
 }
 
 module_init(bd7181x_power_init);
 
 /** @brief module deinitialize function */
-static void __exit bd7181x_power_exit(void)
+static void bd7181x_power_exit(void)
 {
 	platform_driver_unregister(&bd7181x_power_driver);
 }
@@ -2226,7 +2241,7 @@ static const struct file_operations bd7181x_proc_fops = {
  *This function is called when the module is loaded
  *
  */
-int bd7181x_revision_init(void)
+static int bd7181x_revision_init(void)
 {
 	struct proc_dir_entry *bd7181x_proc_entry;
 
@@ -2239,5 +2254,5 @@ int bd7181x_revision_init(void)
 
 	return 0;
 }
-module_init(bd7181x_revision_init);
+//module_init(bd7181x_revision_init);
 /*-------------------------------------------------------*/
