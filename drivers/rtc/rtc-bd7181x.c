@@ -299,13 +299,6 @@ static int bd7181x_rtc_probe(struct platform_device *pdev)
 		return -ENXIO;
 	}
 
-	ret = devm_request_threaded_irq(&pdev->dev, irq, NULL,
-		bd7181x_rtc_interrupt, IRQF_TRIGGER_LOW | IRQF_EARLY_RESUME,
-		dev_name(&pdev->dev), &pdev->dev);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "IRQ is not free.\n");
-		return ret;
-	}
 	bd_rtc->irq = irq;
 	device_set_wakeup_capable(&pdev->dev, 1);
 
@@ -318,6 +311,15 @@ static int bd7181x_rtc_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, bd_rtc);
+
+	ret = devm_request_threaded_irq(&pdev->dev, irq, NULL,
+		bd7181x_rtc_interrupt, IRQF_TRIGGER_LOW | IRQF_EARLY_RESUME,
+		dev_name(&pdev->dev), &pdev->dev);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "IRQ is not free.\n");
+		return ret;
+	}
+
 
 	return 0;
 }
