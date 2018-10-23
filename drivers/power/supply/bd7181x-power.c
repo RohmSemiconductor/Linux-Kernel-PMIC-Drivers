@@ -1962,7 +1962,7 @@ static char *bd7181x_ac_supplied_to[] = {
  * @retval 0 success
  * @retval negative fail
  */
-static int __init bd7181x_power_probe(struct platform_device *pdev)
+static int bd7181x_power_probe(struct platform_device *pdev)
 {
 	struct bd7181x *bd7181x = dev_get_drvdata(pdev->dev.parent);
 	struct bd7181x_power *pwr;
@@ -2126,7 +2126,7 @@ fail_register_bat:
  * @return 0
  */
 
-static int __exit bd7181x_power_remove(struct platform_device *pdev)
+static int bd7181x_power_remove(struct platform_device *pdev)
 {
 	struct bd7181x_power *pwr = platform_get_drvdata(pdev);
 
