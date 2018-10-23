@@ -72,7 +72,7 @@ static int regulator_set_voltage_sel_wled(struct regulator_dev *rdev, unsigned s
 	int onstatus;
 
 	onstatus = regulator_is_enabled_regmap(rdev);
-	ret = regulator_set_voltage_sel_regmap();
+	ret = regulator_set_voltage_sel_regmap(rdev, sel);
 	if (!ret) {
 		int newstatus;
 		newstatus = regulator_is_enabled_regmap(rdev);
