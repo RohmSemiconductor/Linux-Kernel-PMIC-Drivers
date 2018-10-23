@@ -65,6 +65,32 @@ static const int bd7181x_wled_currents[] = {
 	23000, 24000, 25000,
 };
 
+
+static int regulator_set_voltage_sel_wled(struct regulator_dev *rdev, unsigned sel)
+{
+	int ret;
+	int onstatus;
+
+	onstatus = regulator_is_enabled_regmap(rdev);
+	ret = regulator_set_voltage_sel_regmap();
+	if (!ret) {
+		int newstatus;
+		newstatus = regulator_is_enabled_regmap(rdev);
+		if (onstatus != newstatus)
+		{
+			pr_debug("spurious led status change detected - toggling state as a workaround\n");
+			if (onstatus)
+				ret = regulator_enable_regmap(rdev);
+			else
+				ret = regulator_disable_regmap(rdev);
+
+			if (ret)
+				pr_err("LED status error\n");
+		}
+	}
+	return ret;
+}
+
 /*
  * BUCK1/2
  * BUCK1RAMPRATE[1:0] BUCK1 DVS ramp rate setting
@@ -241,7 +267,8 @@ static struct regulator_ops bd7181x_led_regulator_ops = {
 	.is_enabled = regulator_is_enabled_regmap,
 	.list_voltage = regulator_list_voltage_table,
 	.map_voltage = regulator_map_voltage_ascend,
-	.set_voltage_sel = regulator_set_voltage_sel_regmap,
+//	.set_voltage_sel = regulator_set_voltage_sel_regmap,
+	.set_voltage_sel = regulator_set_voltage_sel_wled,
 	.get_voltage_sel = regulator_get_voltage_sel_regmap,
 	.set_current_limit = bd7181x_led_set_current_limit,
 	.get_current_limit = bd7181x_led_get_current_limit,
