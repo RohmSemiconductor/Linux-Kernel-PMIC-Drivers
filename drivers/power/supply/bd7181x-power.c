@@ -1399,7 +1399,9 @@ static irqreturn_t bd7181x_int_11_interrupt(int irq, void *pwrsys)
 static int bd7181x_charger_get_property(struct power_supply *psy,
 					enum power_supply_property psp, union power_supply_propval *val)
 {
-	struct bd7181x_power *pwr = dev_get_drvdata(psy->dev.parent);
+	//struct bd7181x_power *pwr = dev_get_drvdata(psy->dev.parent);
+	//struct bd7181x_power *pwr = dev_get_drvdata(&psy->dev);
+	struct bd7181x_power *pwr = container_of(psy->desc, struct bd7181x_power, ac);
 	u32 vot;
 
 	switch (psp) {
@@ -1428,7 +1430,9 @@ static int bd7181x_charger_get_property(struct power_supply *psy,
 static int bd7181x_battery_get_property(struct power_supply *psy,
 					enum power_supply_property psp, union power_supply_propval *val)
 {
-	struct bd7181x_power *pwr = dev_get_drvdata(psy->dev.parent);
+//	struct bd7181x_power *pwr = dev_get_drvdata(psy->dev.parent);
+	//struct bd7181x_power *pwr = dev_get_drvdata(&psy->dev);
+	struct bd7181x_power *pwr = container_of(psy->desc, struct bd7181x_power, bat);
 	// u32 cap, vot, r;
 	// u8 ret;
 
@@ -1964,10 +1968,24 @@ static char *bd7181x_ac_supplied_to[] = {
  */
 static int bd7181x_power_probe(struct platform_device *pdev)
 {
-	struct bd7181x *bd7181x = dev_get_drvdata(pdev->dev.parent);
+	struct bd7181x *bd7181x;
 	struct bd7181x_power *pwr;
-	struct power_supply_config ac_cfg;
+	struct power_supply_config ac_cfg = {0};
 	int irq, ret, reg;
+
+	if( bd7181x_revision_init() )
+		pr_err("Failed to init revision\n");
+
+	if (!pdev->dev.parent) {
+		pr_err("No parent\n");
+		return -ENODEV;
+	}
+	bd7181x = dev_get_drvdata(pdev->dev.parent);
+
+	if (!bd7181x) {
+		pr_err("No parent drvdata\n");
+		return -ENODEV;
+	}
 
 	pwr = kzalloc(sizeof(*pwr), GFP_KERNEL);
 	if (pwr == NULL)
@@ -1983,6 +2001,7 @@ static int bd7181x_power_probe(struct platform_device *pdev)
 
 	pwr->dev = &pdev->dev;
 	pwr->mfd = bd7181x;
+	if (!bd7181x)
 
 	platform_set_drvdata(pdev, pwr);
 
@@ -2157,28 +2176,30 @@ static struct platform_driver bd7181x_power_driver = {
 		.name = "bd7181x-power",
 		.owner = THIS_MODULE,
 	},
-	.remove = __exit_p(bd7181x_power_remove),
+	.remove = bd7181x_power_remove,
+	.probe = bd7181x_power_probe,
 };
 
 /** @brief module initialize function */
-static int bd7181x_power_init(void)
+/* static int bd7181x_power_init(void)
 {
 	int r;
 	r = bd7181x_revision_init();
 	if(r)
 		return r;
-	return platform_driver_probe(&bd7181x_power_driver, bd7181x_power_probe);
+	return platform_driver_(&bd7181x_power_driver, bd7181x_power_probe);
 }
-
-module_init(bd7181x_power_init);
+*/
+//module_init(bd7181x_power_init);
+module_platform_driver(bd7181x_power_driver);
 
 /** @brief module deinitialize function */
-static void bd7181x_power_exit(void)
+/*static void bd7181x_power_exit(void)
 {
 	platform_driver_unregister(&bd7181x_power_driver);
 }
-
-module_exit(bd7181x_power_exit);
+*/
+//module_exit(bd7181x_power_exit);
 
 module_param(battery_cycle, uint, S_IWUSR | S_IRUGO);
 MODULE_PARM_DESC(battery_parameters, "battery_cycle:battery charge/discharge cycles");
