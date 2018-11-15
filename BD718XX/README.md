@@ -17,6 +17,8 @@ https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
 https://kernel.googlesource.com/pub/scm/linux/kernel/git/torvalds/linux.git
 ```
 
+There is also additional patches for BD71837 with i.MX8. Please see:
+https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD718XX/imx8-patches
+
 Configuration options you need to enable are:
 CONFIG_MFD_ROHM_BD718XX and CONFIG_REGULATOR_BD718XX
-

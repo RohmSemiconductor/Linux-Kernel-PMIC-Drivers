@@ -1,0 +1,54 @@
+From b518efcc7c1494db9d2d883214d7065acdcebd6b Mon Sep 17 00:00:00 2001
+From: Matti Vaittinen <matti.vaittinen@fi.rohmeurope.com>
+Date: Wed, 14 Nov 2018 13:57:30 +0200
+Subject: [PATCH 2/3] regulator: bd718x7: Go to SNVS instead of READY
+
+If crucial-to-boot regulators are not controlled by SW
+we can utilize SNVS state as a state followed by reset.
+So let's go back relying on defaults for poweroff state
+transitions. Eg - if HW default is used (boot does not
+change states) we go to SNVS after all other resets except
+the watchdog reset.
+
+Signed-off-by: Matti Vaittinen <matti.vaittinen@fi.rohmeurope.com>
+---
+ drivers/regulator/bd718x7-regulator.c | 23 -----------------------
+ 1 file changed, 23 deletions(-)
+
+diff --git a/drivers/regulator/bd718x7-regulator.c b/drivers/regulator/bd718x7-regulator.c
+index 6fcd9ba235dc..c0fc4350a45c 100644
+--- a/drivers/regulator/bd718x7-regulator.c
++++ b/drivers/regulator/bd718x7-regulator.c
+@@ -847,29 +847,6 @@ static int bd718xx_probe(struct platform_device *pdev)
+ 			BD718XX_REG_REGLOCK);
+ 	}
+ 
+-	/* At poweroff transition PMIC HW disables EN bit for regulators but
+-	 * leaves SEL bit untouched. So if state transition from POWEROFF
+-	 * is done to SNVS - then all power rails controlled by SW (having
+-	 * SEL bit set) stay disabled as EN is cleared. This may result boot
+-	 * failure if any crucial systems are powered by these rails.
+-	 *
+-	 * Change the next stage from poweroff to be READY instead of SNVS
+-	 * for all reset types because OTP loading at READY will clear SEL
+-	 * bit allowing HW defaults for power rails to be used
+-	 */
+-	err = regmap_update_bits(mfd->regmap, BD718XX_REG_TRANS_COND1,
+-				 BD718XX_ON_REQ_POWEROFF_MASK |
+-				 BD718XX_SWRESET_POWEROFF_MASK |
+-				 BD718XX_WDOG_POWEROFF_MASK |
+-				 BD718XX_KEY_L_POWEROFF_MASK,
+-				 BD718XX_POWOFF_TO_RDY);
+-	if (err) {
+-		dev_err(&pdev->dev, "Failed to change reset target\n");
+-		goto err;
+-	} else {
+-		dev_dbg(&pdev->dev, "Changed all resets from SVNS to READY\n");
+-	}
+-
+ 	for (i = 0; i < pmic_regulators[mfd->chip_type].r_amount; i++) {
+ 
+ 		const struct regulator_desc *desc;
+-- 
+2.14.3
+
