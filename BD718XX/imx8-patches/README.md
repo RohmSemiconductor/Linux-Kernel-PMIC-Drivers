@@ -1,4 +1,4 @@
-#ROHM bd718x7 PMIC. i.MX8 specific set of patches
+# ROHM bd718x7 PMIC. i.MX8 specific set of patches
 
 This patch set allows ROHM bd718x7 driver to work according to i.MX8
 requirements. The main benefit is that patch series allows PMIC to
@@ -17,7 +17,7 @@ Patches also allow user to specify HW run level (RUN, IDLE, SUSPEND)
 specific voltages for DVS bucks.
 
 Currently patches are tested on kernel 4.20-rc1. Also some changes
-coming to kernel 4.21 are considered. See details in [readme.](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD718XX/imx8-patches/v4.21-mark-15_11_2018/README.md)
+coming to kernel 4.21 are considered. See the [details.](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD718XX/imx8-patches/v4.21-mark-15_11_2018/)
 
 I.MX8 patches for linux:
 [4.20](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD718XX/imx8-patches/linux-bd718x7-v4.21-mark-15_11_2018.tar.gz)
