@@ -20,7 +20,7 @@ Currently patches are tested on kernel 4.20-rc1. Also some changes
 coming to kernel 4.21 are considered. See the [details.](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD718XX/imx8-patches/v4.21-mark-15_11_2018/)
 
 I.MX8 patches for linux:
-[4.20](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD718XX/imx8-patches/linux-bd718x7-v4.21-mark-15_11_2018.tar.gz)
+[4.20](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/raw/master/BD718XX/imx8-patches/linux-bd718x7-v4.21-mark-15_11_2018.tar.gz)
 
 Please contact matti.vaittinen@fi.rohmeurope.com if you have problems with the
 patches.
