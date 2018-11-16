@@ -1,4 +1,4 @@
-#ROHM Power Management IC BD71837 Linux device driver.
+# ROHM Power Management IC BD71837 Linux device driver.
 
 Device driver for BD71837 can be found from linux community kernel.
 
