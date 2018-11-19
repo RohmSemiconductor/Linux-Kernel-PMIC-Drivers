@@ -34,6 +34,7 @@ the patches.
 
 Patches are offered free of charge, "AS IS" without warranty.
 
+```
 ---
 
 Axel Lin (3):
@@ -92,4 +93,4 @@ Matti Vaittinen (22):
 
 -- 
 2.14.3
-
+```
