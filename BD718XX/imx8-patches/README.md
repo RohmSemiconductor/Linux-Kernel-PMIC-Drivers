@@ -21,9 +21,12 @@ coming to kernel 4.21 are considered. See the [details.](https://github.com/Rohm
 
 I.MX8 patches for linux:
 [4.20](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/raw/master/BD718XX/imx8-patches/linux-bd718x7-v4.21-mark-15_11_2018.tar.gz)
+[4.9.136](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/raw/master/BD718XX/imx8-patches/linux-bd718x7-v4.9.136-stable-19_11_2018.tar.gz)
 
 Please contact matti.vaittinen@fi.rohmeurope.com if you have problems with the
 patches.
+
+Patches are offered free of charge, "AS IS" without warranty.
 
 ---
 

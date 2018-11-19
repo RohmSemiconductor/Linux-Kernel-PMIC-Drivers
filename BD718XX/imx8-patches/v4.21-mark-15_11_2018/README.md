@@ -1,4 +1,4 @@
-#ROHM bd718x7 PMIC. i.MX8 specific set of patches
+# ROHM bd718x7 PMIC. i.MX8 specific set of patches
 
 This patch set allows ROHM bd718x7 driver to work according to i.MX8
 requirements. The main benefit is that patch series allows PMIC to
