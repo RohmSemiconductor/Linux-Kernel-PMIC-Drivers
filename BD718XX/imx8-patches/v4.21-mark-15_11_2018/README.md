@@ -13,24 +13,37 @@ regulators to SW and always transitions to READY state instead of SNVS.
 This is not optimal with i.MX8 because in READY state also SNVS domain
 is unpowered.
 
+### content by patches:
+
+**Patch 1**
+
 First patch in series disables SW enable/disable control from all other
 regulators except buck3 and buck4 - which are not boot critical on i.MX8
 systems (typically connected to GPU and VPU) and which may provide
 remarkable power savings when disabled.
 
+**Patch 2**
+
 Second patch changes the transition target to be SNVS instead of READY
 for resets (suspends) caused by PMIC_ON_REQ or power button presses.
+Please note that this change is only required for kernel version 4.21
+onwards as it deals with a change that will be merged from Mark's tree
+in official linux only during 4.21 merge window.
+
+**Patch 3**
 
 Last patch allows user to specify HW run level (RUN, IDLE, SUSPEND)
 specific voltages for DVS bucks.
 
+
 This patch series was created on top of Mark Brown's regulator-next tree
-at NOV 15 2018. Latest released official linux kernel is version 4.20
-.
+at NOV 15 2018. Latest released official linux kernel is version 4.20.
+
 Patches 1 and 3 were tested to apply on linux 4.20-rc1. Patch 2 is only
 required from linux 4.21 and onwards. Please contact
 matti.vaittinen@fi.rohmeurope.com if you have problems with the patches.
 
+```
 ---
 
 Matti Vaittinen (3):
@@ -44,4 +57,5 @@ Matti Vaittinen (3):
 
 -- 
 2.14.3
+```
 
