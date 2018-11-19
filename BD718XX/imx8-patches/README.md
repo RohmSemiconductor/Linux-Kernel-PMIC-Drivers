@@ -16,7 +16,7 @@ is unpowered.
 Patches also allow user to specify HW run level (RUN, IDLE, SUSPEND)
 specific voltages for DVS bucks.
 
-Currently patches are tested on kernel 4.20-rc1. Also some changes
+Currently patches are tested on kernel 4.20-rc1 and 4.9.136. Also some changes
 coming to kernel 4.21 are considered. See the [details.](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD718XX/imx8-patches/v4.21-mark-15_11_2018/)
 
 ### BD718x7 I.MX8 patches for linux:
@@ -27,18 +27,3 @@ Please contact matti.vaittinen@fi.rohmeurope.com if you have problems with the
 patches.
 
 Patches are offered free of charge, "AS IS" without warranty.
-
----
-
-Matti Vaittinen (3):
-  regulator: bd718x7: Disallow SW control for critical regulators
-  regulator: bd718x7: Go to SNVS instead of READY
-  regulator: bd718x7: Support setting DVS buck HW state voltages
-
- .../devicetree/bindings/mfd/rohm,bd71837-pmic.txt  |  18 +-
- drivers/regulator/bd718x7-regulator.c              | 478 +++++++++------------
- 2 files changed, 217 insertions(+), 279 deletions(-)
-
--- 
-2.14.3
-
