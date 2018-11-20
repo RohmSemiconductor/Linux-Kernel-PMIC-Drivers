@@ -1,33 +1,33 @@
 # ROHM bd718x7 PMIC. i.MX8 specific set of patches
 
 This patch set backports the ROHM BD718x7 PMIC driver on top of
-linux stable kernel version 4.9.136. (Patches 1-19 + patch 22)
+the Linux stable kernel version 4.9.136. (Patches 1-19 + patch 22)
 
 Patches 20 and 21 change the community driver to work for powering
 NXP i.MX8 processor as explained in data-sheet. This means following
-changes compared to plain community driver:
+changes compared to a plain community driver:
 
-The main benefit is that patch series allows PMIC to transition to SNVS
-state when PMIC_ON_REQ or power-button are used to suspend the system.
-SNVS state on i.MX8 is power saving state where only SNVS domain stays
-powered. Using this state with BD71837/BD71847 is not straightforward
-because when SNVS is reached after poweroff state, the regulators with
-SW control bit enabled will stay unpowered. Thus if any boot critical
-regulator has SW control enabled the system fails to boot if SNVS is used.
-Community driver emphasizes giving full control over regulators to SW and
-thus always transitions to READY state instead of SNVS. This is not optimal
+The main benefit is that the patch series allow PMIC to transition to SNVS
+state when PMIC_ON_REQ or a power-button are used to suspend the system.
+The SNVS state on the i.MX8 is a power saving state where only the SNVS domain
+stays powered. Using this state with BD71837/BD71847 is not straightforward
+because when SNVS is reached after the power-off state, the regulators with
+the SW control bit enabled will stay unpowered. Thus if any boot critical
+regulator has the SW control enabled the system fails to boot if SNVS is used.
+The community driver emphasizes giving full control over regulators to the SW
+and thus always transitions to READY state instead of SNVS. This is not optimal
 with i.MX8 because in READY state also SNVS domain is unpowered.
 
-Patch 0020 disables SW enable/disable control from all other regulators
+Patch 0020 disables the SW enable/disable control from all other regulators
 except buck3 and buck4 - which are not boot critical on i.MX8
 systems (typically connected to GPU and VPU) and which may provide
 remarkable power savings when disabled.
 
-Patch 0021 allows user to specify HW run level (RUN, IDLE, SUSPEND)
+Patch 0021 allows user to specify the HW run level (RUN, IDLE, SUSPEND)
 specific voltages for DVS bucks.
 
 This patch series was created on top of linux-stabe tree tag 2.9.136
-at NOV 19 2018.
+on November 19th 2018.
 
 Please contact matti.vaittinen@fi.rohmeurope.com if you have problems with
 the patches.
