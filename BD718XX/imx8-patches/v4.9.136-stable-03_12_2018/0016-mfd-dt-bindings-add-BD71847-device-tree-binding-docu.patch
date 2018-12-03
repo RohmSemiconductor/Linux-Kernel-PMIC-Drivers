@@ -1,0 +1,50 @@
+From de462f405347fc3a931d462b6f67c57de9584f5c Mon Sep 17 00:00:00 2001
+From: Matti Vaittinen <matti.vaittinen@fi.rohmeurope.com>
+Date: Fri, 14 Sep 2018 11:30:58 +0300
+Subject: [PATCH 16/27] mfd: dt bindings: add BD71847 device-tree binding
+ documentation
+
+Add ROHM BD71847 Power Management IC MFD binding information to
+device-tree binding documents.
+
+Signed-off-by: Matti Vaittinen <matti.vaittinen@fi.rohmeurope.com>
+Reviewed-by: Rob Herring <robh@kernel.org>
+Acked-by: Lee Jones <lee.jones@linaro.org>
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ .../devicetree/bindings/mfd/rohm,bd71837-pmic.txt       | 17 +++++++++--------
+ 1 file changed, 9 insertions(+), 8 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/mfd/rohm,bd71837-pmic.txt b/Documentation/devicetree/bindings/mfd/rohm,bd71837-pmic.txt
+index 3ca56fdb5ffe..a4b056761eaa 100644
+--- a/Documentation/devicetree/bindings/mfd/rohm,bd71837-pmic.txt
++++ b/Documentation/devicetree/bindings/mfd/rohm,bd71837-pmic.txt
+@@ -1,16 +1,17 @@
+-* ROHM BD71837 Power Management Integrated Circuit bindings
++* ROHM BD71837 and BD71847 Power Management Integrated Circuit bindings
+ 
+-BD71837MWV is a programmable Power Management IC for powering single-core,
+-dual-core, and quad-core SoCs such as NXP-i.MX 8M. It is optimized for
+-low BOM cost and compact solution footprint. It integrates 8 Buck
+-egulators and 7 LDOs to provide all the power rails required by the SoC and
+-the commonly used peripherals.
++BD71837MWV and BD71847MWV are programmable Power Management ICs for powering
++single-core, dual-core, and quad-core SoCs such as NXP-i.MX 8M. They are
++optimized for low BOM cost and compact solution footprint. BD71837MWV
++integrates 8 Buck regulators and 7 LDOs. BD71847MWV contains 6 Buck regulators
++and 6 LDOs.
+ 
+-Datasheet for PMIC is available at:
++Datasheet for BD71837 is available at:
+ https://www.rohm.com/datasheet/BD71837MWV/bd71837mwv-e
+ 
+ Required properties:
+- - compatible		: Should be "rohm,bd71837".
++ - compatible		: Should be "rohm,bd71837" for bd71837
++				    "rohm,bd71847" for bd71847.
+  - reg			: I2C slave address.
+  - interrupt-parent	: Phandle to the parent interrupt controller.
+  - interrupts		: The interrupt line the device is connected to.
+-- 
+2.14.3
+

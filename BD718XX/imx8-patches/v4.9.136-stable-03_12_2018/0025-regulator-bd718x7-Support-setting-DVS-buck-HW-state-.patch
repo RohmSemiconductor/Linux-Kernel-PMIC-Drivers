@@ -1,0 +1,320 @@
+From 88761780cb0bc63bd7ab76ecc34cbe637ce387a6 Mon Sep 17 00:00:00 2001
+From: Matti Vaittinen <matti.vaittinen@fi.rohmeurope.com>
+Date: Thu, 15 Nov 2018 10:22:39 +0200
+Subject: [PATCH 25/27] regulator: bd718x7: Support setting DVS buck HW state
+ voltages
+
+bd71837 and bd71847 support setting voltages for different HW
+run states for DVS bucks. Supported states for buck1 are RUN
+SUSPEND and IDLE. States for buck2 are RUN and IDLE For BD71837
+bucks 3 and 4 support setting voltages for RUN.
+
+Add support for giving the voltage levels via device-tree.
+
+Signed-off-by: Matti Vaittinen <matti.vaittinen@fi.rohmeurope.com>
+---
+ .../devicetree/bindings/mfd/rohm,bd71837-pmic.txt  |  18 ++-
+ drivers/regulator/bd718x7-regulator.c              | 167 ++++++++++++++++++++-
+ 2 files changed, 183 insertions(+), 2 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/mfd/rohm,bd71837-pmic.txt b/Documentation/devicetree/bindings/mfd/rohm,bd71837-pmic.txt
+index a4b056761eaa..7ebfab2fee08 100644
+--- a/Documentation/devicetree/bindings/mfd/rohm,bd71837-pmic.txt
++++ b/Documentation/devicetree/bindings/mfd/rohm,bd71837-pmic.txt
+@@ -22,7 +22,19 @@ Required properties:
+ 			  Please see ../regulator/rohm,bd71837-regulator.txt
+ 
+ Optional properties:
+-- clock-output-names	: Should contain name for output clock.
++ - clock-output-names		: Should contain name for output clock.
++ - rohm,pmic-buck1-dvs-voltage	: Should contain list of voltage levels matching
++				  HW states. First voltage is for RUN, second
++				  for IDLE and third for SUSPEND. Voltages
++				  should be given in uV.
++ - rohm,pmic-buck2-dvs-voltage	: Like rohm,pmic-buck1-dvs-voltage but SUSPEND
++				  state is not used. Only give voltages for RUN
++				  and IDLE
++ - rohm,pmic-buck3-dvs-voltage	: Like rohm,pmic-buck2-dvs-voltage but only for
++				  RUN state. Not on BD71847.
++ - rohm,pmic-buck4-dvs-voltage	: Like rohm,pmic-buck3-dvs-voltage.
++				  Not on BD71847.
++
+ 
+ Example:
+ 
+@@ -44,6 +56,10 @@ Example:
+ 		clocks = <&osc 0>;
+ 		clock-output-names = "bd71837-32k-out";
+ 
++		rohm,pmic-buck1-dvs-voltage = <900000>, <850000>, <800000>;
++		rohm,pmic-buck2-dvs-voltage = <1000000>, <900000>;
++		rohm,pmic-buck3-dvs-voltage = <900000>;
++		rohm,pmic-buck4-dvs-voltage = <900000>;
+ 		regulators {
+ 			buck1: BUCK1 {
+ 				regulator-name = "buck1";
+diff --git a/drivers/regulator/bd718x7-regulator.c b/drivers/regulator/bd718x7-regulator.c
+index 90e5292a3d49..c9440fcaf8f2 100644
+--- a/drivers/regulator/bd718x7-regulator.c
++++ b/drivers/regulator/bd718x7-regulator.c
+@@ -16,6 +16,25 @@
+ #include <linux/regulator/of_regulator.h>
+ #include <linux/slab.h>
+ 
++#define BUCK1_RUN_DEFAULT               0x14
++#define BUCK1_SUSP_DEFAULT              0x14
++#define BUCK1_IDLE_DEFAULT              0x14
++
++#define BUCK2_RUN_DEFAULT               0x1E
++#define BUCK2_IDLE_DEFAULT              0x14
++
++#define BUCK3_RUN_DEFAULT               0x1E
++#define BUCK4_RUN_DEFAULT               0x1E
++
++#define BD71837_DVS_BUCK_NUM		4	/* Buck 1/2/3/4 support DVS */
++#define BD71837_DVS_RUN_IDLE_SUSP	3
++#define BD71837_DVS_RUN_IDLE		2
++#define BD71837_DVS_RUN				1
++
++struct bd71837_buck_dvs {
++	u32 voltage[BD71837_DVS_RUN_IDLE_SUSP];
++};
++
+ /*
+  * BUCK1/2/3/4
+  * BUCK1RAMPRATE[1:0] BUCK1 DVS ramp rate setting
+@@ -277,12 +296,65 @@ struct reg_init {
+ 	unsigned int mask;
+ 	unsigned int val;
+ };
++
++struct state_volts {
++	int r_i_s_voltages[3];
++	uint8_t r_i_s_regs[3];
++	uint8_t r_i_s_masks[3];
++};
++
+ struct bd718xx_regulator_data {
+ 	struct regulator_desc desc;
+ 	const struct reg_init *additional_inits;
+ 	int additional_init_amnt;
++	struct state_volts *state_volts;
++};
++
++static struct state_volts buck1_default_dvs = {
++	.r_i_s_voltages = {
++		BUCK1_RUN_DEFAULT,
++		BUCK1_IDLE_DEFAULT,
++		BUCK1_SUSP_DEFAULT
++	},
++	.r_i_s_regs = {
++		BD718XX_REG_BUCK1_VOLT_RUN,
++		BD718XX_REG_BUCK1_VOLT_IDLE,
++		BD718XX_REG_BUCK1_VOLT_SUSP,
++	},
++};
++static struct state_volts buck2_default_dvs = {
++	.r_i_s_voltages = {
++		BUCK2_RUN_DEFAULT,
++		BUCK2_IDLE_DEFAULT,
++	},
++	.r_i_s_regs = {
++		BD718XX_REG_BUCK2_VOLT_RUN,
++		BD718XX_REG_BUCK2_VOLT_IDLE,
++		0 /* Suspend not supported */,
++	},
++};
++static struct state_volts buck3_default_dvs = {
++	.r_i_s_voltages = {
++		BUCK3_RUN_DEFAULT,
++	},
++	.r_i_s_regs = {
++		BD71837_REG_BUCK3_VOLT_RUN,
++		0 /* Neither idle... */,
++		0 /* ...nor suspend are supported*/,
++	},
++};
++static struct state_volts buck4_default_dvs = {
++	.r_i_s_voltages = {
++		BUCK4_RUN_DEFAULT,
++	},
++	.r_i_s_regs = {
++		BD71837_REG_BUCK4_VOLT_RUN,
++		0 /* Neither idle... */,
++		0 /* ...nor suspend are supported*/,
++	},
+ };
+ 
++
+ /*
+  * There is a HW quirk in BD71837. The shutdown sequence timings for
+  * bucks/LDOs which are controlled via register interface are changed.
+@@ -341,6 +413,7 @@ static const struct bd718xx_regulator_data bd71847_regulators[] = {
+ 			.vsel_mask = DVS_BUCK_RUN_MASK,
+ 			.owner = THIS_MODULE,
+ 		},
++		.state_volts = &buck1_default_dvs,
+ 	},
+ 	{
+ 		.desc = {
+@@ -357,6 +430,7 @@ static const struct bd718xx_regulator_data bd71847_regulators[] = {
+ 			.vsel_mask = DVS_BUCK_RUN_MASK,
+ 			.owner = THIS_MODULE,
+ 		},
++		.state_volts = &buck2_default_dvs,
+ 	},
+ 	{
+ 		.desc = {
+@@ -551,6 +625,7 @@ static const struct bd718xx_regulator_data bd71837_regulators[] = {
+ 			.vsel_mask = DVS_BUCK_RUN_MASK,
+ 			.owner = THIS_MODULE,
+ 		},
++		.state_volts = &buck1_default_dvs,
+ 	},
+ 	{
+ 		.desc = {
+@@ -567,6 +642,7 @@ static const struct bd718xx_regulator_data bd71837_regulators[] = {
+ 			.vsel_mask = DVS_BUCK_RUN_MASK,
+ 			.owner = THIS_MODULE,
+ 		},
++		.state_volts = &buck2_default_dvs,
+ 	},
+ 	{
+ 		.desc = {
+@@ -585,6 +661,7 @@ static const struct bd718xx_regulator_data bd71837_regulators[] = {
+ 			.enable_mask = BD718XX_BUCK_EN,
+ 			.owner = THIS_MODULE,
+ 		},
++		.state_volts = &buck3_default_dvs,
+ 		.additional_inits = bd71837_buck3_inits,
+ 		.additional_init_amnt = ARRAY_SIZE(bd71837_buck3_inits),
+ 	},
+@@ -605,6 +682,7 @@ static const struct bd718xx_regulator_data bd71837_regulators[] = {
+ 			.enable_mask = BD718XX_BUCK_EN,
+ 			.owner = THIS_MODULE,
+ 		},
++		.state_volts = &buck4_default_dvs,
+ 		.additional_inits = bd71837_buck4_inits,
+ 		.additional_init_amnt = ARRAY_SIZE(bd71837_buck4_inits),
+ 	},
+@@ -806,6 +884,60 @@ struct bd718xx_pmic_inits {
+ 	unsigned int r_amount;
+ };
+ 
++/** @brief buck1/2 dvs enable/voltage from device tree
++ * @param pdev platfrom device pointer
++ * @param buck_dvs pointer
++ * @return void
++ */
++static int of_bd71837_buck_dvs(struct platform_device *pdev, int num_bucks)
++{
++	int ret;
++	int *dvs_storage[] = {
++		&buck1_default_dvs.r_i_s_voltages[0],
++		&buck2_default_dvs.r_i_s_voltages[0],
++		&buck3_default_dvs.r_i_s_voltages[0],
++		&buck4_default_dvs.r_i_s_voltages[0],
++	};
++	const char *dvs_props[] = {
++		"rohm,pmic-buck1-dvs-voltage",
++		"rohm,pmic-buck2-dvs-voltage",
++		"rohm,pmic-buck3-dvs-voltage",
++		"rohm,pmic-buck4-dvs-voltage",
++		NULL,
++	};
++	int num_expected_values[] = {
++		BD71837_DVS_RUN_IDLE_SUSP,
++		BD71837_DVS_RUN_IDLE,
++		BD71837_DVS_RUN,
++		BD71837_DVS_RUN,
++	};
++	int i;
++
++	if (!pdev->dev.parent->of_node) {
++		dev_err(&pdev->dev, "could not find pmic sub-node\n");
++		return -ENOENT;
++	}
++
++	for (i=0; dvs_props[i] && i < num_bucks; i++) {
++
++		ret = of_property_read_u32_array(pdev->dev.parent->of_node,
++						 dvs_props[i], dvs_storage[i],
++						 num_expected_values[i]);
++
++		if (ret == -EINVAL)
++			break;
++
++		if (ret) {
++			dev_err(&pdev->dev,
++				"Bad amount of dvs voltages for buck%d in DT\n",
++				i);
++			return ret;
++		}
++	}
++
++	return 0;
++}
++
+ static int bd718xx_probe(struct platform_device *pdev)
+ {
+ 	struct bd718xx *mfd;
+@@ -821,7 +953,7 @@ static int bd718xx_probe(struct platform_device *pdev)
+ 		},
+ 	};
+ 
+-	int i, j, err;
++	int i, j, err, num_dvs_bucks = 4;
+ 
+ 	mfd = dev_get_drvdata(pdev->dev.parent);
+ 	if (!mfd) {
+@@ -836,7 +968,12 @@ static int bd718xx_probe(struct platform_device *pdev)
+ 		err = -EINVAL;
+ 		goto err;
+ 	}
++	if (mfd->chip_type == BD718XX_TYPE_BD71847)
++		num_dvs_bucks = 2;
++	err = of_bd71837_buck_dvs(pdev, num_dvs_bucks);
+ 
++	if (err)
++		goto err;
+ 	/* Register LOCK release */
+ 	err = regmap_update_bits(mfd->regmap, BD718XX_REG_REGLOCK,
+ 				 (REGLOCK_PWRSEQ | REGLOCK_VREG), 0);
+@@ -868,6 +1005,34 @@ static int bd718xx_probe(struct platform_device *pdev)
+ 			err = PTR_ERR(rdev);
+ 			goto err;
+ 		}
++		if (r->state_volts) {
++			/* This simple loop works as long as the run, idle
++			 * and suspend voltages for buck are selected with
++			 * identical mask/value. This is true for BD71837
++			 */
++			for (j = 0; j < 3; j++) {
++				if (r->state_volts->r_i_s_regs[j]) {
++					int sel = regulator_map_voltage_iterate(rdev,
++						r->state_volts->r_i_s_voltages[j],
++						r->state_volts->r_i_s_voltages[j]);
++					if (sel < 0) {
++						dev_err(&pdev->dev,
++							"selector for voltage [%d] not found\n",
++							r->state_volts->r_i_s_voltages[j]);
++					} else {
++						err = regmap_update_bits(mfd->regmap,
++							r->state_volts->r_i_s_regs[j],
++							DVS_BUCK_RUN_MASK,
++							sel);
++						if (err) {
++							dev_err(&pdev->dev,
++								"Failed to write DVS voltage\n");
++							goto err;
++						}
++					}
++				}
++			}
++		}
+ 		for (j = 0; j < r->additional_init_amnt; j++) {
+ 			err = regmap_update_bits(mfd->regmap,
+ 						 r->additional_inits[j].reg,
+-- 
+2.14.3
+

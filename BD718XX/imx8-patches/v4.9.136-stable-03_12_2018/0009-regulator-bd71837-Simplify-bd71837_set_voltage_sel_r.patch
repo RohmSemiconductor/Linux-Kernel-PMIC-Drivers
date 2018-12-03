@@ -1,0 +1,38 @@
+From 978568e98371907e06955b6b8a6a08ce06b7daf3 Mon Sep 17 00:00:00 2001
+From: Axel Lin <axel.lin@ingics.com>
+Date: Wed, 27 Jun 2018 20:40:14 +0800
+Subject: [PATCH 09/27] regulator: bd71837: Simplify
+ bd71837_set_voltage_sel_restricted implementation
+
+Signed-off-by: Axel Lin <axel.lin@ingics.com>
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ drivers/regulator/bd71837-regulator.c | 12 ++++--------
+ 1 file changed, 4 insertions(+), 8 deletions(-)
+
+diff --git a/drivers/regulator/bd71837-regulator.c b/drivers/regulator/bd71837-regulator.c
+index 262a786f8a6f..c01ef7d4a83f 100644
+--- a/drivers/regulator/bd71837-regulator.c
++++ b/drivers/regulator/bd71837-regulator.c
+@@ -72,14 +72,10 @@ static int bd71837_buck1234_set_ramp_delay(struct regulator_dev *rdev,
+ static int bd71837_set_voltage_sel_restricted(struct regulator_dev *rdev,
+ 						    unsigned int sel)
+ {
+-	int ret;
+-
+-	ret = regulator_is_enabled_regmap(rdev);
+-	if (!ret)
+-		ret = regulator_set_voltage_sel_regmap(rdev, sel);
+-	else if (ret == 1)
+-		ret = -EBUSY;
+-	return ret;
++	if (regulator_is_enabled_regmap(rdev))
++		return -EBUSY;
++
++	return regulator_set_voltage_sel_regmap(rdev, sel);
+ }
+ 
+ static struct regulator_ops bd71837_ldo_regulator_ops = {
+-- 
+2.14.3
+

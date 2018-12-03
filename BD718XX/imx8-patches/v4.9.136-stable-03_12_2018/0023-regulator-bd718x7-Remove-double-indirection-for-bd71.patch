@@ -1,0 +1,67 @@
+From cb846c2b35f6c34b5d7ef67671160fae3a9fa6db Mon Sep 17 00:00:00 2001
+From: Geert Uytterhoeven <geert@linux-m68k.org>
+Date: Sun, 28 Oct 2018 17:09:22 +0100
+Subject: [PATCH 23/27] regulator: bd718x7: Remove double indirection for
+ bd718xx_pmic_inits.rdatas
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+With gcc 4.1:
+
+    drivers/regulator/bd718x7-regulator.c: In function ‘bd718xx_probe’:
+    drivers/regulator/bd718x7-regulator.c:1020: warning: initialization from incompatible pointer type
+    drivers/regulator/bd718x7-regulator.c:1024: warning: initialization from incompatible pointer type
+
+Apparently this old compiler can't handle the obscure double
+indirection.
+
+However, there is no need for a double indirection.  Just store a
+pointer to the array instead, like other drivers tend to do.
+
+Fixes: 494edd266b945f36 ("regulator/mfd: Support ROHM BD71847 power management IC")
+Signed-off-by: Geert Uytterhoeven <geert@linux-m68k.org>
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ drivers/regulator/bd718x7-regulator.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/regulator/bd718x7-regulator.c b/drivers/regulator/bd718x7-regulator.c
+index 655bf42b496f..a90dae120726 100644
+--- a/drivers/regulator/bd718x7-regulator.c
++++ b/drivers/regulator/bd718x7-regulator.c
+@@ -1008,7 +1008,7 @@ static const struct bd718xx_regulator_data bd71837_regulators[] = {
+ };
+ 
+ struct bd718xx_pmic_inits {
+-	const struct bd718xx_regulator_data (*r_datas)[];
++	const struct bd718xx_regulator_data *r_datas;
+ 	unsigned int r_amount;
+ };
+ 
+@@ -1018,11 +1018,11 @@ static int bd718xx_probe(struct platform_device *pdev)
+ 	struct regulator_config config = { 0 };
+ 	struct bd718xx_pmic_inits pmic_regulators[] = {
+ 		[BD718XX_TYPE_BD71837] = {
+-			.r_datas = &bd71837_regulators,
++			.r_datas = bd71837_regulators,
+ 			.r_amount = ARRAY_SIZE(bd71837_regulators),
+ 		},
+ 		[BD718XX_TYPE_BD71847] = {
+-			.r_datas = &bd71847_regulators,
++			.r_datas = bd71847_regulators,
+ 			.r_amount = ARRAY_SIZE(bd71847_regulators),
+ 		},
+ 	};
+@@ -1060,7 +1060,7 @@ static int bd718xx_probe(struct platform_device *pdev)
+ 		struct regulator_dev *rdev;
+ 		const struct bd718xx_regulator_data *r;
+ 
+-		r = &(*pmic_regulators[mfd->chip_type].r_datas)[i];
++		r = &pmic_regulators[mfd->chip_type].r_datas[i];
+ 		desc = &r->desc;
+ 
+ 		config.dev = pdev->dev.parent;
+-- 
+2.14.3
+

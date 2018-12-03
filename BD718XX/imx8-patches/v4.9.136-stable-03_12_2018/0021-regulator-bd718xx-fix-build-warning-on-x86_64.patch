@@ -1,0 +1,31 @@
+From fef1ce57b442008e9d97448856fcc5c71d1a0308 Mon Sep 17 00:00:00 2001
+From: Matti Vaittinen <matti.vaittinen@fi.rohmeurope.com>
+Date: Tue, 2 Oct 2018 10:16:50 +0300
+Subject: [PATCH 21/27] regulator: bd718xx: fix build warning on x86_64
+
+Casting address to unsigned int causes a warning on some 64 bit
+architectures. Fix the cast.
+
+Signed-off-by: Matti Vaittinen <matti.vaittinen@fi.rohmeurope.com>
+Reported-by: Stephen Rothwell <sfr@canb.auug.org.au>
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ drivers/mfd/rohm-bd718x7.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/mfd/rohm-bd718x7.c b/drivers/mfd/rohm-bd718x7.c
+index 161c8aac6d86..a29d529a96f4 100644
+--- a/drivers/mfd/rohm-bd718x7.c
++++ b/drivers/mfd/rohm-bd718x7.c
+@@ -98,7 +98,7 @@ static int bd718xx_i2c_probe(struct i2c_client *i2c,
+ 		return -ENOMEM;
+ 
+ 	bd718xx->chip_irq = i2c->irq;
+-	bd718xx->chip_type = (unsigned int)
++	bd718xx->chip_type = (unsigned int)(uintptr_t)
+ 				of_device_get_match_data(&i2c->dev);
+ 	bd718xx->dev = &i2c->dev;
+ 	dev_set_drvdata(&i2c->dev, bd718xx);
+-- 
+2.14.3
+

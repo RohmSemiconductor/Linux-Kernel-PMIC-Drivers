@@ -1,0 +1,41 @@
+From e9eea64131ef40a8bb6cb1650a7354e995e8d352 Mon Sep 17 00:00:00 2001
+From: Matti Vaittinen <matti.vaittinen@fi.rohmeurope.com>
+Date: Mon, 19 Nov 2018 14:19:19 +0200
+Subject: [PATCH 26/27] regulator: bd718x7: add i2c_id
+
+older kernel versions can't rely purely on compatible
+I2c_id mey be required to probe the device. Add I2C ID.
+
+Signed-off-by: Matti Vaittinen <matti.vaittinen@fi.rohmeurope.com>
+---
+ drivers/mfd/rohm-bd718x7.c | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/drivers/mfd/rohm-bd718x7.c b/drivers/mfd/rohm-bd718x7.c
+index a29d529a96f4..64ac8eeea5b8 100644
+--- a/drivers/mfd/rohm-bd718x7.c
++++ b/drivers/mfd/rohm-bd718x7.c
+@@ -172,12 +172,20 @@ static const struct of_device_id bd718xx_of_match[] = {
+ };
+ MODULE_DEVICE_TABLE(of, bd718xx_of_match);
+ 
++static const struct i2c_device_id bd718xx_i2c_id[] = {
++	{ "bd71837", BD718XX_TYPE_BD71837 },
++	{ "bd71847", BD718XX_TYPE_BD71847 },
++	{ },
++};
++MODULE_DEVICE_TABLE(i2c, bd718xx_i2c_id);
++
+ static struct i2c_driver bd718xx_i2c_driver = {
+ 	.driver = {
+ 		.name = "rohm-bd718x7",
+ 		.of_match_table = bd718xx_of_match,
+ 	},
+ 	.probe = bd718xx_i2c_probe,
++	.id_table = bd718xx_i2c_id,
+ };
+ 
+ static int __init bd718xx_i2c_init(void)
+-- 
+2.14.3
+

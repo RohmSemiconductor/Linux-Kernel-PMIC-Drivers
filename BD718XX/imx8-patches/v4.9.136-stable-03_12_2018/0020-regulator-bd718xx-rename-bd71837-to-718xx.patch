@@ -1,0 +1,50 @@
+From b9ba4eb460ae3db208cf63297dacd7e155b85a72 Mon Sep 17 00:00:00 2001
+From: Matti Vaittinen <matti.vaittinen@fi.rohmeurope.com>
+Date: Fri, 14 Sep 2018 11:34:02 +0300
+Subject: [PATCH 20/27] regulator: bd718xx: rename bd71837 to 718xx
+
+rename bd71837-regulator.c to bd718x7-regulator.c to reflect the
+fact that also BD71847 is now supported by the driver.
+
+Signed-off-by: Matti Vaittinen <matti.vaittinen@fi.rohmeurope.com>
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ drivers/regulator/Kconfig                                      | 2 +-
+ drivers/regulator/Makefile                                     | 2 +-
+ drivers/regulator/{bd71837-regulator.c => bd718x7-regulator.c} | 0
+ 3 files changed, 2 insertions(+), 2 deletions(-)
+ rename drivers/regulator/{bd71837-regulator.c => bd718x7-regulator.c} (100%)
+
+diff --git a/drivers/regulator/Kconfig b/drivers/regulator/Kconfig
+index 7a2f1a882b9b..669a30961ee1 100644
+--- a/drivers/regulator/Kconfig
++++ b/drivers/regulator/Kconfig
+@@ -172,7 +172,7 @@ config REGULATOR_BD718XX
+ 	  and LDO regulators.
+ 
+ 	  This driver can also be built as a module. If so, the module
+-	  will be called bd71837-regulator.
++	  will be called bd718x7-regulator.
+ 
+ config REGULATOR_DA903X
+ 	tristate "Dialog Semiconductor DA9030/DA9034 regulators"
+diff --git a/drivers/regulator/Makefile b/drivers/regulator/Makefile
+index 8e8ed9427c08..dde33b7cd878 100644
+--- a/drivers/regulator/Makefile
++++ b/drivers/regulator/Makefile
+@@ -23,7 +23,7 @@ obj-$(CONFIG_REGULATOR_AS3711) += as3711-regulator.o
+ obj-$(CONFIG_REGULATOR_AS3722) += as3722-regulator.o
+ obj-$(CONFIG_REGULATOR_AXP20X) += axp20x-regulator.o
+ obj-$(CONFIG_REGULATOR_BCM590XX) += bcm590xx-regulator.o
+-obj-$(CONFIG_REGULATOR_BD718XX) += bd71837-regulator.o
++obj-$(CONFIG_REGULATOR_BD718XX) += bd718x7-regulator.o
+ obj-$(CONFIG_REGULATOR_DA903X)	+= da903x.o
+ obj-$(CONFIG_REGULATOR_DA9052)	+= da9052-regulator.o
+ obj-$(CONFIG_REGULATOR_DA9055)	+= da9055-regulator.o
+diff --git a/drivers/regulator/bd71837-regulator.c b/drivers/regulator/bd718x7-regulator.c
+similarity index 100%
+rename from drivers/regulator/bd71837-regulator.c
+rename to drivers/regulator/bd718x7-regulator.c
+-- 
+2.14.3
+

@@ -3,7 +3,7 @@
 This patch set backports the ROHM BD718x7 PMIC driver on top of
 the Linux stable kernel version 4.9.136. (Patches 1-19 + patch 22)
 
-Patches 20 and 21 change the community driver to work for powering
+Patches 20, 21 and 27 change the community driver to work for powering
 NXP i.MX8 processor as explained in data-sheet. This means following
 changes compared to a plain community driver:
 
@@ -26,13 +26,11 @@ remarkable power savings when disabled.
 Patch 0021 allows user to specify the HW run level (RUN, IDLE, SUSPEND)
 specific voltages for DVS bucks.
 
-This patch series was created on top of linux-stabe tree tag 2.9.136
-on November 19th 2018.
+Patch 0027 fixes format of default HW run level voltages which are used
+when the voltages are not given from device-tree.
 
-UPDATE: 03.12.2018 - Added patch 27 to the folder.
-Patch 27 is a fix for the default DVS voltage setting for RUN, IDLE, SUSPEND
-HW states. Defaults when DVS voltage levels are not given from device-tree
-were wrongly coded. Added patch 27 fixes this.
+This patch series was created on top of linux-stabe tree tag 2.9.136
+on December 03rd 2018.
 
 Please contact matti.vaittinen@fi.rohmeurope.com if you have problems with
 the patches.
@@ -52,7 +50,7 @@ Geert Uytterhoeven (1):
   regulator: bd718x7: Remove double indirection for
     bd718xx_pmic_inits.rdatas
 
-Matti Vaittinen (22):
+Matti Vaittinen (23):
   regulator: bd71837: Devicetree bindings for BD71837 regulators
   regulator: bd71837: BD71837 PMIC regulator driver
   regulator: bd71837: Editorial cleanups.
@@ -75,6 +73,7 @@ Matti Vaittinen (22):
   regulator: bd718x7: Disallow SW control for critical regulators
   regulator: bd718x7: Support setting DVS buck HW state voltages
   regulator: bd718x7: add i2c_id
+  regulator: bd718x7: Fix the buck1 - 4 default DVS voltages
 
  .../devicetree/bindings/mfd/rohm,bd71837-pmic.txt  |   79 ++
  .../bindings/regulator/rohm,bd71837-regulator.txt  |  124 +++
@@ -98,4 +97,6 @@ Matti Vaittinen (22):
 
 -- 
 2.14.3
-```
+
+
+``

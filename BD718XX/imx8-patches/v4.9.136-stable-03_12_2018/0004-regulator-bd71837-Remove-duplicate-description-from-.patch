@@ -1,0 +1,37 @@
+From 3dbba9af7c6e067683dd7f31e8589ad73b73bcda Mon Sep 17 00:00:00 2001
+From: Matti Vaittinen <matti.vaittinen@fi.rohmeurope.com>
+Date: Thu, 28 Jun 2018 14:23:04 +0300
+Subject: [PATCH 04/27] regulator: bd71837: Remove duplicate description from
+ DT bindings
+
+Same general chip description was written in MFD and Regulator
+binding documents for ROHM bd71837 PMIC. Remove description from
+regulator binding as suggested by Rob H.
+
+Signed-off-by: Matti Vaittinen <matti.vaittinen@fi.rohmeurope.com>
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ .../devicetree/bindings/regulator/rohm,bd71837-regulator.txt      | 8 --------
+ 1 file changed, 8 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/regulator/rohm,bd71837-regulator.txt b/Documentation/devicetree/bindings/regulator/rohm,bd71837-regulator.txt
+index 4edf3137d9f7..76ead07072b1 100644
+--- a/Documentation/devicetree/bindings/regulator/rohm,bd71837-regulator.txt
++++ b/Documentation/devicetree/bindings/regulator/rohm,bd71837-regulator.txt
+@@ -1,13 +1,5 @@
+ ROHM BD71837 Power Management Integrated Circuit (PMIC) regulator bindings
+ 
+-BD71837MWV is a programmable Power Management
+-IC (PMIC) for powering single-core, dual-core, and
+-quad-core SoC’s such as NXP-i.MX 8M. It is optimized
+-for low BOM cost and compact solution footprint. It
+-integrates 8 Buck regulators and 7 LDO’s to provide all
+-the power rails required by the SoC and the commonly
+-used peripherals.
+-
+ Required properties:
+  - regulator-name: should be "buck1", ..., "buck8" and "ldo1", ..., "ldo7"
+ 
+-- 
+2.14.3
+

@@ -1,0 +1,34 @@
+From cdd45cee12fd0ff63c25b03b95360241378e2b6f Mon Sep 17 00:00:00 2001
+From: Axel Lin <axel.lin@ingics.com>
+Date: Fri, 24 Aug 2018 19:16:12 +0800
+Subject: [PATCH 13/27] regulator: bd71837: Remove duplicate assignment for
+ n_voltages of LDO2
+
+Set it once is enough.
+Also move n_voltages close to volt_table for better readability.
+
+Signed-off-by: Axel Lin <axel.lin@ingics.com>
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ drivers/regulator/bd71837-regulator.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/drivers/regulator/bd71837-regulator.c b/drivers/regulator/bd71837-regulator.c
+index d8afb0b9a34a..0f242b7b2546 100644
+--- a/drivers/regulator/bd71837-regulator.c
++++ b/drivers/regulator/bd71837-regulator.c
+@@ -389,10 +389,9 @@ static const struct regulator_desc bd71837_regulators[] = {
+ 		.ops = &bd71837_ldo_regulator_nolinear_ops,
+ 		.type = REGULATOR_VOLTAGE,
+ 		.volt_table = &ldo_2_volts[0],
++		.n_voltages = ARRAY_SIZE(ldo_2_volts),
+ 		.vsel_reg = BD71837_REG_LDO2_VOLT,
+ 		.vsel_mask = LDO2_MASK,
+-		.n_voltages = ARRAY_SIZE(ldo_2_volts),
+-		.n_voltages = BD71837_LDO2_VOLTAGE_NUM,
+ 		.enable_reg = BD71837_REG_LDO2_VOLT,
+ 		.enable_mask = BD71837_LDO_EN,
+ 		.owner = THIS_MODULE,
+-- 
+2.14.3
+

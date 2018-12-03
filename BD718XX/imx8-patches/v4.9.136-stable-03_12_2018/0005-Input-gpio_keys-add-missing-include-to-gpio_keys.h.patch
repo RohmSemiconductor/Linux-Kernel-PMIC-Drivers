@@ -1,0 +1,30 @@
+From 5fafd1d26dfcd7a54ba23ab358a89bce12ee79d1 Mon Sep 17 00:00:00 2001
+From: Matti Vaittinen <matti.vaittinen@fi.rohmeurope.com>
+Date: Wed, 18 Jul 2018 16:40:46 +0000
+Subject: [PATCH 05/27] Input: gpio_keys - add missing include to gpio_keys.h
+
+gpio_keys.h uses 'bool' - type which is defined in linux/types.h.
+Include this header.
+
+Signed-off-by: Matti Vaittinen <matti.vaittinen@fi.rohmeurope.com>
+Signed-off-by: Dmitry Torokhov <dmitry.torokhov@gmail.com>
+---
+ include/linux/gpio_keys.h | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/include/linux/gpio_keys.h b/include/linux/gpio_keys.h
+index ee2d8c6f9130..509c07f88756 100644
+--- a/include/linux/gpio_keys.h
++++ b/include/linux/gpio_keys.h
+@@ -1,6 +1,8 @@
+ #ifndef _GPIO_KEYS_H
+ #define _GPIO_KEYS_H
+ 
++#include <linux/types.h>
++
+ struct device;
+ struct gpio_desc;
+ 
+-- 
+2.14.3
+
