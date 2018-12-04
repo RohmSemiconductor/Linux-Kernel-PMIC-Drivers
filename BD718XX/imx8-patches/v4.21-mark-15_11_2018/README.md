@@ -32,14 +32,18 @@ in official linux only during 4.21 merge window.
 
 **Patch 3**
 
-The last patch allows user to specify the HW run level (RUN, IDLE, SUSPEND)
+The third patch allows user to specify the HW run level (RUN, IDLE, SUSPEND)
 specific voltages for DVS bucks.
 
+**UPDATE: December 04th: Patch 4**
+
+Patch 4 was created as a bugfix. It fixes the default DVS values introduced
+in patch 3.
 
 This patch series was created on top of Mark Brown's regulator-next tree
 on November 15th 2018.
 
-Patches 1 and 3 were tested to apply on linux 4.20-rc1. Patch 2 is only
+Patches 1, 3 and 4 were tested to apply on linux 4.20-rc1. Patch 2 is only
 required from linux 4.21 and onwards. Please contact
 matti.vaittinen@fi.rohmeurope.com if you have problems with the patches.
 
@@ -49,10 +53,11 @@ The patches are offered free of charge, "AS IS" without warranty.
 ```
 ---
 
-Matti Vaittinen (3):
+Matti Vaittinen (4):
   regulator: bd718x7: Disallow SW control for critical regulators
   regulator: bd718x7: Go to SNVS instead of READY
   regulator: bd718x7: Support setting DVS buck HW state voltages
+  regulator: bd718x7: Fix the buck1 - 4 default DVS voltages
 
  .../devicetree/bindings/mfd/rohm,bd71837-pmic.txt  |  18 +-
  drivers/regulator/bd718x7-regulator.c              | 478 +++++++++------------

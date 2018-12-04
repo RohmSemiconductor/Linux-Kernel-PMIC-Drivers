@@ -1,0 +1,58 @@
+From 738f96daf352bbf91cae23eeedfa8ffd3ef96052 Mon Sep 17 00:00:00 2001
+From: Matti Vaittinen <matti.vaittinen@fi.rohmeurope.com>
+Date: Tue, 4 Dec 2018 14:01:32 +0200
+Subject: [PATCH 4/4] regulator: bd718x7: Fix the buck1 - 4 default DVS
+ voltages
+
+If the voltages for buck1-4 HW states (run, idle, suspend)
+are not given the driver sets hard coded defaults. Defaults
+should be given as voltages but they were given as register
+values. Thus the default setting at startup fails with error
+prints like:
+
+"[ 0.470421] bd718xx-pmic bd718xx-pmic.2.auto: selector for voltage [20] not found
+[ 0.476194] bd718xx-pmic bd718xx-pmic.2.auto: selector for voltage [20] not found
+[ 0.483772] bd718xx-pmic bd718xx-pmic.2.auto: selector for voltage [20] not found
+[ 0.499269] bd718xx-pmic bd718xx-pmic.2.auto: selector for voltage [30] not found
+[ 0.505202] bd718xx-pmic bd718xx-pmic.2.auto: selector for voltage [20] not found
+[ 0.513683] bd718xx-pmic bd718xx-pmic.2.auto: selector for voltage [30] not found
+[ 0.528991] bd718xx-pmic bd718xx-pmic.2.auto: selector for voltage [30] not found"
+
+Correct the default values to be voltages, not the register
+values.
+
+Signed-off-by: Matti Vaittinen <matti.vaittinen@fi.rohmeurope.com>
+---
+ drivers/regulator/bd718x7-regulator.c | 14 +++++++-------
+ 1 file changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/regulator/bd718x7-regulator.c b/drivers/regulator/bd718x7-regulator.c
+index 13f111445576..46a49971eea2 100644
+--- a/drivers/regulator/bd718x7-regulator.c
++++ b/drivers/regulator/bd718x7-regulator.c
+@@ -15,15 +15,15 @@
+ #include <linux/regulator/of_regulator.h>
+ #include <linux/slab.h>
+ 
+-#define BUCK1_RUN_DEFAULT               0x14
+-#define BUCK1_SUSP_DEFAULT              0x14
+-#define BUCK1_IDLE_DEFAULT              0x14
++#define BUCK1_RUN_DEFAULT               900000
++#define BUCK1_SUSP_DEFAULT              900000
++#define BUCK1_IDLE_DEFAULT              900000
+ 
+-#define BUCK2_RUN_DEFAULT               0x1E
+-#define BUCK2_IDLE_DEFAULT              0x14
++#define BUCK2_RUN_DEFAULT               1000000
++#define BUCK2_IDLE_DEFAULT              900000
+ 
+-#define BUCK3_RUN_DEFAULT               0x1E
+-#define BUCK4_RUN_DEFAULT               0x1E
++#define BUCK3_RUN_DEFAULT               1000000
++#define BUCK4_RUN_DEFAULT               1000000
+ 
+ #define BD71837_DVS_BUCK_NUM		4	/* Buck 1/2/3/4 support DVS */
+ #define BD71837_DVS_RUN_IDLE_SUSP	3
+-- 
+2.14.3
+
