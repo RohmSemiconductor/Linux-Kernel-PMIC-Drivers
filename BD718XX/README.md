@@ -18,9 +18,11 @@ https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
 https://kernel.googlesource.com/pub/scm/linux/kernel/git/torvalds/linux.git
 ```
 
-The 32.768 Hz clock gate driver is not yet in the official linux tree. 
-You can get the support for controlling the clock using the [common clock framework](https://www.kernel.org/doc/Documentation/clk.txt)
-by applying patches 1,2,3 and 10 from [this](https://lore.kernel.org/linux-clk/20181204114527.GC31204@localhost.localdomain/T/#t) patch series.
+The 32.768 Hz clock gate driver is not yet in the official linux release. It is currently included in Linus Torvald's tree and will get included in linux release 4.21 if there is no surprizes. Meanwhile you can get the support for controlling the clock using the [common clock framework](https://www.kernel.org/doc/Documentation/clk.txt)
+by applying these patches:
+[clk: Add kerneldoc to managed of-provider interfaces](https://patchwork.kernel.org/patch/10711567/),
+[clk: of-provider: look at parent if registered device has no provider info](https://patchwork.kernel.org/patch/10711571/),
+[clk: bd718x7: Initial support for ROHM bd71837/bd71847 PMIC clock ](https://patchwork.kernel.org/patch/10717793/).
 
 There is also additional patches for BD71837 with i.MX8. Please see:
 https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD718XX/imx8-patches
