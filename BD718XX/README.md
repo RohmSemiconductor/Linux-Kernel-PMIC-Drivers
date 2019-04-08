@@ -1,4 +1,6 @@
-# ROHM Power Management IC BD71837 and BD71847 Linux device driver.
+# ROHM Power Management IC BD71837 and BD71847 device drivers.
+
+## Linux:
 
 Device driver for BD71837 and BD71847 can be found from the Linux community kernel.
 
@@ -21,19 +23,27 @@ https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
 https://kernel.googlesource.com/pub/scm/linux/kernel/git/torvalds/linux.git
 ```
 
-There is also additional patches for BD71837 / BD71847 with i.MX8. Please see:
-https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD718XX/imx8-patches
-Main difference between community driver and i.MX8 specific driver is
-that on i.MX8 patch set we support keeping i.MX8 SNVS domain powered
-after resets at a cost of disallowing enable/disable control for most
-of the regulators.
-
-The i.MX8 SNVS state support for BD71837 and BD71847 will be included
-in mainline kernel at release 5.1. The change is already available in the
-linux-next and Mark Brown's regulator trees.
+The i.MX8 SNVS state support for BD71837 and BD71847 was included
+in mainline kernel at release 5.1-rc1.
 
 Configuration options may want to enable are:
 CONFIG_MFD_ROHM_BD718XX for BD71837/BD71847 core
 CONFIG_REGULATOR_BD718XX for regulator control
 CONFIG_COMMON_CLK_BD718XX for clock gate control
 CONFIG_KEYBOARD_GPIO for reset induced by short press of power button.
+
+## Das u-Boot:
+
+The experimental u-Boot driver for BD71837 and BD71847 is sent to u-Boot mail list.
+Patches can be found from
+
+
+Cover-letter email:
+```
+https://lists.denx.de/pipermail/u-boot/2019-April/364314.html
+```
+Patches:
+```
+https://patchwork.ozlabs.org/patch/1080860/
+https://patchwork.ozlabs.org/patch/1080863/
+```
