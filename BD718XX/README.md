@@ -7,7 +7,9 @@ Device driver for BD71837 and BD71847 can be found from the Linux community kern
 The driver has been included in the Linux kernel since the Linux version
 4.19-rc1. Please note that few crucial patches has been applied since then.
 It is highly recommended to use driver included in the Linux kernel version
-5.0-rc1 or later.
+5.0-rc1 or later. On i.MX8 setups it is suggested to use Linux 5.1-rc1 or later because
+the i.MX8 SNVS state support for BD71837 and BD71847 was included
+in mainline kernel at release 5.1-rc1.
 
 Linux kernel can be obtained from:
 
@@ -23,8 +25,7 @@ https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
 https://kernel.googlesource.com/pub/scm/linux/kernel/git/torvalds/linux.git
 ```
 
-The i.MX8 SNVS state support for BD71837 and BD71847 was included
-in mainline kernel at release 5.1-rc1.
+
 
 Configuration options may want to enable are:
 CONFIG_MFD_ROHM_BD718XX for BD71837/BD71847 core
