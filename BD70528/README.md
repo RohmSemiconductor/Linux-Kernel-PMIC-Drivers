@@ -42,11 +42,11 @@ https://kernel.googlesource.com/pub/scm/linux/kernel/git/torvalds/linux.git
 ```
 
 Configuration options may want to enable are:
-CONFIG_MFD_ROHM_BD70528 for BD70528 core
-CONFIG_REGULATOR_BD70528 for regulator control
-CONFIG_COMMON_CLK_BD718XX for clock gate control
-CONFIG_GPIO_BD70528 for GPIO
-CONFIG_RTC_DRV_BD70528 for RTC
-CONFIG_CHARGER_BD70528 for power supply
-CONFIG_BD70528_WATCHDOG for watchdog
+* CONFIG_MFD_ROHM_BD70528 for BD70528 core
+* CONFIG_REGULATOR_BD70528 for regulator control
+* CONFIG_COMMON_CLK_BD718XX for clock gate control
+* CONFIG_GPIO_BD70528 for GPIO
+* CONFIG_RTC_DRV_BD70528 for RTC
+* CONFIG_CHARGER_BD70528 for power supply
+* CONFIG_BD70528_WATCHDOG for watchdog
 
