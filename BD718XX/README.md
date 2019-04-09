@@ -28,10 +28,10 @@ https://kernel.googlesource.com/pub/scm/linux/kernel/git/torvalds/linux.git
 
 
 Configuration options may want to enable are:
-CONFIG_MFD_ROHM_BD718XX for BD71837/BD71847 core
-CONFIG_REGULATOR_BD718XX for regulator control
-CONFIG_COMMON_CLK_BD718XX for clock gate control
-CONFIG_KEYBOARD_GPIO for reset induced by short press of power button.
+* CONFIG_MFD_ROHM_BD718XX for BD71837/BD71847 core
+* CONFIG_REGULATOR_BD718XX for regulator control
+* CONFIG_COMMON_CLK_BD718XX for clock gate control
+* CONFIG_KEYBOARD_GPIO for reset induced by short press of power button.
 
 ## Das u-Boot:
 
