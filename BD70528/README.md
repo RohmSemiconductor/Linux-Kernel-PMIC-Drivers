@@ -1,10 +1,8 @@
 # ROHM Power Management IC BD70528 Linux device drivers.
 
-Device driver for BD70528 is submitted to the Linux community kernel.
+The device driver for BD70528 is included in the Linux community kernel.
 
-The regulator patches are included in Linux 5.1-rc1. They do require
-the MFD patches to be functional. Further features such as GPIO,
-RTC, watchdog, battery charger and clock have own patches (see below).
+The complete set of drivers for BD70528 was first included in Linux 5.3-rc1. 
 
 Please note that the driver is intended to be used in use-cases where
 processor running linux is directly connected to PMIC via i2c and PMIC
@@ -15,17 +13,6 @@ towards Linux) - if PMIC control is required from Linux. Thus, for the
 basic i.MX7ULP cases you probably have better support on NXP BSP - and
 from linux side the NXP's pfuze1550-rpmsg driver should work nicely or
 require only minor modifications.
-
-BD70528 Linux driver patches (based on Linux 5.1-rc2):
-* [explanatory cover-letter](https://lore.kernel.org/lkml/cover.1554371464.git.matti.vaittinen@fi.rohmeurope.com/)
-* [preparatory header split](https://lkml.org/lkml/diff/2019/4/4/957/1)
-* [MFD core](https://lkml.org/lkml/diff/2019/4/4/960/1)
-* [clock](https://lkml.org/lkml/diff/2019/4/4/963/1)
-* [dt-binding document](https://lkml.org/lkml/diff/2019/4/4/967/1)
-* [GPIO](https://lkml.org/lkml/diff/2019/4/4/971/1)
-* [RTC](https://lkml.org/lkml/diff/2019/4/4/974/1)
-* [power supply](https://lkml.org/lkml/diff/2019/4/4/975/1)
-* [watchdog](https://lkml.org/lkml/diff/2019/4/4/977/1)
 
 Linux kernel can be obtained from:
 
