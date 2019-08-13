@@ -25,8 +25,6 @@ https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
 https://kernel.googlesource.com/pub/scm/linux/kernel/git/torvalds/linux.git
 ```
 
-
-
 Configuration options may want to enable are:
 * CONFIG_MFD_ROHM_BD718XX for BD71837/BD71847 core
 * CONFIG_REGULATOR_BD718XX for regulator control
@@ -35,16 +33,18 @@ Configuration options may want to enable are:
 
 ## Das u-Boot:
 
-The experimental u-Boot driver for BD71837 and BD71847 is sent to u-Boot mail list.
-Patches can be found from
+Limited u-Boot regulator driver for BD71837 and BD71847 is included in the official Denx u-boot. First u-boot release containing the driver is the 1.st release candidate for 2019.10 (version u-boot-2019.10-rc1). The u-boot driver works with pmic device-tree which is compatible with dt-documentation included in the Linux source code but a few of the properties are ignored. 
 
+The Denx u-boot:
 
-Cover-letter email:
 ```
-https://lists.denx.de/pipermail/u-boot/2019-April/364314.html
+https://www.denx.de/wiki/U-Boot/SourceCode
+ftp://ftp.denx.de/pub/u-boot/
 ```
-Patches:
+
+The linux dt-documentations
+
 ```
-https://patchwork.ozlabs.org/patch/1080860/
-https://patchwork.ozlabs.org/patch/1080863/
+https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/Documentation/devicetree/bindings/mfd/rohm,bd71837-pmic.txt
+https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/Documentation/devicetree/bindings/regulator/rohm,bd71837-regulator.txt
 ```
