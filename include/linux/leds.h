@@ -13,6 +13,7 @@
 #include <linux/kernfs.h>
 #include <linux/list.h>
 #include <linux/mutex.h>
+#include <linux/property.h>
 #include <linux/rwsem.h>
 #include <linux/spinlock.h>
 #include <linux/timer.h>
@@ -20,6 +21,7 @@
 
 struct device;
 struct led_pattern;
+struct led_classdev;
 /*
  * LED Core
  */
@@ -31,8 +33,47 @@ enum led_brightness {
 	LED_FULL	= 255,
 };
 
+struct led_properties {
+	u32		color;
+	bool		color_present;
+	const char	*function;
+	u32		func_enum;
+	bool		func_enum_present;
+	const char	*label;
+	const char	*default_trigger;
+	const char	*default_state;
+	bool		brightness_keep;
+};
+
+struct led_fw_match_property {
+	const char *name;	/* Name of the property to match */
+	void *raw_val;		/* Raw property value as present in fwnode */
+	void *intval;		/* Property value if 8,16,32 or 64bit integer */
+	size_t size;		/* Size of value in bytes */
+};
+
 struct led_init_data {
-	/* device fwnode handle */
+	/*
+	 * If DT binding dictates the node name the driver can fill of_match
+	 * corresponding to node name describing this LED. If fwnode is given
+	 * the match is searched from it's child nodes. If not, the match is
+	 * searched from device's own child nodes.
+	 */
+	const char *of_match;
+	/*
+	 * If fwnode contains property with known value the driver can specify
+	 * correct propertty-value pair here to do the matching. This has higher
+	 * priority than of_match. If fwnode is given the match is searched
+	 * from it's child nodes. If not match is searched from device's
+	 * own child nodes.
+	 */
+	struct led_fw_match_property match_property;
+	/*
+	 * device fwnode handle. If of_match or led_compatible are not given
+	 * this is used for LED as given. If of_match or led_compatible are
+	 * given then this is used as a parent node whose child nodes are
+	 * scanned for given match.
+	 */
 	struct fwnode_handle *fwnode;
 	/*
 	 * default <color:function> tuple, for backward compatibility
@@ -53,9 +94,19 @@ struct led_init_data {
 	 * set it to true
 	 */
 	bool devname_mandatory;
+	/*
+	 * Callback which a LED driver can register if it has own non-standard
+	 * DT properties. Core calls this with the located DT node during
+	 * class_device registration
+	 */
+	int (*of_parse_cb)(struct led_classdev *ld, struct fwnode_handle *fw,
+			    struct led_properties *props);
+	 /* LED core should parse and handle the common firmware properties */
+	bool parse_fwnode;
 };
 
 struct led_classdev {
+	struct led_init_data	*init_data;
 	const char		*name;
 	enum led_brightness	 brightness;
 	enum led_brightness	 max_brightness;
@@ -148,6 +199,7 @@ struct led_classdev {
 
 	/* Ensures consistent access to the LED Flash Class device */
 	struct mutex		led_access;
+	bool			fwnode_owned;
 };
 
 /**
@@ -299,6 +351,7 @@ void led_sysfs_enable(struct led_classdev *led_cdev);
  * led_compose_name - compose LED class device name
  * @dev: LED controller device object
  * @init_data: the LED class device initialization data
+ * @props: LED properties as parsed from fwnode.
  * @led_classdev_name: composed LED class device name
  *
  * Create LED class device name basing on the provided init_data argument.
@@ -308,7 +361,8 @@ void led_sysfs_enable(struct led_classdev *led_cdev);
  * Returns: 0 on success or negative error value on failure
  */
 int led_compose_name(struct device *dev, struct led_init_data *init_data,
-		     char *led_classdev_name);
+			    struct led_properties *props,
+			    char *led_classdev_name);
 
 /**
  * led_sysfs_is_disabled - check if LED sysfs interface is disabled
@@ -320,6 +374,33 @@ static inline bool led_sysfs_is_disabled(struct led_classdev *led_cdev)
 {
 	return led_cdev->flags & LED_SYSFS_DISABLE;
 }
+
+/**
+ * led_get_fwnode - find fwnode matching given LED init data
+ * @parent: LED controller device this LED is driven by
+ * @init_data: the LED class device initialization data
+ *
+ * Find the fw node matching given LED init data.
+ * NOTE: Function increases refcount for found node. Caller must decrease
+ * refcount using fwnode_handle_put when finished with node.
+ *
+ * Returns: node handle or NULL if matching fw node was not found
+ */
+struct fwnode_handle *led_get_fwnode(struct device *parent,
+				      struct led_init_data *init_data);
+
+/**
+ * led_parse_fwnode_props - parse LED common properties from fwnode
+ * @dev: pointer to LED device.
+ * @fwnode: LED node containing the properties
+ * @props: structure where found property data is stored.
+ *
+ * Parse the common LED properties from fwnode.
+ *
+ * Returns: 0 on success or negative error value on failure
+ */
+int led_parse_fwnode_props(struct device *dev, struct fwnode_handle *fwnode,
+			   struct led_properties *props);
 
 /*
  * LED Triggers
@@ -481,15 +562,6 @@ struct led_info {
 struct led_platform_data {
 	int		num_leds;
 	struct led_info	*leds;
-};
-
-struct led_properties {
-	u32		color;
-	bool		color_present;
-	const char	*function;
-	u32		func_enum;
-	bool		func_enum_present;
-	const char	*label;
 };
 
 struct gpio_desc;

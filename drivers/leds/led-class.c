@@ -235,6 +235,32 @@ static int led_classdev_next_name(const char *init_name, char *name,
 	return i;
 }
 
+static void led_add_props(struct led_classdev *ld, struct led_properties *props)
+{
+	if (props->default_trigger)
+		ld->default_trigger = props->default_trigger;
+	/*
+	 * According to binding docs the LED is by-default turned OFF unless
+	 * default_state is used to indicate it should be ON or that state
+	 * should be kept as is
+	 */
+	if (props->default_state) {
+		ld->brightness = LED_OFF;
+		if (!strcmp(props->default_state, "on")) {
+			if (!ld->max_brightness)
+				ld->brightness = LED_FULL;
+			else
+				ld->brightness = ld->max_brightness;
+	/*
+	 * We probably should not call the brightness_get prior calling
+	 * the of_parse_cb if one is provided.
+	 * Add a flag to advertice that state should be queried and kept as-is.
+	 */
+		} else if (!strcmp(props->default_state, "keep"))
+			props->brightness_keep = true;
+	}
+}
+
 /**
  * led_classdev_register_ext - register a new object of led_classdev class
  *			       with init data.
@@ -251,22 +277,69 @@ int led_classdev_register_ext(struct device *parent,
 	char final_name[LED_MAX_NAME_SIZE];
 	const char *proposed_name = composed_name;
 	int ret;
+	struct led_properties props = {0};
+	struct fwnode_handle *fw;
 
+	/*
+	 * We don't try getting the name based on DT node if init-data is not
+	 * given. We could see if we find LED properties from the device's node
+	 * but that might change LED names for old users of
+	 * led_classdev_register who have been providing the LED name in
+	 * cdev->name. So we seek fwnode for names only if init_data is given
+	 */
 	if (init_data) {
+		led_cdev->init_data = init_data;
 		if (init_data->devname_mandatory && !init_data->devicename) {
 			dev_err(parent, "Mandatory device name is missing");
 			return -EINVAL;
 		}
-		ret = led_compose_name(parent, init_data, composed_name);
+
+		fw = led_get_fwnode(parent, init_data);
+		if (IS_ERR(fw))
+			return PTR_ERR(fw);
+
+		if (fw) {
+			/*
+			 * We did increase refcount for fwnode. Let's set a flag
+			 * so we can decrease it during deregistration
+			 */
+			led_cdev->fwnode_owned = true;
+
+			ret = led_parse_fwnode_props(parent, fw, &props);
+			if (ret)
+				goto err_out;
+
+			if (init_data->of_parse_cb)
+				ret = init_data->of_parse_cb(led_cdev, fw,
+							     &props);
+			if (ret < 0)
+				goto err_out;
+
+			/*
+			 * Handle the common LED properties only for drivers
+			 * that explicitly request it. This allows us to test
+			 * and convert drivers to utilize common LED parsing one
+			 * by one.
+			 */
+			if (init_data->parse_fwnode)
+				led_add_props(led_cdev, &props);
+
+		} else {
+			led_cdev->fwnode_owned = false;
+		}
+		ret = led_compose_name(parent, init_data, &props,
+				       composed_name);
 		if (ret < 0)
-			return ret;
+			goto err_out;
 	} else {
 		proposed_name = led_cdev->name;
+		led_cdev->fwnode_owned = false;
+		fw = NULL;
 	}
 
 	ret = led_classdev_next_name(proposed_name, final_name, sizeof(final_name));
 	if (ret < 0)
-		return ret;
+		goto err_out;
 
 	mutex_init(&led_cdev->led_access);
 	mutex_lock(&led_cdev->led_access);
@@ -274,14 +347,20 @@ int led_classdev_register_ext(struct device *parent,
 				led_cdev, led_cdev->groups, "%s", final_name);
 	if (IS_ERR(led_cdev->dev)) {
 		mutex_unlock(&led_cdev->led_access);
-		return PTR_ERR(led_cdev->dev);
+		ret = PTR_ERR(led_cdev->dev);
+		goto err_out;
 	}
-	if (init_data && init_data->fwnode)
-		led_cdev->dev->fwnode = init_data->fwnode;
+	if (fw)
+		led_cdev->dev->fwnode = fw;
 
 	if (ret)
 		dev_warn(parent, "Led %s renamed to %s due to name collision",
 				led_cdev->name, dev_name(led_cdev->dev));
+
+	if (props.brightness_keep)
+		if (led_cdev->brightness_get)
+			led_cdev->brightness =
+				 led_cdev->brightness_get(led_cdev);
 
 	if (led_cdev->flags & LED_BRIGHT_HW_CHANGED) {
 		ret = led_add_brightness_hw_changed(led_cdev);
@@ -289,7 +368,7 @@ int led_classdev_register_ext(struct device *parent,
 			device_unregister(led_cdev->dev);
 			led_cdev->dev = NULL;
 			mutex_unlock(&led_cdev->led_access);
-			return ret;
+			goto err_out;
 		}
 	}
 
@@ -322,6 +401,17 @@ int led_classdev_register_ext(struct device *parent,
 			led_cdev->name);
 
 	return 0;
+err_out:
+	if (led_cdev->fwnode_owned) {
+		fwnode_handle_put(fw);
+		/*
+		 * This might not be needed as 'fwnode_owned' is always
+		 * initialized in led_classdev_register_ext
+		 */
+		led_cdev->fwnode_owned = false;
+	}
+
+	return ret;
 }
 EXPORT_SYMBOL_GPL(led_classdev_register_ext);
 
@@ -354,6 +444,15 @@ void led_classdev_unregister(struct led_classdev *led_cdev)
 
 	if (led_cdev->flags & LED_BRIGHT_HW_CHANGED)
 		led_remove_brightness_hw_changed(led_cdev);
+
+	if (led_cdev->fwnode_owned) {
+		fwnode_handle_put(led_cdev->dev->fwnode);
+		/*
+		 * This might not be needed as 'fwnode_owned' is always
+		 * initialized in led_classdev_register_ext
+		 */
+		led_cdev->fwnode_owned = false;
+	}
 
 	device_unregister(led_cdev->dev);
 

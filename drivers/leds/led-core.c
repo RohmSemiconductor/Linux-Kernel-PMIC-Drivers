@@ -365,70 +365,226 @@ void led_sysfs_enable(struct led_classdev *led_cdev)
 }
 EXPORT_SYMBOL_GPL(led_sysfs_enable);
 
-static void led_parse_fwnode_props(struct device *dev,
-				   struct fwnode_handle *fwnode,
-				   struct led_properties *props)
+static int fw_is_match(struct fwnode_handle *fw,
+		       struct led_fw_match_property *mp, void *val)
 {
-	int ret;
+	void *cmp = mp->raw_val;
+	int ret = -EINVAL;
+
+	if (mp->raw_val) {
+		ret = fwnode_property_read_u8_array(fw, mp->name, val,
+						    mp->size);
+	} else if (mp->intval) {
+		cmp = mp->intval;
+		switch (mp->size) {
+		case 1:
+			ret = fwnode_property_read_u8_array(fw, mp->name, val,
+						    mp->size);
+			break;
+		case 2:
+			ret = fwnode_property_read_u16_array(fw, mp->name, val,
+						    mp->size);
+			break;
+		case 4:
+			ret = fwnode_property_read_u32_array(fw, mp->name, val,
+						    mp->size);
+			break;
+		case 8:
+			ret = fwnode_property_read_u64_array(fw, mp->name, val,
+						    mp->size);
+			break;
+		default:
+			return -EINVAL;
+		}
+	}
+	if (!ret && cmp)
+		if (!memcmp(val, cmp, mp->size))
+			return 1;
+
+	return 0;
+}
+/**
+ * led_get_fwnode - find fwnode for led
+ * @parent	LED controller device
+ * @init_data	led init data with match information
+ *
+ * Scans the firmware nodes and returns node matching the given init_data.
+ * NOTE: Function increases refcount for found node. Caller must decrease
+ * refcount using fwnode_handle_put when finished with node.
+ */
+struct fwnode_handle *led_get_fwnode(struct device *parent,
+				      struct led_init_data *init_data)
+{
+	struct fwnode_handle *fw;
+
+	/*
+	 * This should never be called without init data. We could always return
+	 * dev_fwnode() - but then we should pump-up the refcount
+	 */
+	if (!init_data)
+		return NULL;
+
+	/*
+	 * For now we do only do node look-up for drivers which populate
+	 * the new match properties. We could and perhaps should do
+	 * fw = dev_fwnode(parent); if given fwnode is NULL. But in order not to
+	 * break the existing setups we keep the old behaviour and just directly
+	 * use the given init_data->fwnode no matter if it is NULL or not.
+	 */
+
+	if ((!init_data->match_property.name ||
+	     !init_data->match_property.size) && !init_data->of_match)
+		return fwnode_handle_get(init_data->fwnode);
+
+	/* match information was given - do node look-up */
+
+	if (!init_data->fwnode)
+		fw = dev_fwnode(parent);
+	else
+		fw = init_data->fwnode;
+
+	if (!fw)
+		return NULL;
+
+	/*
+	 * Simple things are pretty. I think simplest is to use DT node-name
+	 * for matching the node with LED - same way regulators use the node
+	 * name to match with desc.
+	 *
+	 * This may not work with existing LED DT entries if the node name has
+	 * been freely pickable. In order to this to work the binding doc
+	 * for LED driver should define usable node names.
+	 *
+	 * If this is not working we can define specific match property which
+	 * value we scan and use for matching for LEDs connected to the
+	 * controller.
+	 */
+	if (init_data->match_property.name && init_data->match_property.size) {
+		u8 *val;
+		int ret;
+		struct fwnode_handle *child;
+		struct led_fw_match_property *mp;
+
+		mp = &init_data->match_property;
+
+		val = kzalloc(mp->size, GFP_KERNEL);
+		if (!val)
+			return ERR_PTR(-ENOMEM);
+
+		fwnode_for_each_child_node(fw, child) {
+			ret = fw_is_match(child, mp, val);
+			if (ret > 0) {
+				kfree(val);
+				return child;
+			}
+			if (ret < 0) {
+				dev_err(parent,
+					"invalid fw match. Use raw_val?\n");
+				fwnode_handle_put(child);
+				break;
+			}
+		}
+		kfree(val);
+	}
+	if (init_data->of_match)
+		fw = fwnode_get_named_child_node(fw, init_data->of_match);
+
+	return fw;
+}
+EXPORT_SYMBOL(led_get_fwnode);
+
+int led_parse_fwnode_props(struct device *dev, struct fwnode_handle *fwnode,
+			   struct led_properties *props)
+{
+	int ret = 0;
 
 	if (!fwnode)
-		return;
+		return 0;
 
 	if (fwnode_property_present(fwnode, "label")) {
 		ret = fwnode_property_read_string(fwnode, "label", &props->label);
 		if (ret)
 			dev_err(dev, "Error parsing 'label' property (%d)\n", ret);
-		return;
+		return ret;
 	}
 
+	/*
+	 * Please note, logic changed - if invalid property is found we bail
+	 * early out without parsing the rest of the properties. Originally
+	 * this was the case only for 'label' property. I don't know the
+	 * rationale behind original logic allowing invalid properties to be
+	 * given. If there is a reason then we should reconsider this.
+	 * Intuitively it feels correct to just yell and quit if we hit value we
+	 * don't understand - but intuition may be wrong at times :)
+	 */
 	if (fwnode_property_present(fwnode, "color")) {
 		ret = fwnode_property_read_u32(fwnode, "color", &props->color);
-		if (ret)
+		if (ret) {
 			dev_err(dev, "Error parsing 'color' property (%d)\n", ret);
-		else if (props->color >= LED_COLOR_ID_MAX)
+			return ret;
+		} else if (props->color >= LED_COLOR_ID_MAX) {
 			dev_err(dev, "LED color identifier out of range\n");
-		else
-			props->color_present = true;
+			return ret;
+		}
+		props->color_present = true;
 	}
 
-
-	if (!fwnode_property_present(fwnode, "function"))
-		return;
-
-	ret = fwnode_property_read_string(fwnode, "function", &props->function);
-	if (ret) {
-		dev_err(dev,
-			"Error parsing 'function' property (%d)\n",
-			ret);
+	if (fwnode_property_present(fwnode, "function")) {
+		ret = fwnode_property_read_string(fwnode, "function",
+						  &props->function);
+		if (ret) {
+			dev_err(dev,
+				"Error parsing 'function' property (%d)\n",
+				ret);
+			return ret;
+		}
 	}
 
-	if (!fwnode_property_present(fwnode, "function-enumerator"))
-		return;
-
-	ret = fwnode_property_read_u32(fwnode, "function-enumerator",
-				       &props->func_enum);
-	if (ret) {
-		dev_err(dev,
-			"Error parsing 'function-enumerator' property (%d)\n",
-			ret);
-	} else {
+	if (fwnode_property_present(fwnode, "function-enumerator")) {
+		ret = fwnode_property_read_u32(fwnode, "function-enumerator",
+					       &props->func_enum);
+		if (ret) {
+			dev_err(dev,
+				"Error parsing 'function-enumerator' property (%d)\n",
+				ret);
+			return ret;
+		}
 		props->func_enum_present = true;
 	}
+
+	if (fwnode_property_present(fwnode, "default-state")) {
+		ret = fwnode_property_read_string(fwnode, "default-state",
+						  &props->default_state);
+		if (ret) {
+			dev_err(dev,
+				"Error parsing 'default-state' property (%d)\n",
+				ret);
+			return ret;
+		}
+	}
+
+	if (fwnode_property_present(fwnode, "linux,default-trigger")) {
+		ret = fwnode_property_read_string(fwnode,
+						  "linux,default-trigger",
+						  &props->default_trigger);
+		if (ret)
+			dev_err(dev,
+				"Error parsing 'linux,default-trigger' property (%d)\n",
+				ret);
+	}
+	return ret;
 }
+EXPORT_SYMBOL_GPL(led_parse_fwnode_props);
 
 int led_compose_name(struct device *dev, struct led_init_data *init_data,
-		     char *led_classdev_name)
+		     struct led_properties *props, char *led_classdev_name)
 {
-	struct led_properties props = {};
-	struct fwnode_handle *fwnode = init_data->fwnode;
 	const char *devicename = init_data->devicename;
 
 	if (!led_classdev_name)
 		return -EINVAL;
 
-	led_parse_fwnode_props(dev, fwnode, &props);
-
-	if (props.label) {
+	if (props->label) {
 		/*
 		 * If init_data.devicename is NULL, then it indicates that
 		 * DT label should be used as-is for LED class device name.
@@ -436,23 +592,23 @@ int led_compose_name(struct device *dev, struct led_init_data *init_data,
 		 * the final LED class device name.
 		 */
 		if (!devicename) {
-			strscpy(led_classdev_name, props.label,
+			strscpy(led_classdev_name, props->label,
 				LED_MAX_NAME_SIZE);
 		} else {
 			snprintf(led_classdev_name, LED_MAX_NAME_SIZE, "%s:%s",
-				 devicename, props.label);
+				 devicename, props->label);
 		}
-	} else if (props.function || props.color_present) {
+	} else if (props->function || props->color_present) {
 		char tmp_buf[LED_MAX_NAME_SIZE];
 
-		if (props.func_enum_present) {
+		if (props->func_enum_present) {
 			snprintf(tmp_buf, LED_MAX_NAME_SIZE, "%s:%s-%d",
-				 props.color_present ? led_colors[props.color] : "",
-				 props.function ?: "", props.func_enum);
+				 props->color_present ? led_colors[props->color] : "",
+				 props->function ?: "", props->func_enum);
 		} else {
 			snprintf(tmp_buf, LED_MAX_NAME_SIZE, "%s:%s",
-				 props.color_present ? led_colors[props.color] : "",
-				 props.function ?: "");
+				 props->color_present ? led_colors[props->color] : "",
+				 props->function ?: "");
 		}
 		if (init_data->devname_mandatory) {
 			snprintf(led_classdev_name, LED_MAX_NAME_SIZE, "%s:%s",
@@ -468,11 +624,19 @@ int led_compose_name(struct device *dev, struct led_init_data *init_data,
 		}
 		snprintf(led_classdev_name, LED_MAX_NAME_SIZE, "%s:%s",
 			 devicename, init_data->default_label);
-	} else if (is_of_node(fwnode)) {
-		strscpy(led_classdev_name, to_of_node(fwnode)->name,
-			LED_MAX_NAME_SIZE);
-	} else
-		return -EINVAL;
+	} else {
+		struct fwnode_handle *fwnode = led_get_fwnode(dev, init_data);
+		int ret = -EINVAL;
+
+		if (is_of_node(fwnode)) {
+			ret = 0;
+			strscpy(led_classdev_name, to_of_node(fwnode)->name,
+				LED_MAX_NAME_SIZE);
+		}
+		fwnode_handle_put(fwnode);
+
+		return ret;
+	}
 
 	return 0;
 }
