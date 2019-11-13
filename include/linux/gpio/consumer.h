@@ -103,6 +103,11 @@ struct gpio_descs *__must_check devm_gpiod_get_array(struct device *dev,
 struct gpio_descs *__must_check
 devm_gpiod_get_array_optional(struct device *dev, const char *con_id,
 			      enum gpiod_flags flags);
+struct gpio_descs *__must_check
+devm_gpiod_get_parent_array(struct device *dev,
+			    const char *con_id,
+			    enum gpiod_flags flags);
+
 void devm_gpiod_put(struct device *dev, struct gpio_desc *desc);
 void devm_gpiod_unhinge(struct device *dev, struct gpio_desc *desc);
 void devm_gpiod_put_array(struct device *dev, struct gpio_descs *descs);

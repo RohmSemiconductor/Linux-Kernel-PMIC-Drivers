@@ -270,6 +270,35 @@ struct gpio_desc *__must_check devm_gpiod_get_index_optional(struct device *dev,
 }
 EXPORT_SYMBOL_GPL(devm_gpiod_get_index_optional);
 
+static struct gpio_descs *__must_check
+devm_gpiod_get_array_common(struct device *gpiodev,
+			    struct device *managed,
+			    const char *con_id,
+			    enum gpiod_flags flags)
+{
+	struct gpio_descs **dr;
+	struct gpio_descs *descs;
+
+	dr = devres_alloc(devm_gpiod_release_array,
+			  sizeof(struct gpio_descs *), GFP_KERNEL);
+	if (!dr)
+		return ERR_PTR(-ENOMEM);
+
+	descs = gpiod_get_array(gpiodev, con_id, flags);
+	if (IS_ERR(descs)) {
+		devres_free(dr);
+		return descs;
+	}
+
+	*dr = descs;
+	if (managed)
+		devres_add(managed, dr);
+	else
+		devres_add(gpiodev, dr);
+
+	return descs;
+}
+
 /**
  * devm_gpiod_get_array - Resource-managed gpiod_get_array()
  * @dev:	GPIO consumer
@@ -284,26 +313,32 @@ struct gpio_descs *__must_check devm_gpiod_get_array(struct device *dev,
 						     const char *con_id,
 						     enum gpiod_flags flags)
 {
-	struct gpio_descs **dr;
-	struct gpio_descs *descs;
-
-	dr = devres_alloc(devm_gpiod_release_array,
-			  sizeof(struct gpio_descs *), GFP_KERNEL);
-	if (!dr)
-		return ERR_PTR(-ENOMEM);
-
-	descs = gpiod_get_array(dev, con_id, flags);
-	if (IS_ERR(descs)) {
-		devres_free(dr);
-		return descs;
-	}
-
-	*dr = descs;
-	devres_add(dev, dr);
-
-	return descs;
+	return devm_gpiod_get_array_common(dev, NULL, con_id, flags);
 }
 EXPORT_SYMBOL_GPL(devm_gpiod_get_array);
+
+/**
+ * devm_gpiod_get_parent_array - Resource-managed gpiod_get_array for subdevices
+ * @dev:	Managed device whose parent is the GPIO consumer
+ * @con_id:	function within the GPIO consumer
+ * @flags:	optional GPIO initialization flags
+ *
+ * Managed gpiod_get_array() for subdevices. This function is intended to be
+ * used by MFD sub-devices whose GPIO bindings are in parent (MFD) device but
+ * whose GPIO reservation should last only for the dub-device life time.
+ * Returns EINVAL if no parent device is found. Rest of the behaviour and
+ * return values are as documented for gpiod_get_array()
+ */
+struct gpio_descs *__must_check
+devm_gpiod_get_parent_array(struct device *dev,
+			    const char *con_id,
+			    enum gpiod_flags flags)
+{
+	if (!dev | !dev->parent)
+		return ERR_PTR(-EINVAL);
+	return devm_gpiod_get_array_common(dev->parent, dev, con_id, flags);
+}
+EXPORT_SYMBOL_GPL(devm_gpiod_get_parent_array);
 
 /**
  * devm_gpiod_get_array_optional - Resource-managed gpiod_get_array_optional()

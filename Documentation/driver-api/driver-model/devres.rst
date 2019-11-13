@@ -270,6 +270,7 @@ GPIO
   devm_gpiod_get_index()
   devm_gpiod_get_index_optional()
   devm_gpiod_get_optional()
+  devm_gpiod_get_parent_array()
   devm_gpiod_put()
   devm_gpiod_unhinge()
   devm_gpiochip_add_data()
