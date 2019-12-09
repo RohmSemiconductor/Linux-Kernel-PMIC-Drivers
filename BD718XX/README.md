@@ -1,8 +1,8 @@
-# ROHM Power Management IC BD71837 and BD71847 device drivers.
+# ROHM Power Management IC BD71837, BD71847 and BD71850 device drivers.
 
 ## Linux:
 
-Device driver for BD71837 and BD71847 can be found from the Linux community kernel.
+Device driver for BD71837, BD71847 (and BD71850) can be found from the Linux community kernel.
 
 The driver has been included in the Linux kernel since the Linux version
 4.19-rc1. Please note that few crucial patches has been applied since then.
@@ -10,6 +10,13 @@ It is highly recommended to use driver included in the Linux kernel version
 5.0-rc1 or later. On i.MX8 setups it is suggested to use Linux 5.1-rc1 or later because
 the i.MX8 SNVS state support for BD71837 and BD71847 was included
 in mainline kernel at release 5.1-rc1.
+
+Please not that there is no own device-tree compatible for BD71850. The BD71850 can be
+described using exactly same device-tree bindings as BD71847. Please use
+
+compatible = "rohm,bd71847";
+
+also for BD71850.
 
 Linux kernel can be obtained from:
 
@@ -33,7 +40,7 @@ Configuration options may want to enable are:
 
 ## Das u-Boot:
 
-Limited u-Boot regulator driver for BD71837 and BD71847 is included in the official Denx u-boot. First u-boot release containing the driver is the 1.st release candidate for 2019.10 (version u-boot-2019.10-rc1). The u-boot driver works with pmic device-tree which is compatible with dt-documentation included in the Linux source code but a few of the properties are ignored. 
+Limited u-Boot regulator driver for BD71837 and BD71847 is included in the official Denx u-boot. First u-boot release containing the driver is the 1.st release candidate for 2019.10 (version u-boot-2019.10-rc1). The u-boot driver works with pmic device-tree which is compatible with dt-documentation included in the Linux source code but a few of the properties are ignored. BD71850 can be used with same u-boot driver using the BD71847 device-tree bindings.
 
 The Denx u-boot:
 
