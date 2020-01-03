@@ -701,6 +701,15 @@ config CHARGER_BD70528
 	 information and altering charger configurations from charger
 	 block of the ROHM BD70528 Power Management IC.
 
+config POWER_BD71828
+	tristate "Power-supply driver for ROHM BD71828 PMIC"
+	depends on MFD_ROHM_BD71828
+	help
+	  Say Y here to enable support for charger, battery and fuel gauge
+	  in ROHM BD71827 and ROHM BD71828 power management ICs. This driver
+	  gets various bits of information about battery and charger states
+	  and also implements fuel gauge based on coulomb counters on PMIC.
+
 config CHARGER_WILCO
 	tristate "Wilco EC based charger for ChromeOS"
 	depends on WILCO_EC
