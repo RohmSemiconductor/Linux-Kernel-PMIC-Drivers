@@ -100,6 +100,7 @@ static int bd71828_led_probe(struct platform_device *pdev)
  */
 static const struct of_device_id bd71828_dt_match[] __used = {
 	{ .compatible = "rohm,bd71828-leds" },
+	{ .compatible = "rohm,bd71878-leds" },
 	{ }
 };
 MODULE_DEVICE_TABLE(of, bd71828_dt_match);

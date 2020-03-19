@@ -61,10 +61,14 @@
 
 #define JITTER_DEFAULT			3000		/* hope 3s is enough */
 #define JITTER_REPORT_CAP		10000		/* 10 seconds */
-#define BATTERY_CAP_MAH_DEFAULT	910
+#define BATTERY_CAP_MAH_DEFAULT_28	910
+#define BATTERY_CAP_MAH_DEFAULT_78	910
+static int BATTERY_CAP_MAH_DEFAULT = BATTERY_CAP_MAH_DEFAULT_28;
 #define MAX_VOLTAGE_DEFAULT		ocv_table_default[0]
-#define MIN_VOLTAGE_DEFAULT		3400000
+#define MIN_VOLTAGE_DEFAULT_28		3400000
+#define MIN_VOLTAGE_DEFAULT_78		3200000
 #define THR_VOLTAGE_DEFAULT		4100000
+static int MIN_VOLTAGE_DEFAULT = MIN_VOLTAGE_DEFAULT_28;
 #define MAX_CURRENT_DEFAULT		890000		/* uA */
 #define AC_NAME					"bd71827_ac"
 #define BAT_NAME				"bd71827_bat"
@@ -93,14 +97,28 @@
 #define THR_RELAX_CURRENT_DEFAULT	5		/* mA */
 #define THR_RELAX_TIME_DEFAULT		(60 * 60)	/* sec. */
 
-#define DGRD_CYC_CAP_DEFAULT		26	/* 1 micro Ah unit */
+#define DGRD_CYC_CAP_DEFAULT_28		26	/* 1 micro Ah unit */
+#define DGRD_CYC_CAP_DEFAULT_78		15	/* 1 micro Ah unit */
+static int DGRD_CYC_CAP_DEFAULT = DGRD_CYC_CAP_DEFAULT_28;
 
-#define DGRD_TEMP_H_DEFAULT			45	/* 1 degrees C unit */
-#define DGRD_TEMP_M_DEFAULT			25	/* 1 degrees C unit */
-#define DGRD_TEMP_L_DEFAULT			5	/* 1 degrees C unit */
+#define DGRD_TEMP_H_28			45	/* 1 degrees C unit */
+#define DGRD_TEMP_M_28			25	/* 1 degrees C unit */
+#define DGRD_TEMP_L_28			5	/* 1 degrees C unit */
+
+#define DGRD_TEMP_H_78			0	/* 1 degrees C unit */
+#define DGRD_TEMP_M_78			0	/* 1 degrees C unit */
+#define DGRD_TEMP_L_78			0	/* 1 degrees C unit */
 #define DGRD_TEMP_VL_DEFAULT		0	/* 1 degrees C unit */
 
-#define SOC_EST_MAX_NUM_DEFAULT 	1
+static int DGRD_TEMP_H_DEFAULT = DGRD_TEMP_H_28;
+static int DGRD_TEMP_M_DEFAULT = DGRD_TEMP_M_28;
+static int DGRD_TEMP_L_DEFAULT = DGRD_TEMP_L_28;
+
+#define DGRD_TEMP_VL_DEFAULT		0	/* 1 degrees C unit */
+
+#define SOC_EST_MAX_NUM_DEFAULT_28 	1
+#define SOC_EST_MAX_NUM_DEFAULT_78 	5
+static int  SOC_EST_MAX_NUM_DEFAULT_78 = SOC_EST_MAX_NUM_DEFAULT_28;
 #define DGRD_TEMP_CAP_H_DEFAULT		(0)	/* 1 micro Ah unit */
 #define DGRD_TEMP_CAP_M_DEFAULT		(1187)	/* 1 micro Ah unit */
 #define DGRD_TEMP_CAP_L_DEFAULT		(5141)	/* 1 micro Ah unit */
@@ -235,8 +253,33 @@ struct pwr_regs pwr_regs_bd71828 = {
 #endif
 };
 
+static int *ocv_table_78[23] = {
+	4200000,
+	4183673,
+	4133087,
+	4088990,
+	4050001,
+	3999386,
+	3969737,
+	3941923,
+	3914141,
+	3876458,
+	3840151,
+	3818242,
+	3803144,
+	3791427,
+	3782452,
+	3774388,
+	3759613,
+	3739858,
+	3713895,
+	3691682,
+	3625561,
+	3278893,
+	1625099
+};
 
-static int ocv_table_default[23] = {
+static int *ocv_table_28[23] = {
 	4200000,
 	4167456,
 	4109781,
@@ -261,6 +304,8 @@ static int ocv_table_default[23] = {
 	3465599,
 	2830610
 };	/* unit 1 micro V */
+
+static int *ocv_table_default = ocv_table_28;
 
 static int soc_table_default[23] = {
 	1000,
@@ -289,7 +334,86 @@ static int soc_table_default[23] = {
 	/* unit 0.1% */
 };
 
-static int vdr_table_h_default[23] = {
+static int vdr_table_h_78[23] = {
+	100,
+	100,
+	101,
+	101,
+	102,
+	102,
+	103,
+	103,
+	104,
+	104,
+	105,
+	105,
+	106,
+	106,
+	107,
+	107,
+	108,
+	108,
+	108,
+	112,
+	136,
+	215,
+	834
+};
+
+static int vdr_table_h_28[23] = {
+	100,
+	100,
+	100,
+	100,
+	100,
+	100,
+	100,
+	100,
+	100,
+	100,
+	100,
+	100,
+	100,
+	100,
+	100,
+	100,
+	100,
+	100,
+	100,
+	100,
+	100,
+	100,
+	100
+};
+static int *vdr_table_h_default = vdr_table_h_28;
+
+static int vdr_table_m_78[23] = {
+        100,
+        100,
+        101,
+        102,
+        104,
+        105,
+        106,
+        107,
+        109,
+        110,
+        111,
+        112,
+        114,
+        115,
+        116,
+        117,
+        118,
+        111,
+        111,
+        118,
+        141,
+        202,
+        526
+};
+
+static int vdr_table_m_28[23] = {
 	100,
 	100,
 	100,
@@ -315,7 +439,35 @@ static int vdr_table_h_default[23] = {
 	100
 };
 
-static int vdr_table_m_default[23] = {
+static int vdr_table_m_default[23] = vdr_table_m_28;
+
+static int vdr_table_l_78[23] = {
+        100,
+        100,
+        102,
+        104,
+        105,
+        107,
+        109,
+        111,
+        113,
+        114,
+        116,
+        118,
+        120,
+        121,
+        123,
+        125,
+        127,
+        132,
+        141,
+        168,
+        249,
+        276,
+        427
+};
+
+static int vdr_table_l_28[23] = {
 	100,
 	100,
 	100,
@@ -341,7 +493,35 @@ static int vdr_table_m_default[23] = {
 	100
 };
 
-static int vdr_table_l_default[23] = {
+static int *vdr_table_l_default = vdr_table_l_28;
+
+static int vdr_table_vl_78[23] = {
+        100,
+        100,
+        102,
+        104,
+        107,
+        109,
+        111,
+        113,
+        115,
+        117,
+        120,
+        122,
+        124,
+        126,
+        128,
+        131,
+        134,
+        144,
+        161,
+        201,
+        284,
+        382,
+        479
+};
+
+static int vdr_table_vl_28[23] = {
 	100,
 	100,
 	100,
@@ -367,31 +547,7 @@ static int vdr_table_l_default[23] = {
 	100
 };
 
-static int vdr_table_vl_default[23] = {
-	100,
-	100,
-	100,
-	100,
-	100,
-	100,
-	100,
-	100,
-	100,
-	100,
-	100,
-	100,
-	100,
-	100,
-	100,
-	100,
-	100,
-	100,
-	100,
-	100,
-	100,
-	100,
-	100
-};
+static int *vdr_table_vl_default = vdr_table_vl_28;
 
 int use_load_bat_params;
 
@@ -1025,7 +1181,7 @@ static int bd71827_adjust_coulomb_count(struct bd71827_power* pwr,
 	int ret;
 
 	ret = bd7182x_read16_himask(pwr, pwr->regs->vbat_rex_avg,
-                                    BD7182x_MASK_VBAT_U, &tmp);
+				    BD7182x_MASK_VBAT_U, &tmp);
 	if (ret)
 		return ret;
 
@@ -1289,7 +1445,7 @@ static int bd71827_update_cycle(struct bd71827_power* pwr,
 	}
 
 	dev_dbg(pwr->mfd->dev, "%s(): charged_coulomb_cnt = 0x%x\n", __func__,
-	        (int)charged_coulomb_cnt);
+		(int)charged_coulomb_cnt);
 	if (charged_coulomb_cnt >= wd->designed_cap) {
 		wd->cycle++;
 		dev_dbg(pwr->mfd->dev,  "Update cycle = %d\n", wd->cycle);
@@ -1735,7 +1891,6 @@ static int bd71827_init_hardware(struct bd71827_power *pwr,
 	wd->designed_cap = battery_cap;
 	wd->full_cap = battery_cap;
 	/* Why BD71827_REG_CC_BATCAP_U is not used? */
-	// bd71827_reg_read16(pwr->mfd, BD71827_REG_CC_BATCAP_U);
 
 	if (r & BD7182x_MASK_CONF_PON) {
 		/* Init HW, when the battery is inserted. */
@@ -1783,9 +1938,6 @@ static int bd71827_init_hardware(struct bd71827_power *pwr,
 					 BD7182x_MASK_WDT_AUTO);
 		if (ret)
 			return ret;
-
-		/* VBAT Low voltage detection Setting, added by John Zhang*/
-		//bd71827_reg_write16(mfd, BD71827_REG_ALM_VBAT_TH_U, VBAT_LOW_TH);
 
 		ret = bd7182x_write16(pwr, pwr->regs->vbat_alm_limit_u,
 				      VBAT_LOW_TH);
@@ -2396,6 +2548,19 @@ static int bd7182x_set_chip_specifics(struct bd71827_power *pwr, int rsens_ohm)
 			pwr->regs = &pwr_regs_bd71827;
 			pwr->get_temp = bd71827_get_temp;
 			dev_warn(pwr->mfd->dev, "BD71817 not tested\n");
+		case ROHM_CHIP_TYPE_BD71878:
+			MIN_VOLTAGE_DEFAULT = MIN_VOLTAGE_DEFAULT_78;
+			ocv_table_default = ocv_table_78;
+			vdr_table_h_default = vdr_table_h_78;
+			vdr_table_m_default = vdr_table_m_78;
+			vdr_table_l_default = vdr_table_l_78;
+			vdr_table_vl_default = vdr_table_vl_78;
+			BATTERY_CAP_MAH_DEFAULT = BATTERY_CAP_MAH_DEFAULT_78;
+			DGRD_CYC_CAP_DEFAULT = DGRD_CYC_CAP_DEFAULT_78;
+			SOC_EST_MAX_NUM_DEFAULT_78 = SOC_EST_MAX_NUM_DEFAULT_78;
+			DGRD_TEMP_H_DEFAULT = DGRD_TEMP_H_78;
+			DGRD_TEMP_M_DEFAULT = DGRD_TEMP_M_78;
+			DGRD_TEMP_L_DEFAULT = DGRD_TEMP_L_78;
 			break;
 		default:
 			dev_err(pwr->mfd->dev, "Unknown PMIC\n");
@@ -2747,12 +2912,13 @@ static int bd71827_power_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static const struct platform_device_id bd718x7_clk_id[] = {
+static const struct platform_device_id bd718x7_id[] = {
 	{ "bd71827-power", ROHM_CHIP_TYPE_BD71827 },
 	{ "bd71828-power", ROHM_CHIP_TYPE_BD71828 },
+	{ "bd71878-power", ROHM_CHIP_TYPE_BD71878 },
 	{ },
 };
-MODULE_DEVICE_TABLE(platform, bd718x7_clk_id);
+MODULE_DEVICE_TABLE(platform, bd718x7_id);
 
 static struct platform_driver bd71827_power_driver = {
 	.driver = {

@@ -17,6 +17,11 @@
 #include <linux/regmap.h>
 #include <linux/types.h>
 
+enum {
+	BD71828,
+	BD71878,
+};
+
 static struct gpio_keys_button button = {
 	.code = KEY_POWER,
 	.gpio = -1,
@@ -33,6 +38,32 @@ static const struct resource rtc_irqs[] = {
 	DEFINE_RES_IRQ_NAMED(BD71828_INT_RTC0, "bd71828-rtc-alm-0"),
 	DEFINE_RES_IRQ_NAMED(BD71828_INT_RTC1, "bd71828-rtc-alm-1"),
 	DEFINE_RES_IRQ_NAMED(BD71828_INT_RTC2, "bd71828-rtc-alm-2"),
+};
+
+/*
+ * We use BD71878 and BD71828 are pretty similar. They can be operated by same
+ * drivers. Let's allow own compatibles though in order to be on a safe side
+ * if we note the driver needs to be modified for the other. Hence we have
+ * these dublicated structs where only difference is the LED compatible.
+ * And currently both LED compatibles hook the same LED driver too. But it
+ * allows us to use correct compatile in LED DT node too.
+ */
+
+static struct mfd_cell bd71878_mfd_cells[] = {
+	{ .name = "bd71828-pmic", },
+	{ .name = "bd71828-gpio", },
+	{ .name = "bd71828-led", .of_compatible = "rohm,bd71878-leds" },
+	{ .name = "bd71828-clk", },
+	{ .name = "bd71828-power", },
+	{
+		.name = "bd71828-rtc",
+		.resources = rtc_irqs,
+		.num_resources = ARRAY_SIZE(rtc_irqs),
+	}, {
+		.name = "gpio-keys",
+		.platform_data = &bd71828_powerkey_data,
+		.pdata_size = sizeof(bd71828_powerkey_data),
+	},
 };
 
 static struct mfd_cell bd71828_mfd_cells[] = {
@@ -276,6 +307,7 @@ static int bd71828_i2c_probe(struct i2c_client *i2c)
 {
 	struct rohm_regmap_dev *chip;
 	struct regmap_irq_chip_data *irq_data;
+	unsigned int chip_type;
 	int ret;
 
 	if (!i2c->irq) {
@@ -314,10 +346,22 @@ static int bd71828_i2c_probe(struct i2c_client *i2c)
 
 	button.irq = ret;
 
-	ret = devm_mfd_add_devices(&i2c->dev, PLATFORM_DEVID_AUTO,
-				   bd71828_mfd_cells,
-				   ARRAY_SIZE(bd71828_mfd_cells), NULL, 0,
-				   regmap_irq_get_domain(irq_data));
+	chip_type = (unsigned int)(uintptr_t)
+		    of_device_get_match_data(&i2c->dev);
+
+	if (chip_type == BD71828)
+		ret = devm_mfd_add_devices(&i2c->dev, PLATFORM_DEVID_AUTO,
+					   bd71828_mfd_cells,
+					   ARRAY_SIZE(bd71828_mfd_cells), NULL,
+					   0, regmap_irq_get_domain(irq_data));
+	else if (chip_type == BD71878)
+		ret = devm_mfd_add_devices(&i2c->dev, PLATFORM_DEVID_AUTO,
+					   bd71878_mfd_cells,
+					   ARRAY_SIZE(bd71828_mfd_cells), NULL,
+					   0, regmap_irq_get_domain(irq_data));
+	else
+		ret = -ENOENT;
+
 	if (ret)
 		dev_err(&i2c->dev, "Failed to create subdevices\n");
 
@@ -325,7 +369,8 @@ static int bd71828_i2c_probe(struct i2c_client *i2c)
 }
 
 static const struct of_device_id bd71828_of_match[] = {
-	{ .compatible = "rohm,bd71828", },
+	{ .compatible = "rohm,bd71828", .data = BD71828 },
+	{ .compatible = "rohm,bd71878", .data = BD71878 },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, bd71828_of_match);
