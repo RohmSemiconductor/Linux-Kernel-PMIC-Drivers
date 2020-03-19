@@ -10,8 +10,8 @@ maintainers:
   - Matti Vaittinen <matti.vaittinen@fi.rohmeurope.com>
 
 description: |
-  This module is part of the ROHM BD71828 MFD device. For more details
-  see Documentation/devicetree/bindings/mfd/rohm,bd71828-pmic.yaml.
+  This module is part of the ROHM BD71828 or BD71878 MFD device. For more
+  details see Documentation/devicetree/bindings/mfd/rohm,bd71828-pmic.yaml.
 
   The LED controller is represented as a sub-node of the PMIC node on the device
   tree.
@@ -22,7 +22,9 @@ select: false
 
 properties:
   compatible:
-    const: rohm,bd71828-leds
+    enum:
+      - rohm,bd71828-leds
+      - rohm,bd71878-leds
 
 patternProperties:
   "^led-[1-2]$":
