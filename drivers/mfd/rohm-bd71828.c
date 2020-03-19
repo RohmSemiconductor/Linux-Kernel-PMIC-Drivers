@@ -369,8 +369,8 @@ static int bd71828_i2c_probe(struct i2c_client *i2c)
 }
 
 static const struct of_device_id bd71828_of_match[] = {
-	{ .compatible = "rohm,bd71828", .data = BD71828 },
-	{ .compatible = "rohm,bd71878", .data = BD71878 },
+	{ .compatible = "rohm,bd71828", .data = (void *)BD71828 },
+	{ .compatible = "rohm,bd71878", .data = (void *)BD71878 },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, bd71828_of_match);
