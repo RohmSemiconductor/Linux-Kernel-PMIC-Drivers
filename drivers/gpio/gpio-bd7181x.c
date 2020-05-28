@@ -23,7 +23,8 @@
 #include <linux/init.h>
 #include <linux/kthread.h>
 #include <linux/irq.h>
-#include <linux/gpio.h>
+//#include <linux/gpio.h>
+#include <linux/gpio/driver.h>
 #include <linux/platform_device.h>
 #include <linux/of.h>
 
@@ -40,7 +41,8 @@ static struct gpio_chip bd7181xgpo_chip;
  */
 static int bd7181xgpo_get(struct gpio_chip *chip, unsigned offset)
 {
-	struct bd7181x *bd7181x = dev_get_drvdata(chip->dev->parent);
+	//struct bd7181x *bd7181x = dev_get_drvdata(chip->gpiodev->dev->parent);
+	struct bd7181x *bd7181x = gpiochip_get_data(chip);
 	int ret = 0;
 
 	ret = bd7181x_reg_read(bd7181x, BD7181X_REG_GPO);
@@ -72,7 +74,8 @@ static int bd7181xgpo_direction_out(struct gpio_chip *chip, unsigned offset,
  */
 static void bd7181xgpo_set(struct gpio_chip *chip, unsigned offset, int value)
 {
-	struct bd7181x *bd7181x = dev_get_drvdata(chip->dev->parent);
+	//struct bd7181x *bd7181x = dev_get_drvdata(chip->gpiodev->dev->parent);
+	struct bd7181x *bd7181x = gpiochip_get_data(chip);
 	int ret;
 	u8 gpoctl;
 
@@ -155,9 +158,12 @@ static int gpo_bd7181x_probe(struct platform_device *pdev)
 
 	bd7181xgpo_chip.ngpio = 2;	/* bd71815/bd71817 have 2 GPO */
 
-	bd7181xgpo_chip.dev = &pdev->dev;
+//	bd7181xgpo_chip.dev = &pdev->dev;
+	bd7181xgpo_chip.parent = pdev->dev.parent;
 
-	ret = gpiochip_add(&bd7181xgpo_chip);
+//	ret = gpiochip_add(&bd7181xgpo_chip);
+	ret = devm_gpiochip_add_data(&pdev->dev, &bd7181xgpo_chip,
+				     bd7181x);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "could not register gpiochip, %d\n", ret);
 		bd7181xgpo_chip.ngpio = 0;
@@ -171,16 +177,6 @@ static int gpo_bd7181x_probe(struct platform_device *pdev)
 	return ret;
 }
 
-/** @brief remove bd7181x gpo device
- * @param pdev platfrom device pointer
- * @retval 0 success
- * @retval negative error number
- */
-static int gpo_bd7181x_remove(struct platform_device *pdev)
-{
-	return gpiochip_remove(&bd7181xgpo_chip);
-}
-
 /* Note:  this hardware lives inside an I2C-based multi-function device. */
 MODULE_ALIAS("platform:bd7181x-gpo");
 
@@ -191,7 +187,6 @@ static struct platform_driver gpo_bd7181x_driver = {
 		.owner	= THIS_MODULE,
 	},
 	.probe		= gpo_bd7181x_probe,
-	.remove		= gpo_bd7181x_remove,
 };
 
 module_platform_driver(gpo_bd7181x_driver);
