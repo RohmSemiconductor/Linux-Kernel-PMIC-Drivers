@@ -2,11 +2,9 @@
 
 ## Linux:
 
+### Community drivers:
+
 Device driver for BD71828/BD71878 has been included in the Linux community kernel v5.6.
-
-<a href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/drivers/mfd/rohm-bd71828.c">BD71828 MFD driver</a>
-
-Additional patches for regulator run-level and LED control as well as for charger/fuel-gauge support have been created but are not in upstream. Please let us know if you are interested in getting them. You can send us an email to matti.vaittinen@fi.rohmeurope.com (patches will be added here as well)
 
 Linux kernel can be obtained from:
 
@@ -21,6 +19,10 @@ git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
 https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
 https://kernel.googlesource.com/pub/scm/linux/kernel/git/torvalds/linux.git
 ```
+
+### Extensions - not fully tested
+
+Here you can find additional patches for regulator run-level and LED control as well as for charger/fuel-gauge support. Please see the branch [stable-v5.4.6](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/stable-v5.4.6). Keep in mind that some GPIO/regulator features have been backported to this stable kernel and no full testing has been performed - you should be prepared to do testing and fixing as needed. Please treat these changes as a implementation reference only.
 
 Configuration options may want to enable are:
 * CONFIG_MFD_ROHM_BD71828 for BD71828 core
