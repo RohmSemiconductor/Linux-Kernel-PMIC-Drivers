@@ -15,10 +15,10 @@ maintainers - but we don't "own" these components or frameworks anymore. You
 get the best possible contacts via the MAINTAINERS file.
 
 ## Contents of this repository
-Yet we occasionally develop something which does not perfectly fit
-to upstream Linux frameworks or policies. It may be something which
-is too product specific or something which requires functionality
-not present in upstream kernels.
+We occasionally develop something which does not perfectly fit into
+the upstream Linux frameworks or policies. This content may include something
+which is too product specific or something which requires functionality not
+present in upstream kernels.
 
 This is the place to look for ROHM POWER IC specific Linux driver extensions.
 Please be aware that these extensions are provided as reference implementation
