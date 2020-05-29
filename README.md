@@ -29,10 +29,8 @@ We know our drivers. We know our HW. We can speed-up your development.
 Interested? Feel free to contact Mr. Koki Okada (koki.okada(at)fi.rohmeurope.com)
 to discuss about co-operation possibilities and project scheduling/prizing/scoping.
 
-* Not upstreamed BD71815AGW PMIC - to be added here (you can ask from matti.vaittinen(at)fi.rohmeurope.com untill added)
+* Not upstreamed - [BD71815AGW PMIC] (https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD71815)
+* ROHM extensions available - [BD71828 / BD71878 PMICs](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD71828)
+* Fully upstreamed - [BD71837 / BD71847 / BD71850 PMICs](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD718XX)
+* Fully upstreamed - [BD70528 PMIC](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD70528)
 * ACPI not upstreamed BD99954 CHARGER - partially tested implementation to be added here (you can ask from matti.vaittinen(at)fi.rohmeurope.com untill added)
-* ROHM extensions available - [BD71828 / BD71878](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD71828)
-* Fully upstreamed - [BD71837 / BD71847 / BD71850](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD718XX)
-* Fully upstreamed - [BD70528](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD70528)
-
-
