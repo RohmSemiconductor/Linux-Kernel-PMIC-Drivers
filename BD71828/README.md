@@ -25,6 +25,8 @@ https://kernel.googlesource.com/pub/scm/linux/kernel/git/torvalds/linux.git
 Here you can find additional patches for regulator run-level and LED control as well as for charger/fuel-gauge support. Please see the branch [stable-v5.4.6](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/stable-v5.4.6). Keep in mind that some GPIO/regulator features have been backported to this stable kernel and no full testing has been performed - you should be prepared to do testing and fixing as needed. Please treat these changes as a implementation reference only.
 
 Configuration options may want to enable are:
+
+```
 * CONFIG_MFD_ROHM_BD71828 for BD71828 core
 * CONFIG_REGULATOR_BD71828 for regulator control
 * CONFIG_COMMON_CLK_BD718XX for clock gate control
