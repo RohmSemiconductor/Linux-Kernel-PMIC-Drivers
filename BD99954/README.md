@@ -1,19 +1,19 @@
 # ROHM BD99954 Charger IC Linux device drivers.
 
 The device driver for BD99954 is sent to Linux community and is - as
-writing of this - present in power-supply tree ifor-next branch (with
+writing of this - present in power-supply tree for-next branch (with
 some corrections in regulators tree). The driver should be merged to
 mainline Linux v5.8.
 
 ## ACPI
-Community driver (as of writing this) does not support ACPI. There is a
+Community driver (as writing of this) does not support ACPI. There is an
 early version of this driver with ACPI support - but it has not been
-actively maintained. It might be safer and cheaper to add ACPI support to
-community kernel. If you need ACPI and don't feel comfortable adding ACPI
-support yourself you can contact Mr. Koki Okada
-(koki.okada(at)fi.rohmeurope.com) to discuss the possibility of us integrating
-the driver to your system. We can also provide you the old development driver
-if requested - but please treat that as a reference design only.
+actively maintained. We can provide it to you but it might be safer
+(and cheaper) to add ACPI support to community kernel.
+
+If you need ACPI and don't feel comfortable adding ACPI support yourself you
+can contact Mr. Koki Okada (koki.okada(at)fi.rohmeurope.com) to discuss the
+possibility of us integrating the driver to your system.
 
 Power-supply Linux development tree:
 ```
