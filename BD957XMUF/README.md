@@ -6,7 +6,7 @@ Device driver for BD9576MUF and BD9573MUF has been submitted to the Linux commun
 The community reviewing process is still ongoing for MFD and Watchdog portions.
 
 Intermediate driver release can be found from [this branch](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/commits/bd9576-rohm)
-Please see the latest commits.
+Please see the commits on top of tag Linux 5.9-rc4.
 
 This page will be updated when drivers are included in the community Linux kernel.
 
