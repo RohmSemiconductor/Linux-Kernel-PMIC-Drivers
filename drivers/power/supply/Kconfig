@@ -9,6 +9,14 @@ menuconfig POWER_SUPPLY
 
 if POWER_SUPPLY
 
+config SW_GAUGE
+	bool "SW gauge"
+	help
+	  Say Y here to enable kernel fuel-gauge which can be used to
+	  compute the remaining state of charge in a battery. The SW gauge
+	  can compensate battery aging and adjust coulomb counter on ICs
+	  based on some battery/charger specific data.
+
 config POWER_SUPPLY_DEBUG
 	bool "Power supply debug"
 	help
