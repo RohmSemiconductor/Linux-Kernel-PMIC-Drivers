@@ -118,7 +118,7 @@ static struct mfd_cell bd71828_mfd_cells[] = {
 	 * BD70528 clock gate are the register address and mask.
 	 */
 	{ .name = "bd71828-clk", },
-	{ .name = "bd71827-power", },
+	{ .name = "bd71828-power", },
 	{
 		.name = "bd71828-rtc",
 		.resources = bd71828_rtc_irqs,
