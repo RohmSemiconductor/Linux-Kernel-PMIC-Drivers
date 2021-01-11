@@ -1,6 +1,6 @@
 # ROHM Power Management IC BD71815 Linux device drivers.
 
-### 01/2021 ROHM mainstream driver 
+### 01/2021 ROHM mainstream driver for BD71815
 
 We decided that it would be beneficial for all if these drivers were available
 in the mainstream Linux community kernel. After few weeks of work, initial
