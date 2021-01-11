@@ -1,5 +1,20 @@
 # ROHM Power Management IC BD71815 Linux device drivers.
 
+### 01/2021 ROHM mainstream driver 
+
+We decided that it would be beneficial for all if these drivers were available
+in the mainstream Linux community kernel. After few weeks of work, initial
+[set of patches](https://lore.kernel.org/lkml/cover.1610110144.git.matti.vaittinen@fi.rohmeurope.com/)
+was sent to the Linux kernel community in order to collect some feedback and
+to initiate the driver's long journey to community kernel :) Please note that
+the driver sent to upstream kernel does not yet contain the power-supply portion
+because the ROHM power-supply driver contains a very IC specific fuel-gauge algorithm
+and this may not fit as such to generic Linux driver. More work is required to
+separate the fuel-gauge computations from IC specific code. We keep working on this
+but can not guarantee the end result yet.
+
+### Reference driver ported on Linux v.4.9.99
+
 A Linux driver for the ROHM BD71815 Power Management IC is available here.
 Please note that this driver has been originally written for an early Linux 4.9
 kernel and has not been actively maintained. Here we have a port to the more
