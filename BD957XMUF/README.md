@@ -6,7 +6,7 @@ Device driver for BD9576MUF and BD9573MUF has been submitted to the Linux commun
 The community reviewing process is still ongoing for MFD and Watchdog portions.
 
 Latst set of patches are [version 7](https://lore.kernel.org/lkml/cover.1611324968.git.matti.vaittinen@fi.rohmeurope.com/)
-This patch set adds also support for receiving warning when regulator voltages go under/over limit
+This patch set adds also support (BD9576 only) for receiving warning when regulator voltages go under/over limit
 or if IC temperature increases beynd a limit. User-specific software can then initiate recovery actions
 before problem gets worse and BD9576 initiates a shutdown to prevent permanent damage.
 
