@@ -5,7 +5,7 @@
 Device driver for BD9576MUF and BD9573MUF has been submitted to the Linux community kernel.
 The community reviewing process is still ongoing for MFD and Watchdog portions.
 
-Latst set of patches are [version 8](https://lore.kernel.org/lkml/cover.1613031055.git.matti.vaittinen@fi.rohmeurope.com/)
+Latest set of patches are [version 8](https://lore.kernel.org/lkml/cover.1613031055.git.matti.vaittinen@fi.rohmeurope.com/)
 
 ### Safety limits and warnings
 The BD9576MUF was designed to support notifying SoC from various problem conditions before problems are so severe they damage the hardware.
