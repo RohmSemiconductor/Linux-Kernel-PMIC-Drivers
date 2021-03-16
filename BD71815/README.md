@@ -21,9 +21,9 @@ I would definitely go with option 1 or 3. The upstream driver is likely to be re
 testing and bug-fixes by others. It is also likely to be ported on new kernel versions.
 The old reference driver below is not maintained.
 
-[upstream patches v3](https://lore.kernel.org/lkml/cover.1615198094.git.matti.vaittinen@fi.rohmeurope.com/)
-[swgauge RFC (no BD71815)](https://lore.kernel.org/lkml/cover.1607085199.git.matti.vaittinen@fi.rohmeurope.com/)
-[swgauge + BD71815 unofficial development version](https://github.com/M-Vaittinen/linux/commits/swgauge-dev)
+- [upstream patches v3](https://lore.kernel.org/lkml/cover.1615198094.git.matti.vaittinen@fi.rohmeurope.com/)
+- [swgauge RFC (no BD71815)](https://lore.kernel.org/lkml/cover.1607085199.git.matti.vaittinen@fi.rohmeurope.com/)
+- [swgauge + BD71815 unofficial development version](https://github.com/M-Vaittinen/linux/commits/swgauge-dev)
 
 
 ### Reference driver ported on Linux v.4.9.99
