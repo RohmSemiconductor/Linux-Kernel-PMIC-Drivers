@@ -1118,6 +1118,19 @@ config GPIO_ARIZONA
 	help
 	  Support for GPIOs on Wolfson Arizona class devices.
 
+config GPIO_BD2657
+	tristate "ROHM BD2657 GPIO support"
+	depends on MFD_ROHM_BD2657
+	help
+	  Support for GPIOs on ROHM BD2657 PMIC. There are two GPIOs
+	  available on the ROHM PMIC in total. The GPIO0 ping can be
+	  configured to be used to inform PMIC HW state or as a GPIO.
+	  The GPIO1 must be enabled by PMIC OTP and will then be located
+	  on PMIC_EN pin. The GPIO1 can only work as an output.
+
+	  This driver can also be built as a module. If so, the module
+	  will be called gpio-bd2657.
+
 config GPIO_BD70528
 	tristate "ROHM BD70528 GPIO support"
 	depends on MFD_ROHM_BD70528
