@@ -16,8 +16,8 @@ limits when PMIC will shut down regulator outputs to protect the hardware from f
 
 ROHM has in co-operation with the Linux kernel community developed Linux regulator framework extension so that these warnings can be fully utilized.
 This extension was first sent as an RFC patch series for further reviewing and improving. The RFC has now stabilized and evolved into proper patch
-series. You can find warning support and BD9576MUF driver which
-emits these notifications [from patch v6](https://lore.kernel.org/lkml/cover.1617789229.git.matti.vaittinen@fi.rohmeurope.com/)
+series. You can find warning support and BD9576MUF driver which emits these notifications from this notification support series
+[patch series v6](https://lore.kernel.org/lkml/cover.1617789229.git.matti.vaittinen@fi.rohmeurope.com/)
 
 This page will be updated when drivers are included in the community Linux kernel.
 
