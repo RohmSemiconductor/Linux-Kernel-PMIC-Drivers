@@ -15,8 +15,9 @@ The PMIC allows configuring per regulator notification limits for over/under vol
 limits when PMIC will shut down regulator outputs to protect the hardware from further damages.
 
 ROHM has in co-operation with the Linux kernel community developed Linux regulator framework extension so that these warnings can be fully utilized.
-This extension is currently sent as an RFC patch series for further reviewing and improving. You can find warning support and BD9576MUF driver which
-emits these notifications [from RFC v3 here](https://lore.kernel.org/lkml/cover.1615454845.git.matti.vaittinen@fi.rohmeurope.com/)
+This extension was first sent as an RFC patch series for further reviewing and improving. The RFC has now stabilized and evolved into proper patch
+series. You can find warning support and BD9576MUF driver which
+emits these notifications [from patch v6](https://lore.kernel.org/lkml/cover.1617789229.git.matti.vaittinen@fi.rohmeurope.com/)
 
 This page will be updated when drivers are included in the community Linux kernel.
 
