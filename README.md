@@ -35,3 +35,5 @@ to discuss about co-operation possibilities and project scheduling/prizing/scopi
 * Fully upstreamed - [BD70528 PMIC](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD70528)
 * Upstreaming ongoing - [BD9576 / BD9573](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD957XMUF)
 * Upstreamed - no ACPI [BD99954 CHARGER](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD99954)
+* Under development - [BD2657](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD2657)
+
