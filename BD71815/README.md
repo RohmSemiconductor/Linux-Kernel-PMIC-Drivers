@@ -21,7 +21,7 @@ I would definitely go with option 1 or 3. The upstream driver is likely to be re
 testing and bug-fixes by others. It is also likely to be ported on new kernel versions.
 The old reference driver below is not maintained.
 
-- [upstream patches v6](https://lore.kernel.org/lkml/cover.1617616855.git.matti.vaittinen@fi.rohmeurope.com/) or [immutable branch in MFD tree](https://git.kernel.org/pub/scm/linux/kernel/git/lee/mfd.git/log/?h=ib-mfd-clk-gpio-regulator-rtc-5.13) - please see the note below
+- [upstream patches v6](https://lore.kernel.org/lkml/cover.1617616855.git.matti.vaittinen@fi.rohmeurope.com/) or [pull request in MFD tree](https://lore.kernel.org/lkml/20210414131158.GN4869@dell/) - please see the dependencies from PR mail or note below
 - [swgauge RFC (no BD71815)](https://lore.kernel.org/lkml/cover.1607085199.git.matti.vaittinen@fi.rohmeurope.com/)
 - [swgauge + BD71815 unofficial development version](https://github.com/M-Vaittinen/linux/commits/swgauge-dev)
 
