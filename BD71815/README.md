@@ -21,13 +21,13 @@ I would definitely go with option 1 or 3. The upstream driver is likely to be re
 testing and bug-fixes by others. It is also likely to be ported on new kernel versions.
 The old reference driver below is not maintained.
 
-- [upstream patches v6](https://lore.kernel.org/lkml/cover.1617616855.git.matti.vaittinen@fi.rohmeurope.com/) - please see note below
+- [upstream patches v6](https://lore.kernel.org/lkml/cover.1617616855.git.matti.vaittinen@fi.rohmeurope.com/) or [immutable brancg in MFD tree](https://git.kernel.org/pub/scm/linux/kernel/git/lee/mfd.git/log/?h=ib-mfd-clk-gpio-regulator-rtc-5.13) - please see the note below
 - [swgauge RFC (no BD71815)](https://lore.kernel.org/lkml/cover.1607085199.git.matti.vaittinen@fi.rohmeurope.com/)
 - [swgauge + BD71815 unofficial development version](https://github.com/M-Vaittinen/linux/commits/swgauge-dev)
 
 #### Upstream patch v6 note:
 
-The patch set v6 does depend on the few regulator framework improvements I wrote. These improvements were already applied to the regulator tree and are not included in this patch series. Please ensure the helpers which were added to this [tag](https://git.kernel.org/pub/scm/linux/kernel/git/broonie/regulator.git/tag/?h=regulator-list-ramp-helpers)
+The patch set v6 does depend on the few regulator framework improvements I wrote. These improvements were already applied to the regulator tree and are not included in this patch series. Please ensure the helpers which were added to this [tag](https://git.kernel.org/pub/scm/linux/kernel/git/broonie/regulator.git/tag/?h=regulator-list-ramp-helpers) are present in your tree.
 
 ### Reference driver ported on Linux v.4.9.99
 
