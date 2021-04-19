@@ -26,10 +26,10 @@ The extension aims to add following improvements:
 4. Emergency poweroff function (refactored out of the thermal-core to kernel/reboot.c)
 	 Function to be called if IC fires error IRQs but IC reading fails and given retry-count is exceeded. Improve the shutdown-funcionality so it is allowed to be called from any context.
 
-You can check the [unofficial repository for the development](https://github.com/M-Vaittinen/linux/releases/tag/sent-regu-limits-bd9576-v7).
+You can check the [unofficial repository for the development](https://github.com/M-Vaittinen/linux/releases/tag/sent-regu-limits-bd9576-v8).
 Please note the branches in this repository can be rebased without a warning.
 
-Latest upstream patch series [v7](https://lore.kernel.org/lkml/cover.1618377272.git.matti.vaittinen@fi.rohmeurope.com/)
+Latest upstream patch series [v8](https://lore.kernel.org/lkml/cover.1618832466.git.matti.vaittinen@fi.rohmeurope.com/)
 
 ### Improve Linux's in-kernel battery fuel-gauge support
 
