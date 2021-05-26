@@ -2,15 +2,13 @@
 
 ### 01/2021 ROHM mainstream driver for BD71815
 
-We decided that it would be beneficial for all if these drivers were available
-in the mainstream Linux community kernel. After few weeks of work, initial
-set of patches was sent to the Linux kernel community in order to collect some feedback
-and to initiate the driver's (long) journey to community kernel :) Please note that
-the driver sent to upstream kernel does not yet contain the power-supply portion
-because the ROHM power-supply driver contains a very IC specific fuel-gauge algorithm
-and this may not fit as such to generic Linux driver. More work is required to
-separate the fuel-gauge computations from IC specific code. We keep working on this
-but can not guarantee the end result yet. If you have a project where you need the
+First set of the BD71815 PMIC drivers were included in the mainstream Linux
+version 5.13-rc1. Please note that the driver sent to upstream kernel does not
+yet contain the power-supply portion because the ROHM power-supply driver
+contains a very IC specific fuel-gauge algorithm and this may not fit as such
+to a generic Linux driver. More work is required to separate the fuel-gauge
+computations from IC specific code. We keep working on this but can not
+guarantee the end result yet. If you have a project where you need the
 battery fuel-gauge implemented in BD71815 driver you may:
 
 1. Get the upstream driver and add a power-supply driver in it.
@@ -21,13 +19,9 @@ I would definitely go with option 1 or 3. The upstream driver is likely to be re
 testing and bug-fixes by others. It is also likely to be ported on new kernel versions.
 The old reference driver below is not maintained.
 
-- [upstream patches v6](https://lore.kernel.org/lkml/cover.1617616855.git.matti.vaittinen@fi.rohmeurope.com/) or [pull request in MFD tree](https://lore.kernel.org/lkml/20210414131158.GN4869@dell/) - please see the [dependencies](https://git.kernel.org/pub/scm/linux/kernel/git/broonie/regulator.git/tag/?h=regulator-list-ramp-helpers) from PR mail or from the note below
+- [upstream kernel](https://www.kernel.org)
 - [swgauge RFC (no BD71815)](https://lore.kernel.org/lkml/cover.1607085199.git.matti.vaittinen@fi.rohmeurope.com/)
 - [swgauge + BD71815 unofficial development version](https://github.com/M-Vaittinen/linux/commits/swgauge-dev)
-
-#### Upstream patch v6 note:
-
-The patch set v6 does depend on the few regulator framework improvements I wrote. These improvements were already applied to the regulator tree and are not included in this patch series. Please ensure the helpers which were added to this [tag](https://git.kernel.org/pub/scm/linux/kernel/git/broonie/regulator.git/tag/?h=regulator-list-ramp-helpers) are present in your tree.
 
 ### Reference driver ported on Linux v.4.9.99
 
@@ -48,4 +42,3 @@ This driver has support for
 * power-supply
 * regulators
 * RTC
-
