@@ -35,8 +35,8 @@ only and they are not actively developed/maintained.
 * Under development - [BD96801 "Scalable PMIC"](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD96801)
 
 ### Generic upstream effort
-ROHM aims giving back to community. We know t's two-way road, really. We get
-from the community a working platform, bug fixes, porting to new versions
+ROHM aims giving back to the community. We know it's two-way road, really. We get
+from the community a working platform, bug fixes, porting to new versions,
 discussions, education and a chance to impact the direction Linux is heading
 to. We value all of this and want to give back innovations and improvements
 which may be small or big and aren't always directly relaed to our products.
