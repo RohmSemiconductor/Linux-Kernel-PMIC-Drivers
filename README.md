@@ -24,11 +24,7 @@ This is the place to look for ROHM POWER IC specific Linux driver extensions.
 Please be aware that these extensions are provided as reference implementation
 only and they are not actively developed/maintained.
 
-## Linux driver integration to your system
-We know our drivers. We know our HW. We can speed-up your development.
-Interested? Feel free to contact Mr. Koki Okada (koki.okada(at)fi.rohmeurope.com)
-to discuss about co-operation possibilities and project scheduling/prizing/scoping.
-
+### Upstream status
 * ROHM extensions available - [BD71815AGW PMIC](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD71815)
 * ROHM extensions available - [BD71828 / BD71878 PMICs](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD71828)
 * Fully upstreamed - [BD71837 / BD71847 / BD71850 PMICs](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD718XX)
@@ -37,4 +33,21 @@ to discuss about co-operation possibilities and project scheduling/prizing/scopi
 * Upstreamed - no ACPI [BD99954 CHARGER](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD99954)
 * Under development - [BD2657](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD2657)
 * Under development - [BD96801 "Scalable PMIC"](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD96801)
+
+### Generic upstream effort
+ROHM aims giving back to community. We know t's two-way road, really. We get
+from the community a working platform, bug fixes, porting to new versions
+discussions, education and a chance to impact the direction Linux is heading
+to. We value all of this and want to give back innovations and improvements
+which may be small or big and aren't always directly relaed to our products.
+This helps us all. Here are some things we have participated and are working
+on - maybe you find something that is helpful to you too.
+
+[Generic Linux improvements](generic-linux-improvements/)
+
+## Linux driver integration to your system
+We know our drivers. We know our HW. We can speed-up your development.
+Interested? Feel free to contact Mr. Koki Okada (koki.okada(at)fi.rohmeurope.com)
+to discuss about co-operation possibilities and project scheduling/prizing/scoping.
+
 
