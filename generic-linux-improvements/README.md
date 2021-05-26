@@ -43,6 +43,20 @@ Please note the branches in this repository can be rebased without a warning.
 
 Latest upstream patch series [RFC v2](https://lore.kernel.org/lkml/cover.1607085199.git.matti.vaittinen@fi.rohmeurope.com/)
 
+### Improve gpio-regmap generic GPIO driver
+
+Support providing some IC specific operations at gpio_regmap registration.
+
+Implementation of few GPIO related functionalities are likely to be
+very IC specific. For example the pin-configuration registers and the
+pin validity checks. Allow IC driver to provide IC specific functions
+which gpio-regmap can utilize for these IC specific configurations.
+This should help broaden the gpio-regmap IC coverage without the need
+of exposing the registered gpio_chip or struct gpio_regmap to IC drivers.
+
+[patch v4 discussion](https://lore.kernel.org/lkml/cover.1622008846.git.matti.vaittinen@fi.rohmeurope.com/)
+
+
 ## Examples of completed and upstreamed improvements:
 - [Regmap-IRQ main IRQ register support](https://lore.kernel.org/lkml/20190123175732.298F51127ABA@debutante.sirena.org.uk/)
 - [Regmap-IRQ improve IRQ type configuration](https://lore.kernel.org/lkml/20181218115931.GA21253@localhost.localdomain/) and [fix to it](https://lore.kernel.org/lkml/20181227084443.GA23991@localhost.localdomain/)
