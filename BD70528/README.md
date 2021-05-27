@@ -1,5 +1,14 @@
 # ROHM Power Management IC BD70528 Linux device drivers.
 
+---
+
+### NOTE:
+Maintenance of the BD70528 Linux driver has ended. It is scheduled to be removed from the Linux
+kernel during the development of 5.13 and 5.14. If you need the driver you can
+get the Linux kernel v5.12 and port the driver to your target kernel version.
+
+---
+
 The device driver for BD70528 is included in the Linux community kernel.
 
 The complete set of drivers for BD70528 was first included in Linux 5.3-rc1. 
