@@ -9,11 +9,10 @@ The driver has been included in the Linux kernel since the Linux version
 It is highly recommended to use driver included in the Linux kernel version
 5.0-rc1 or later. On i.MX8 setups it is suggested to use Linux 5.1-rc1 or later because
 the i.MX8 SNVS state support for BD71837 and BD71847 was included
-in mainline kernel at release 5.1-rc1. Finally, support for leaving enable/disable
-states of given regulators under HW-state machine seems to be landing in 5.10. (It is
-available in Linux-Next integration tree as writing of this)
+in mainline kernel at release 5.1-rc1. Support for leaving enable/disable
+states of given regulators under the control of the HW-state machine landed in 5.10.
 
-Please not that there is no own device-tree compatible in old Linux releases for the
+Please note that there is no own device-tree compatible in old Linux releases for the
 BD71850. If such Linux release is used the BD71850 can be
 described using exactly same device-tree bindings as BD71847. Please use
 
