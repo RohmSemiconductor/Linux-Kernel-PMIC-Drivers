@@ -26,10 +26,10 @@ The extension aims to add following improvements:
 4. Emergency poweroff function (refactored out of the thermal-core to kernel/reboot.c)
 	 Function to be called if IC fires error IRQs but IC reading fails and given retry-count is exceeded. Improve the shutdown-funcionality so it is allowed to be called from any context.
 
-You can check the [unofficial repository for the development](https://github.com/M-Vaittinen/linux/releases/tag/sent-regu-limits-bd9576-v8).
+You can check the [unofficial repository for the development](https://github.com/M-Vaittinen/linux/releases/tag/sent-regu-limits-bd9576-v10).
 Please note the branches in this repository can be rebased without a warning.
 
-Latest upstream patch series [v8](https://lore.kernel.org/lkml/cover.1618832466.git.matti.vaittinen@fi.rohmeurope.com/)
+Latest upstream patch series [v10](https://lore.kernel.org/lkml/cover.1621333893.git.matti.vaittinen@fi.rohmeurope.com/)
 
 ### Improve Linux's in-kernel battery fuel-gauge support
 
@@ -42,19 +42,6 @@ You can check the [unofficial repository for the development](https://github.com
 Please note the branches in this repository can be rebased without a warning.
 
 Latest upstream patch series [RFC v2](https://lore.kernel.org/lkml/cover.1607085199.git.matti.vaittinen@fi.rohmeurope.com/)
-
-### Improve gpio-regmap generic GPIO driver
-
-Support providing some IC specific operations at gpio_regmap registration.
-
-Implementation of few GPIO related functionalities are likely to be
-very IC specific. For example the pin-configuration registers and the
-pin validity checks. Allow IC driver to provide IC specific functions
-which gpio-regmap can utilize for these IC specific configurations.
-This should help broaden the gpio-regmap IC coverage without the need
-of exposing the registered gpio_chip or struct gpio_regmap to IC drivers.
-
-[patch v4 discussion](https://lore.kernel.org/lkml/cover.1622008846.git.matti.vaittinen@fi.rohmeurope.com/)
 
 
 ## Examples of completed and upstreamed improvements:
