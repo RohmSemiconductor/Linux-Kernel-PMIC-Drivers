@@ -492,11 +492,11 @@ static int test_zero_cap_adjust(struct simple_gauge *sw, int *effective_cap,
 	int dsoc;
 	int vdrop;
 	unsigned int dsoc_at_newzero;
-	int hack = 0;
-	int hack2 = 0;
 
 	/* Debug hack to display vdrop calc for strange values */
 #if 0
+	int hack = 0;
+	int hack2 = 0;
 	if (vbat == 3511871) {
 		hack2 = 1;
 		pr_info("******************* PROBLEM ROUND? *******************\n");
