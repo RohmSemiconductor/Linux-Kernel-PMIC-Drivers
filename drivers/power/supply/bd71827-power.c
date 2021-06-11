@@ -71,7 +71,7 @@ static const struct linear_range dcin_collapse = {
 /* Measured min and max value clear bits */
 #define BD718XX_MASK_VSYS_MIN_AVG_CLR		0x10
 
-#define JITTER_DEFAULT				3000
+#define JITTER_DEFAULT				3000000
 #define BATTERY_CAP_MAH_DEFAULT			1529
 #define MAX_VOLTAGE_DEFAULT			(ocv_table_default[0])
 #define MIN_VOLTAGE_DEFAULT			3400000
@@ -2344,6 +2344,9 @@ static int bd71827_power_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "SW-gauge registration failed\n");
 		return PTR_ERR(pwr->sw);
 	}
+
+	/* Add simple-gauge to test device's platform-data */
+	dev_set_drvdata(pdev->dev.parent, pwr->sw);
 
 	ret = bd7182x_get_irqs(pdev, pwr);
 	if (ret) {
