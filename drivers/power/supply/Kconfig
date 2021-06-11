@@ -12,6 +12,14 @@ if POWER_SUPPLY
 config POWER_SIMPLE_GAUGE
 	tristate
 
+config POWER_SUPPLY_SIMPLE_GAUGE_TEST
+	tristate "Test simple-gauge"
+	select POWER_SIMPLE_GAUGE
+	help
+	  Say Y here to enable test for simple-gauge fuel-gauge logic.
+	  Test operates on set of measured battery-data and computes
+	  SoC based on it.
+
 config POWER_SUPPLY_DEBUG
 	bool "Power supply debug"
 	help
