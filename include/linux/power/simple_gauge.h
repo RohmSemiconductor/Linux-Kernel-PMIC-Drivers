@@ -236,6 +236,9 @@ devm_psy_register_simple_gauge(struct device *parent, struct simple_gauge_psy *p
 			   struct simple_gauge_ops *ops,
 			   struct simple_gauge_desc *desc);
 void simple_gauge_run(struct simple_gauge *sw);
+int simple_gauge_run_blocking_timeout(struct simple_gauge *sg,
+				      unsigned timeout_ms);
+int simple_gauge_run_blocking(struct simple_gauge *sg);
 void *simple_gauge_get_drvdata(struct simple_gauge *sg);
 
 #endif /* POWER_SW_GAUGE_H */

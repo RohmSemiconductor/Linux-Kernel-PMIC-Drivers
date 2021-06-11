@@ -748,6 +748,7 @@ static void adjust_next_tmo(struct simple_gauge *sw, u64 *timeout, u64 now)
 }
 
 static DECLARE_WAIT_QUEUE_HEAD(simple_gauge_thread_wait);
+static DECLARE_WAIT_QUEUE_HEAD(simple_gauge_forced_wait);
 
 static int simple_gauge_forced_run;
 
@@ -770,8 +771,77 @@ void simple_gauge_run(struct simple_gauge *sw)
 }
 EXPORT_SYMBOL_GPL(simple_gauge_run);
 
+static unsigned int g_iteration = 0;
+
+static unsigned int simple_gauge_run_locked(struct simple_gauge *sg)
+{
+	unsigned int ctr;
+
+	/* Wait for any ongoing iteration */
+	mutex_lock(&simple_gauge_lock);
+	ctr = g_iteration;
+	simple_gauge_run(sg);
+	mutex_unlock(&simple_gauge_lock);
+
+	return ctr;
+}
+
+/**
+ * simple_gauge_run_blocking_timeout - Run gauge loop and block until ran
+ *
+ * Trigger simple-gauge to run. Wait until simple-gauge has been ran or timeout
+ * occurs.
+ *
+ * @sg:		Pointer to gauge
+ * @timeout_ms:	Timeout in milliseconds.
+ *
+ * Returns: 0 if gauge loop was ran. -EAGAIN if timeout occurred and
+ * 	    -ERESTARTSYS if call was interrupted.
+ */
+int simple_gauge_run_blocking_timeout(struct simple_gauge *sg,
+				      unsigned timeout_ms)
+{
+	unsigned int ctr;
+	int ret;
+
+	ctr = simple_gauge_run_locked(sg);
+	ret = wait_event_interruptible_timeout(simple_gauge_forced_wait,
+					       g_iteration > ctr,
+					       timeout_ms);
+	if (ret == 1)
+		ret = 0;
+	else if (!ret)
+		ret = -EAGAIN;
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(simple_gauge_run_blocking_timeout);
+
+/**
+ * simple_gauge_run_blocking - Run gauge loop and block until ran
+ *
+ * Trigger simple-gauge to run. Wait until simple-gauge has been ran.
+ *
+ * @sg:		Pointer to gauge
+ *
+ * Returns: 0 on success. -ERESTARTSYS if call was interrupted.
+ */
+int simple_gauge_run_blocking(struct simple_gauge *sg)
+{
+	unsigned int ctr;
+	int ret;
+
+	ctr = simple_gauge_run_locked(sg);
+	ret = wait_event_interruptible(simple_gauge_forced_wait,
+				       g_iteration > ctr);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(simple_gauge_run_blocking);
+
 static int gauge_thread(void *data)
 {
+
 	for (;;) {
 		u64 timeout = 0;
 		struct simple_gauge *sw;
@@ -799,14 +869,9 @@ static int gauge_thread(void *data)
 			adjust_next_tmo(sw, &timeout, now);
 			gauge_put(sw);
 		}
+		g_iteration++;
 		mutex_unlock(&simple_gauge_lock);
-		/*
-		 * We should change this to wait_event_interruptible because
-		 * when new simple_gauge is registered we must wake-up and perform
-		 * the first iteration ASAP. First iteration needs to be done
-		 * before we have SOC for user-space so registration needs to
-		 * kick us here
-		 */
+		wake_up(&simple_gauge_forced_wait);
 		pr_debug("sleeping %u msec\n", jiffies_to_msecs(timeout));
 		wait_event_interruptible_timeout(simple_gauge_thread_wait,
 						 simple_gauge_forced_run, timeout);
@@ -1019,10 +1084,8 @@ struct simple_gauge *__must_check psy_register_simple_gauge(struct device *paren
 	}
 	new->dev = parent;
 	new->custom_is_writable = pcfg->is_writable;
-	//new->drv_data = desc->drv_data;
 
 	init_waitqueue_head(&new->wq);
-
 
 	ret = simple_gauge_set_ops(new, ops);
 	if (ret) {
@@ -1102,6 +1165,8 @@ struct simple_gauge *__must_check psy_register_simple_gauge(struct device *paren
 		goto info_out;
 	}
 	dev_dbg(new->dev, "YaY! SW-gauge registered\n");
+
+	simple_gauge_run_blocking(new);
 
 	return new;
 
