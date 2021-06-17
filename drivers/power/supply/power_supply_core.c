@@ -651,9 +651,16 @@ int power_supply_dev_get_battery_info(struct device *dev,
 	if (!node)
 		node = dev_fwnode(dev);
 
+	if (!node) {
+		dev_err(dev, "no charger node\n");
+		return -ENODEV;
+	}
+
 	battery_node = fwnode_find_reference(node, "monitored-battery", 0);
-	if (IS_ERR(battery_node))
+	if (IS_ERR(battery_node)) {
+		dev_err(dev, "No battery node found\n");
 		return PTR_ERR(battery_node);
+	}
 
 	if (fwnode_property_match_string(battery_node, "compatible",
 					 "simple-battery")) {
@@ -732,9 +739,12 @@ int power_supply_dev_get_battery_info(struct device *dev,
 		info->temp_min = tuple[0];
 		info->temp_max = tuple[1];
 	}
-	/* TODO: Test that 0 is returned if property does not exist */
+
 	len = fwnode_property_count_u32(battery_node, "temp-degrade-table");
+	if (len == -EINVAL)
+		len = 0;
 	if (len < 0) {
+		dev_err(dev, "malformed temp-degrade-table %d\n", len);
 		err = len;
 		goto out_put_node;
 	}
@@ -745,7 +755,6 @@ int power_supply_dev_get_battery_info(struct device *dev,
 		err = -EINVAL;
 		goto out_put_node;
 	}
-	pr_info("Found %d temp-cap values (%d triplets)\n", len, len/3);
 	info->temp_dgrd_values = len / 3;
 	if (info->temp_dgrd_values) {
 		info->temp_dgrd = devm_kcalloc(dev, info->temp_dgrd_values,
@@ -781,9 +790,11 @@ int power_supply_dev_get_battery_info(struct device *dev,
 		kfree(dgrd_table);
 	}
 
-	/* TODO: Test that 0 is returned if property does not exist */
 	len = fwnode_property_count_u32(battery_node, "ocv-capacity-celsius");
+	if (len == -EINVAL)
+		len = 0;
 	if (len < 0) {
+		dev_err(dev, "malformed ocv-capacity-celsius table\n");
 		err = len;
 		goto out_put_node;
 	} else if (len > POWER_SUPPLY_OCV_TEMP_MAX) {
