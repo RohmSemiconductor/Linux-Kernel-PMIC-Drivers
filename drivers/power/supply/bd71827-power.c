@@ -72,10 +72,12 @@ static const struct linear_range dcin_collapse = {
 #define BD718XX_MASK_VSYS_MIN_AVG_CLR		0x10
 
 #define JITTER_DEFAULT				3000000
-#define BATTERY_CAP_MAH_DEFAULT			1529
-#define MAX_VOLTAGE_DEFAULT			(ocv_table_default[0])
-#define MIN_VOLTAGE_DEFAULT			3400000
-#define THR_VOLTAGE_DEFAULT			4250000
+//#define BATTERY_CAP_MAH_DEFAULT			1529
+//#define MAX_VOLTAGE_DEFAULT			(ocv_table_default[0])
+/*
+ #define MIN_VOLTAGE_DEFAULT			3400000
+ #define THR_VOLTAGE_DEFAULT			4250000
+*/
 #define MAX_CURRENT_DEFAULT			890000		/* uA */
 #define AC_NAME					"bd71827_ac"
 #define BAT_NAME				"bd71827_bat"
@@ -138,7 +140,7 @@ struct pwr_regs {
 #endif
 };
 
-struct pwr_regs pwr_regs_bd71827 = {
+static struct pwr_regs pwr_regs_bd71827 = {
 	.vbat_init = BD71827_REG_VM_OCV_PRE_U,
 	.vbat_init2 = BD71827_REG_VM_OCV_PST_U,
 	.vbat_init3 = BD71827_REG_VM_OCV_PWRON_U,
@@ -173,7 +175,7 @@ struct pwr_regs pwr_regs_bd71827 = {
 #endif
 };
 
-struct pwr_regs pwr_regs_bd71828 = {
+static struct pwr_regs pwr_regs_bd71828 = {
 	.vbat_init = BD71828_REG_VBAT_INITIAL1_U,
 	.vbat_init2 = BD71828_REG_VBAT_INITIAL2_U,
 	.vbat_init3 = BD71828_REG_OCV_PWRON_U,
@@ -210,7 +212,7 @@ struct pwr_regs pwr_regs_bd71828 = {
 #endif
 };
 
-struct pwr_regs pwr_regs_bd71815 = {
+static struct pwr_regs pwr_regs_bd71815 = {
 	.vbat_init = BD71815_REG_VM_OCV_PRE_U,
 	.vbat_init2 = BD71815_REG_VM_OCV_PST_U,
 	.used_init_regs = 2,
@@ -250,6 +252,7 @@ struct pwr_regs pwr_regs_bd71815 = {
 };
 
 /*  1 micro V */
+/*
 static int ocv_table_default[NUM_BAT_PARAMS] = {
 	4350000,
 	4325945,
@@ -275,7 +278,7 @@ static int ocv_table_default[NUM_BAT_PARAMS] = {
 	3512942,
 	3019825
 };
-
+*/
 /* unit 0.1% */
 static int soc_table_default[NUM_BAT_PARAMS] = {
 	1000,
@@ -407,7 +410,11 @@ static int vdr_table_vl_default[NUM_BAT_PARAMS] = {
 	336
 };
 
-int use_load_bat_params;
+/* Module parameters */
+static int use_load_bat_params;
+static int param_thr_voltage;
+static int param_max_voltage;
+static int param_min_voltage;
 
 static int battery_cap_mah;
 
@@ -436,6 +443,9 @@ struct bd71827_power {
 	/* Reg val to uA */
 	int curr_factor;
 	int rsens;
+	int min_voltage;
+	int max_voltage;
+	int low_thr_voltage;
 	int (*get_temp)(struct bd71827_power *pwr, int *temp);
 	int (*bat_inserted)(struct bd71827_power *pwr);
 	int battery_cap;
@@ -1002,7 +1012,7 @@ static int bd71827_get_ocv(struct simple_gauge *sw, int dsoc, int temp, int *ocv
 	}
 
 	if (dsoc > soc_table[0]) {
-		*ocv = MAX_VOLTAGE_DEFAULT;
+		*ocv = pwr->max_voltage;
 		return 0;
 	}
 	if (dsoc == 0) {
@@ -1107,7 +1117,7 @@ static int bd71828_zero_correct(struct simple_gauge *sw, int *effective_cap,
 
 	for (i = 1; i < NUM_BAT_PARAMS; i++) {
 		ocv_table_load[i] = ocv_table[i] - (ocv - vbat);
-		if (ocv_table_load[i] <= MIN_VOLTAGE_DEFAULT) {
+		if (ocv_table_load[i] <= pwr->min_voltage) {
 			dev_dbg(pwr->dev, "ocv_table_load[%d] = %d\n", i,
 				ocv_table_load[i]);
 			break;
@@ -1131,7 +1141,7 @@ static int bd71828_zero_correct(struct simple_gauge *sw, int *effective_cap,
 		dv = (ocv_table_load[i - 1] - ocv_table_load[i]) / soc_range; /* was hard coded 5 */
 		for (j = 1; j < soc_range/* was 5 */; j++) {
 			if ((ocv_table_load[i] + dv * j) >
-			    MIN_VOLTAGE_DEFAULT) {
+			    pwr->min_voltage) {
 				break;
 			}
 		}
@@ -1155,7 +1165,7 @@ static int bd71828_zero_correct(struct simple_gauge *sw, int *effective_cap,
 			for (k = 1; k < NUM_BAT_PARAMS; k++) {
 				ocv_table_load[k] = ocv_table[k] -
 						    (ocv - vbat) * vdr0 / vdr;
-				if (ocv_table_load[k] <= MIN_VOLTAGE_DEFAULT) {
+				if (ocv_table_load[k] <= pwr->min_voltage) {
 					dev_dbg(pwr->dev,
 						"ocv_table_load[%d] = %d\n",  k,
 						ocv_table_load[k]);
@@ -1167,7 +1177,7 @@ static int bd71828_zero_correct(struct simple_gauge *sw, int *effective_cap,
 				     ocv_table_load[k]) / 5;
 				for (j = 1; j < 5; j++)
 					if ((ocv_table_load[k] + dv * j) >
-					     MIN_VOLTAGE_DEFAULT)
+					     pwr->min_voltage)
 						break;
 
 				new_lost_cap = ((NUM_BAT_PARAMS - 2 - k) *
@@ -1362,6 +1372,27 @@ static int bd71827_set_battery_parameters(struct bd71827_power *pwr)
 			dev_err(pwr->dev, "Unknown battery capacity\n");
 			return -EINVAL;
 		}
+
+		if (pwr->batinfo.voltage_max_design_uv == -EINVAL) {
+			/*
+			 * We could try digging this from OCV table but
+			 * lets just bail-out for now
+			 */
+			dev_err(pwr->dev, "Unknown max voltage\n");
+			return -EINVAL;
+		}
+		pwr->max_voltage = pwr->batinfo.voltage_max_design_uv;
+
+		if (pwr->batinfo.voltage_min_design_uv == -EINVAL) {
+			/* We could try digging this from OCV table....? */
+			dev_err(pwr->dev, "Unknown max voltage\n");
+			return -EINVAL;
+		}
+		pwr->min_voltage = pwr->batinfo.voltage_min_design_uv;
+		/*
+		 * Let's default the zero-correction limit to 10%
+		 * voltage limit. TODO: See what would be the correct value
+		 */
 		pwr->battery_cap = pwr->batinfo.charge_full_design_uah;
 		pwr->gdesc.degrade_cycle_uah = pwr->batinfo.degrade_cycle_uah;
 
@@ -1375,13 +1406,24 @@ static int bd71827_set_battery_parameters(struct bd71827_power *pwr)
 			vdr_table_vl[i] = vdr_table_vl_default[i];
 		}
 		return 0;
-	}
+	} else {
 	for (i = 0; i < NUM_BAT_PARAMS; i++)
 		soc_table[i] = soc_table_default[i];
 
+	pwr->min_voltage = param_max_voltage;
+	pwr->max_voltage = param_min_voltage;
+	pwr->low_thr_voltage = param_thr_voltage;
 	pwr->battery_cap = battery_cap_mah * 1000;
 	pwr->gdesc.degrade_cycle_uah = dgrd_cyc_cap;
+	}
+	if (!pwr->min_voltage || !pwr->max_voltage || !pwr->battery_cap) {
+		dev_err(pwr->dev, "Battery parameters missing\n");
 
+		return -EINVAL;
+	}
+	if (!pwr->low_thr_voltage)
+		pwr->low_thr_voltage = pwr->min_voltage +
+			(pwr->max_voltage - pwr->min_voltage) / 10;
 	return 0;
 }
 
@@ -1468,10 +1510,10 @@ static int bd71827_battery_get_property(struct simple_gauge *gauge,
 		val->intval = curr;
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_MAX:
-		val->intval = MAX_VOLTAGE_DEFAULT;
+		val->intval = pwr->max_voltage;
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_MIN:
-		val->intval = MIN_VOLTAGE_DEFAULT;
+		val->intval = pwr->min_voltage;
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
 		val->intval = MAX_CURRENT_DEFAULT;
@@ -2201,7 +2243,7 @@ static void fgauge_initial_values(struct bd71827_power *pwr)
 	/* TODO: See if these could be get from DT? */
 	d->poll_interval = JITTER_DEFAULT; /* 3 seconds */
 	d->allow_set_cycle = true;
-	d->cap_adjust_volt_threshold = THR_VOLTAGE_DEFAULT;
+	d->cap_adjust_volt_threshold = pwr->low_thr_voltage;
 	d->designed_cap = pwr->battery_cap;
 	d->clamp_soc = true;
 
@@ -2381,6 +2423,18 @@ module_platform_driver(bd71827_power_driver);
 
 module_param(use_load_bat_params, int, 0444);
 MODULE_PARM_DESC(use_load_bat_params, "use_load_bat_params:Use loading battery parameters");
+
+module_param(param_max_voltage, int, 0444);
+MODULE_PARM_DESC(param_max_voltage,
+		 "Maximum voltage of fully charged battery, uV");
+
+module_param(param_min_voltage, int, 0444);
+MODULE_PARM_DESC(param_min_voltage,
+		 "Minimum voltage of fully drained battery, uV");
+
+module_param(param_thr_voltage, int, 0444);
+MODULE_PARM_DESC(param_thr_voltage,
+		 "Threshold voltage for applying zero correction, uV");
 
 module_param(battery_cap_mah, int, 0444);
 MODULE_PARM_DESC(battery_cap_mah, "battery_cap_mah:Battery capacity (mAh)");
