@@ -674,7 +674,7 @@ MODULE_DEVICE_TABLE(of, test_of_match);
 
 static struct platform_driver test_driver = {
 	.driver = {
-		   .name = "test-swgauge",
+		   .name = "test-bd71815-simple-gauge",
 		   .owner = THIS_MODULE,
 		   .of_match_table = test_of_match,
 		   },
