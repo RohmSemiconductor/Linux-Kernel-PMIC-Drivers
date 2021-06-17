@@ -93,7 +93,9 @@
  * which ensure as much logic is good as possible.
  */
 
+/* From DT "charge-full-design-microamp-hours"
 #define TEST_DESIGNED_CAP 1738000
+ */
 #define TEST_MAX_VOLTAGE 4400000
 #define soc_est_max_num 5
 
@@ -667,7 +669,7 @@ static int test_probe(struct platform_device *pdev)
 }
 
 static const struct of_device_id test_of_match[] = {
-	{ .compatible = "rohm,test-swgauge", },
+	{ .compatible = "rohm,test-bd71815-simple-gauge", },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, test_of_match);
