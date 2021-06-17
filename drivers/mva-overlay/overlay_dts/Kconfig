@@ -1,0 +1,19 @@
+#menuconfig MVA_DT_OVERLAY_BLOBS
+#	bool  "Device overlay blobs"
+#	depends on MVA_OVERLAY
+#	help
+#	  Build DT overlay binary blobs.
+#
+#	  These device-tree overlay blobs are intended to be used for
+#	  testing.
+#
+#if MVA_DT_OVERLAY_BLOBS
+config MVA_OVERLAY_BD71815_SIMPLE_GAUGE_TEST
+	bool "Dummy device node for BD71815 test"
+	depends on MVA_OVERLAY
+	help
+	  DT blob to allow testing of BD71815 driver and the simple-gauge
+
+	  If unsure, say no.
+
+#endif
