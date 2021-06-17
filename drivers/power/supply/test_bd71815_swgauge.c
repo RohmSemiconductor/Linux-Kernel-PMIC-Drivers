@@ -382,7 +382,15 @@ static void swgauge_test_soc(struct platform_device *pdev)
 	enum power_supply_property psp;
 	union power_supply_propval soc, chg, chg_des, chg_now, cyc;
 
+	pr_info("Testing SOC\n");
+
+retry:
 	g = dev_get_drvdata(&pdev->dev);
+	if (!g) {
+		msleep(1000);
+		pr_info("NULL gauge - ReTry - TODO: Fixme\n");
+		goto retry;
+	}
 
 	for (i = 0; i < VALUES * 25; i++) {
 		psp = POWER_SUPPLY_PROP_CAPACITY;
@@ -410,7 +418,7 @@ static void swgauge_test_soc(struct platform_device *pdev)
 		simple_gauge_run_blocking(g);
 	}
 
-	platform_device_put(pdev);
+//	platform_device_put(pdev);
 }
 
 static u8 g_reg_arr[BD71815_MAX_REGISTER] = { 0 };
@@ -565,9 +573,10 @@ static void initialize_initial_ocv_regs(int uv)
 {
 	u16 *pre_reg = (u16 *)&g_reg_arr[BD71815_REG_VM_OCV_PRE_U],
 	    *post_reg = (u16 *)&g_reg_arr[BD71815_REG_VM_OCV_PST_U];
+	u16 mv = uv/1000;
 
-	*pre_reg = cpu_to_be16(uv/1000);
-	*post_reg = cpu_to_be16(uv/1000);
+	*pre_reg = cpu_to_be16(mv);
+	*post_reg = cpu_to_be16(mv);
 }
 
 /*
@@ -645,6 +654,7 @@ static int test_probe(struct platform_device *pdev)
 		dev_err(dev, "Failed to initialize Regmap\n");
 		return PTR_ERR(regmap);
 	}
+	pr_info("YaY! Regmap initilized\n");
 
 	ret = devm_regmap_add_irq_chip(dev, regmap, irq,
 				       IRQF_ONESHOT, 0, &bd71815_irq_chip, &irq_data);
@@ -652,8 +662,10 @@ static int test_probe(struct platform_device *pdev)
 		dev_err(dev, "Failed to add IRQ chip\n");
 		return ret;
 	}
+	pr_info("YaY! Regmap IRQ irqchip added\n");
 
 	initialize_register_vals();
+	pr_info("Regvals initialized\n");
 
 	ret = devm_mfd_add_devices(dev, PLATFORM_DEVID_AUTO, bd71815_mfd_cells,
 				   ARRAY_SIZE(bd71815_mfd_cells), NULL, 0,
@@ -662,6 +674,7 @@ static int test_probe(struct platform_device *pdev)
 		dev_err(dev, "Failed to create subdevices\n");
 		return ret;
 	}
+	pr_info("MFD device added\n");
 
 	swgauge_test_soc(pdev);
 
