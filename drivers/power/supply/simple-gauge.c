@@ -1124,7 +1124,12 @@ struct simple_gauge *__must_check psy_register_simple_gauge(struct device *paren
 		ret = PTR_ERR(new->psy);
 		goto free_out;
 	}
-
+	/*
+	 * TODO: Would it be better if battery_info() was obtained by the
+	 * IC driver? OTOH, its nicer if IC drivers do not need to do
+	 * any extra calls... Few may need something from batinfo though.
+	 * Must ponder what would be the best.
+	 */
 	ret = power_supply_get_battery_info(new->psy, &new->info);
 	if (ret && !new->ops.get_soc_by_ocv) {
 		dev_err(new->dev, "No OCV => SoC conversion\n");
