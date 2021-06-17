@@ -1364,9 +1364,12 @@ static int bd71827_set_battery_parameters(struct bd71827_power *pwr)
 		 * power_supply_dev_get_battery_info uses devm internally
 		 * so we do not need explicit remove()
 		 */
-		ret = power_supply_dev_get_battery_info(pwr->dev, NULL,
+		ret = power_supply_dev_get_battery_info(pwr->dev->parent, NULL,
 							&pwr->batinfo);
+		if (ret) {
+			dev_err(pwr->dev, "No battery information (%d)\n", ret);
 			return ret;
+		}
 
 		if (pwr->batinfo.charge_full_design_uah == -EINVAL) {
 			dev_err(pwr->dev, "Unknown battery capacity\n");
@@ -1405,6 +1408,7 @@ static int bd71827_set_battery_parameters(struct bd71827_power *pwr)
 			vdr_table_l[i] = vdr_table_l_default[i];
 			vdr_table_vl[i] = vdr_table_vl_default[i];
 		}
+
 		return 0;
 	} else {
 	for (i = 0; i < NUM_BAT_PARAMS; i++)
@@ -2413,13 +2417,14 @@ MODULE_DEVICE_TABLE(platform, bd71827_charger_id);
 
 static struct platform_driver bd71827_power_driver = {
 	.driver = {
-		.name = "bd71827-power",
+		.name = "bd718xx-power",
 	},
 	.probe = bd71827_power_probe,
 	.id_table = bd71827_charger_id,
 };
 
 module_platform_driver(bd71827_power_driver);
+MODULE_ALIAS("platform:bd718xx-power");
 
 module_param(use_load_bat_params, int, 0444);
 MODULE_PARM_DESC(use_load_bat_params, "use_load_bat_params:Use loading battery parameters");
