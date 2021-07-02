@@ -29,7 +29,7 @@ only and they are not actively developed/maintained.
 * ROHM extensions available - [BD71828 / BD71878 PMICs](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD71828)
 * Fully upstreamed - [BD71837 / BD71847 / BD71850 PMICs](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD718XX)
 * Fully upstreamed - [BD70528 PMIC](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD70528)
-* ROHM extensions available - [BD9576 / BD9573](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD957XMUF)
+* Fully upstreamed - [BD9576 / BD9573](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD957XMUF)
 * Upstreamed - no ACPI [BD99954 CHARGER](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD99954)
 * Under development - [BD2657](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD2657)
 * Under development - [BD96801 "Scalable PMIC"](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/master/BD96801)
