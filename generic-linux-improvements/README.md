@@ -3,9 +3,24 @@
 ROHM aims to collaborate with the Linux kernel community to improve Linux kernel and drivers also outside the scope of ROHM component drivers. We want to give back to community but also want to stay on track regarding what happens in the Linux. This is a great way to improve our common software while also being able to impact on the direction it develops. This page lists some of the improvements ROHM employees are working on.
 
 ## Under development:
+
+### Improve Linux's in-kernel battery fuel-gauge support
+
+This is an attempt to add some fuel-gauge logic to power-supply core.
+
+We try to add in-kernel entity performing iterative SOC estimation and coulomb counter correction for devices with a (drifting) coulomb
+counter. This should allow few charger/fuel-gauge drivers to use generic loop instead of implementing their own.
+
+You can check the [unofficial repository for the development](https://github.com/M-Vaittinen/linux/tree/swgauge-dev).
+Please note the branches in this repository can be rebased without a warning.
+
+Latest upstream patch series [RFC v2](https://lore.kernel.org/lkml/cover.1607085199.git.matti.vaittinen@fi.rohmeurope.com/)
+
+
+## Examples of completed and upstreamed improvements:
 ### Linux regulator framework's protection extension
 
-The extension aims to add following improvements:
+The extension adds following improvements:
 
 1. WARNING level events/error flags.
 	Current regulator 'ERROR' event notifications for over/under voltage, over current and over temperature are used to indicate
@@ -26,25 +41,17 @@ The extension aims to add following improvements:
 4. Emergency poweroff function (refactored out of the thermal-core to kernel/reboot.c)
 	 Function to be called if IC fires error IRQs but IC reading fails and given retry-count is exceeded. Improve the shutdown-funcionality so it is allowed to be called from any context.
 
-You can check the [unofficial repository for the development](https://github.com/M-Vaittinen/linux/releases/tag/sent-regu-limits-bd9576-v10).
-Please note the branches in this repository can be rebased without a warning.
+5. Regulator device print helpers exported
 
-Latest upstream patch series [v10](https://lore.kernel.org/lkml/cover.1621333893.git.matti.vaittinen@fi.rohmeurope.com/)
+### Regmap-IRQ main register support
 
-### Improve Linux's in-kernel battery fuel-gauge support
+Support IRQ controllers which have multiple "IRQ blocks" with status and mask registers, and one (or more) "main status"-register(s) indicating which "sub IRQ" blocks have active IRQs. This register setup can be usefull when IRQ registers are read over (relatively) slow bus and when only part of the IRQ blocks have frequently active IRQs. This design can help decreasing amount of register reads.
 
-This is an attempt to add some fuel-gauge logic to power-supply core.
+ROHM has extended the Linux general purpose "regmap-IRQ" IRQ contoller code to support the main-register setup.
 
-We try to add in-kernel entity performing iterative SOC estimation and coulomb counter correction for devices with a (drifting) coulomb
-counter. This should allow few charger/fuel-gauge drivers to use generic loop instead of implementing their own.
+### Links to few generic Linux improvements contributed by ROHM
 
-You can check the [unofficial repository for the development](https://github.com/M-Vaittinen/linux/tree/swgauge-dev).
-Please note the branches in this repository can be rebased without a warning.
-
-Latest upstream patch series [RFC v2](https://lore.kernel.org/lkml/cover.1607085199.git.matti.vaittinen@fi.rohmeurope.com/)
-
-
-## Examples of completed and upstreamed improvements:
+- [Linux regulator framework's protection extension](https://lore.kernel.org/lkml/20210628145501.EC10F60C3E@mail.kernel.org/)
 - [Regmap-IRQ main IRQ register support](https://lore.kernel.org/lkml/20190123175732.298F51127ABA@debutante.sirena.org.uk/)
 - [Regmap-IRQ improve IRQ type configuration](https://lore.kernel.org/lkml/20181218115931.GA21253@localhost.localdomain/) and [fix to it](https://lore.kernel.org/lkml/20181227084443.GA23991@localhost.localdomain/)
 - [Regulator framework, support pickable voltage ranges](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=18e4b55fbd2069cee51ef9660b35c65ec13bee6d)
