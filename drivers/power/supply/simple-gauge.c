@@ -37,51 +37,49 @@
  *
  * Device drivers for (charger) ICs which contain a coulomb counter can
  * register here and provide IC specific functions as listed in
- * include/linux/power/simple_gauge.h struct simple_gauge_ops. Drivers can also specify
- * time interval the IC is polled.
+ * include/linux/power/simple_gauge.h struct simple_gauge_ops. Drivers can also
+ * specify time interval the IC is polled.
  *
  * After registration the simple_gauge does periodically poll the driver and:
- * - get battery state
- * - adjust coulomb counter value (to fix drifting caused for example by ADC
+ * 1. get battery state
+ * 2. adjust coulomb counter value (to fix drifting caused for example by ADC
  *   offset) if:
  *     - Battery is relaxed and OCV<=>SOC table is given
- *     - Battery is full charged
- * - get battery age (cycles) from driver
- * - get battery temperature
- * - do battery capacity correction
+ *     - Battery is fully charged
+ * 3. get battery age (cycles) from driver
+ * 4. get battery temperature
+ * 5. do battery capacity correction
  *     - by battery temperature
  *     - by battery age
  *     - by computed Vbat/OCV difference at low-battery condition if
  *       low-limit is set and OCV table given
  *     - by IC specific low-battery correction if provided
- * - compute current State Of Charge (SOC)
- * - do periodical calibration if IC supports that. (Many ICs do calibration
+ * 6. compute current State Of Charge (SOC) based on corrected capacity
+ * 7. do periodical calibration if IC supports that. (Many ICs do calibration
  *   of CC by shorting the ADC pins and getting the offset).
- * - TODO: Support starting calibration in HW when entering to suspend. This
+ *   TODO: Support starting calibration in HW when entering to suspend. This
  *   is useful for ICs supporting delayed calibration to mitigate CC error
  *   during suspend - and to make periodical wake-up less critical.
  *
  * The SW gauge provides the last computed SOC as POWER_SUPPLY_PROP_CAPACITY to
  * power_supply_class when requested.
  *
- * Additionally the SW-gauge should provide the user-space a consistent
- * interface for getting/setting the battery-cycle information for ICs which
- * can't store the battery aging information (like how many times battery
- * has been charged to full) over reset. (not yet implemnted - will work on it
- * next if this RFC is not completely frowned upon - Oh, should userspace just
- * use POWER_SUPPLY_PROP_CYCLE_COUNT for this? I only now noticed that :))
+ * Additionally the SW-gauge provides the user-space a consistent interface for
+ * getting/setting the battery-cycle information for ICs which can't store the
+ * battery aging information (like how many times battery has been charged to
+ * full) over a reset. POWER_SUPPLY_PROP_CYCLE_COUNT is used for this.
  *
- * Some very low-power devices prefer periodical wake-up for performing SOC
- * estimation computation even at the cost of power-consumption caused by
- * such wake-up. So as a future improvement it would be nice to see a RTC
- * integration which might allow the periodic wake-up. (Or is there better
- * ideas?)
+ * TODO: Some low-power devices which may spend long times suspended may prefer
+ * periodical wake-up for performing SOC estimation/computation even at the
+ * cost of power-consumption caused by such a wake-up. So as a future
+ * improvement it would be nice to see a RTC integration which might allow the
+ * periodic wake-up. (Or is there better ideas?). This could be usefull for the
+ * devices which do not support calibration when SOC is turned off and current
+ * consumption is minimal.
  *
  * If this is not seen as a complete waste of time - then I would like to get
  * suggestions and opinions :) Especially for following:
- * 1. Is this kind of generic entity needed or should this just be left to be
- *    implemented in each individual driver?
- * 2. Should this be meld-in power_supply_class? I didn't go to that route as I
+ * 1. Should this be meld-in power_supply_class? I didn't go to that route as I
  *    didn't want to obfuscate the power_supply registration with the items in
  *    the simple_gauge desc and ops. OTOH, the psy now has a pointer to sw-gauge
  *    and sw-gauge to psy - which is a clear hint that the relation of them
