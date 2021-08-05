@@ -375,6 +375,8 @@ bool test_is_relaxed(int iter)
 	return false;
 }
 
+static u8 g_reg_arr[BD71815_MAX_REGISTER] = { 0 };
+
 static void swgauge_test_soc(struct platform_device *pdev)
 {
 	int i, ret;
@@ -408,9 +410,18 @@ retry:
 				pr_err("vituix man\n");
 			continue;
 		} else {
-			pr_info("i=%u/%u SOC=%u FULL=%u DESIGN=%u NOW=%u cyc=%u, curr_iter %u\n",
+			pr_info("i=%u/%u SOC=%d FULL=%u DESIGN=%u NOW=%u cyc=%u, curr_iter %u\n",
 				 i + 1, VALUES, soc.intval, chg.intval, chg_des.intval,
 				 chg_now.intval, cyc.intval, (i%VALUES) + 1);
+		}
+		/* Let's see how aging impacts and add the cycle count by
+		 * adjusting the full charged CC register
+		 */
+		if (i != 0 && !(i%VALUES)) {
+			g_reg_arr[BD71815_REG_CCNTD_CHG_3] = 0xff;
+			g_reg_arr[BD71815_REG_CCNTD_CHG_2] = 0xff;
+			g_reg_arr[BD71815_REG_CCNTD_CHG_2 + 1] = 0xff;
+			g_reg_arr[BD71815_REG_CCNTD_CHG_2 + 2] = 0xff;
 		}
 		/* Set next set of simulated values to 'registers' */
 		update_register_vals(i + 1);
@@ -420,8 +431,6 @@ retry:
 
 //	platform_device_put(pdev);
 }
-
-static u8 g_reg_arr[BD71815_MAX_REGISTER] = { 0 };
 
 static int test_regmap_read(void *ctx, unsigned int reg, unsigned int *val)
 {
