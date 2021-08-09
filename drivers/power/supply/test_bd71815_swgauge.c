@@ -445,6 +445,17 @@ static int test_regmap_write(void *ctx, unsigned int reg, unsigned int val)
 {
 	u8 *reg_base = ctx;
 
+	if (reg == BD71815_REG_CC_CCNTD_3)
+		pr_info("Writing CC[3] byte to 0x%x\n", val);
+	if (reg == BD71815_REG_CC_CCNTD_2)
+		pr_info("Writing CC[2] byte to 0x%x\n", val);
+	if (reg == BD71815_REG_CC_CCNTD_1)
+		pr_info("Writing CC[1] byte to 0x%x\n", val);
+	if (reg == BD71815_REG_CC_CCNTD_0) {
+		pr_info("Writing CC[0] byte to 0x%x\n", val);
+		msleep(5000);
+	}
+
 	reg_base[reg] = (u8)val;
 
 	return 0;
