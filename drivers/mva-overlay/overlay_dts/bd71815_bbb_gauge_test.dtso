@@ -19,6 +19,22 @@
  				voltage-min-design-microvolt = <3400000>;
 				voltage-max-design-microvolt = <4350000>;
 				charge-full-design-microamp-hours = <1738000>;
+
+
+				ocv-capacity-celsius = <0>;
+				ocv-capacity-table-0 = <4350000 100>,
+				<4325945 100>, <4255935 95>, <4197476 90>,
+				<4142843 85>, <4090615 80>, <4047113 75>,
+				<3987352 70>, <3957835 65>, <3920815 60>,
+				<3879834 55>, <3827010 50>, <3807239 45>,
+				<3791379 40>, <3779925 35>, <3775038 30>,
+				<3773530 25>, <3756695 20>, <3734099 15>,
+				<3704867 10>, <3635377 5>, <3512942 0>;
+				/* there could be <3019825 (-5)> -not sure if
+				   it would be handled correctly though
+				*/
+
+
 /* TODO: Add rest of the needed properties like OCV tables etc...
   over-voltage-threshold-microvolt:
     description: battery over-voltage limit
