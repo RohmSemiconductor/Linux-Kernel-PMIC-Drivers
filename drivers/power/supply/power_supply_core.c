@@ -576,7 +576,7 @@ static int get_fwnode_tuple_array(struct device *dev, struct fwnode_handle *fw,
 
 	num_values = fwnode_property_count_u32(fw, name);
 	if (num_values <= 0) {
-		dev_err(dev, "failed to get %s\n", name);
+		dev_dbg(dev, "failed to get %s\n", name);
 		return -EINVAL;
 	}
 
@@ -817,6 +817,7 @@ int power_supply_dev_get_battery_info(struct device *dev,
 						&info->ocv_table[index],
 					     &info->ocv_table_size[index]);
 		if (err) {
+			dev_err(dev, "malformed ocv-capacity-table\n");
 			kfree(propname);
 			power_supply_dev_put_battery_info(dev, info);
 			goto out_put_node;
