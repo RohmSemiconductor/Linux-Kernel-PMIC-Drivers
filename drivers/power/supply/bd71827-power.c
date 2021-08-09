@@ -140,6 +140,16 @@ struct pwr_regs {
 #endif
 };
 
+/* Regions for High, Medium, Low, Very Low temperature */
+enum {
+	VDR_TEMP_HIGH,
+	VDR_TEMP_NORMAL,
+	VDR_TEMP_LOW,
+	VDR_TEMP_VERY_LOW,
+	NUM_VDR_TEMPS
+};
+static int vdr_temps[NUM_VDR_TEMPS] = { -EINVAL, -EINVAL, -EINVAL, -EINVAL};
+
 static struct pwr_regs pwr_regs_bd71827 = {
 	.vbat_init = BD71827_REG_VM_OCV_PRE_U,
 	.vbat_init2 = BD71827_REG_VM_OCV_PST_U,
@@ -305,7 +315,7 @@ static int soc_table_default[NUM_BAT_PARAMS] = {
 	0,
 	-50
 };
-
+#if 0
 static int vdr_table_h_default[NUM_BAT_PARAMS] = {
 	100,
 	100,
@@ -409,6 +419,7 @@ static int vdr_table_vl_default[NUM_BAT_PARAMS] = {
 	246,
 	336
 };
+#endif
 
 /* Module parameters */
 static int use_load_bat_params;
@@ -1062,21 +1073,21 @@ static int bd71827_get_vdr(struct bd71827_power *pwr, int dsoc, int temp)
 	int vdr_table[NUM_BAT_PARAMS];
 
 	/* Calculate VDR by temperature */
-	if (temp >= DGRD_TEMP_H_DEFAULT)
+	if (temp >= vdr_temps[VDR_TEMP_HIGH])
 		for (i = 0; i < NUM_BAT_PARAMS; i++)
 			vdr_table[i] = vdr_table_h[i];
-	else if (temp >= DGRD_TEMP_M_DEFAULT)
-		calc_vdr(vdr_table, vdr_table_m, temp, DGRD_TEMP_M_DEFAULT,
-			 vdr_table_h, DGRD_TEMP_H_DEFAULT,
+	else if (temp >= vdr_temps[VDR_TEMP_NORMAL])
+		calc_vdr(vdr_table, vdr_table_m, temp, vdr_temps[VDR_TEMP_NORMAL],
+			 vdr_table_h, vdr_temps[VDR_TEMP_HIGH],
 			 NUM_BAT_PARAMS);
-	else if (temp >= DGRD_TEMP_L_DEFAULT)
-		calc_vdr(vdr_table, vdr_table_l, temp, DGRD_TEMP_L_DEFAULT,
-			 vdr_table_m, DGRD_TEMP_M_DEFAULT,
+	else if (temp >= vdr_temps[VDR_TEMP_LOW])
+		calc_vdr(vdr_table, vdr_table_l, temp, vdr_temps[VDR_TEMP_LOW],
+			 vdr_table_m, vdr_temps[VDR_TEMP_NORMAL],
 			 NUM_BAT_PARAMS);
-	else if (temp >= DGRD_TEMP_VL_DEFAULT)
+	else if (temp >= vdr_temps[VDR_TEMP_VERY_LOW])
 		calc_vdr(vdr_table, vdr_table_vl, temp,
-			 DGRD_TEMP_VL_DEFAULT, vdr_table_l, DGRD_TEMP_L_DEFAULT,
-			 NUM_BAT_PARAMS);
+			 vdr_temps[VDR_TEMP_VERY_LOW], vdr_table_l,
+			 vdr_temps[VDR_TEMP_LOW], NUM_BAT_PARAMS);
 	else
 		for (i = 0; i < NUM_BAT_PARAMS; i++)
 			vdr_table[i] = vdr_table_vl[i];
@@ -1122,6 +1133,13 @@ static int bd71828_zero_correct(struct simple_gauge *sw, int *effective_cap,
 	if (ret)
 		return ret;
 
+	/* FIXME: if batinfo is used for OCV, then the ocv_table is not populated.
+	 * populate ocv table from DT values.
+	 *
+	 * FIXME: The amount of OCV values and VDR values should match - as
+	 * should the SOCs for VDR and OCV values. Either do sanity checks
+	 * at probe - or make algorithm more flexible.
+	 */
 	for (i = 1; i < NUM_BAT_PARAMS; i++) {
 		ocv_table_load[i] = ocv_table[i] - (ocv - vbat);
 		if (ocv_table_load[i] <= pwr->min_voltage) {
@@ -1355,6 +1373,65 @@ static int bd71827_init_hardware(struct bd71827_power *pwr)
 	return start_cc(pwr);
 }
 
+#define MK_2_100MCELSIUS(m_kevl_in) (((int)(m_kevl_in) - 273150) / 100)
+static int get_vdr_from_dt(struct bd71827_power *pwr, int temp_bytes)
+{
+	int i, ret, num_values;
+	struct fwnode_handle * node;
+	u32 vdr_kelvin[NUM_VDR_TEMPS];
+
+	node = dev_fwnode(pwr->dev->parent);
+	if (!node) {
+		dev_err(pwr->dev, "no charger node\n");
+		return -ENODEV;
+	}
+
+	if (temp_bytes != NUM_VDR_TEMPS * 4) {
+		dev_err(pwr->dev, "Bad VDR temperature table size (%dB). Expected %dB",
+			temp_bytes, NUM_VDR_TEMPS * 4);
+		return -EINVAL;
+	}
+	ret = fwnode_property_read_u32_array(node,
+					    "rohm,volt-drop-temp-millikelvin",
+					    &vdr_kelvin[0], NUM_VDR_TEMPS);
+	if (ret) {
+		dev_err(pwr->dev, "Invalid VDR temperatures in device-tree");
+		return ret;
+	}
+	/* Convert millikelvin to .1 celsius as is expected by VDR algo */
+	for (i = 0; i < NUM_VDR_TEMPS; i++)
+		vdr_temps[i] = MK_2_100MCELSIUS(vdr_kelvin[i]);
+
+	for (i = 0; i < NUM_VDR_TEMPS; i++) {
+		const char *prop[] = {
+			"rohm,volt-drop-high-temp-microvolt",
+			"rohm,volt-drop-normal-temp-microvolt",
+			"rohm,volt-drop-low-temp-microvolt",
+			"rohm,volt-drop-very-low-temp-microvolt",
+		};
+		int32_t *tables[4] = {
+			&vdr_table_h[0], &vdr_table_m[0], &vdr_table_l[0],
+			&vdr_table_vl[0] };
+
+		num_values = fwnode_property_count_u32(node, prop[i]);
+		if (num_values != NUM_BAT_PARAMS) {
+			dev_err(pwr->dev,
+				"Bad VDR table size. Expected %d parameters",
+				NUM_BAT_PARAMS);
+			return -EINVAL;
+		}
+		ret = fwnode_property_read_u32_array(node, prop[i], tables[i],
+						     num_values);
+		if (ret) {
+			dev_err(pwr->dev,
+				"Invalid VDR temperatures in device-tree");
+			return ret;
+		}
+	}
+
+	return 0;
+}
+
  /* Set default parameters if no module parameters were given */
 static int bd71827_set_battery_parameters(struct bd71827_power *pwr)
 {
@@ -1365,7 +1442,8 @@ static int bd71827_set_battery_parameters(struct bd71827_power *pwr)
 	 * or as module parameters.
 	 */
 	if (!use_load_bat_params) {
-		int ret;
+		int ret, sz;
+		struct device_node *battery_np;
 
 		/*
 		 * power_supply_dev_get_battery_info uses devm internally
@@ -1376,6 +1454,11 @@ static int bd71827_set_battery_parameters(struct bd71827_power *pwr)
 		if (ret) {
 			dev_err(pwr->dev, "No battery information (%d)\n", ret);
 			return ret;
+		}
+
+		if (!pwr->batinfo.ocv_table[0]) {
+			dev_err(pwr->dev, "No Open Circuit Voltages for battery\n");
+			return -EINVAL;
 		}
 
 		if (pwr->batinfo.charge_full_design_uah == -EINVAL) {
@@ -1407,6 +1490,21 @@ static int bd71827_set_battery_parameters(struct bd71827_power *pwr)
 		pwr->gdesc.degrade_cycle_uah = pwr->batinfo.degrade_cycle_uah;
 
 		soc_est_max_num = SOC_EST_MAX_NUM_DEFAULT;
+
+		battery_np = of_parse_phandle(pwr->dev->parent->of_node,
+					      "monitored-battery", 0);
+		if (of_find_property(battery_np,
+				     "rohm,volt-drop-temp-millikelvin", &sz)) {
+			ret = get_vdr_from_dt(pwr, sz);
+			if (ret)
+				return ret;
+		} else {
+			vdr_temps[VDR_TEMP_HIGH] = DGRD_TEMP_H_DEFAULT;
+			vdr_temps[VDR_TEMP_NORMAL] = DGRD_TEMP_M_DEFAULT;
+			vdr_temps[VDR_TEMP_LOW] = DGRD_TEMP_L_DEFAULT;
+			vdr_temps[VDR_TEMP_VERY_LOW] = DGRD_TEMP_VL_DEFAULT;
+		}
+
 /*
 		for (i = 0; i < NUM_BAT_PARAMS; i++) {
 			soc_table[i] = soc_table_default[i];
@@ -1418,14 +1516,24 @@ static int bd71827_set_battery_parameters(struct bd71827_power *pwr)
 */
 		return 0;
 	} else {
-	for (i = 0; i < NUM_BAT_PARAMS; i++)
-		soc_table[i] = soc_table_default[i];
+		for (i = 0; i < NUM_BAT_PARAMS; i++)
+			soc_table[i] = soc_table_default[i];
 
-	pwr->min_voltage = param_max_voltage;
-	pwr->max_voltage = param_min_voltage;
-	pwr->low_thr_voltage = param_thr_voltage;
-	pwr->battery_cap = battery_cap_mah * 1000;
-	pwr->gdesc.degrade_cycle_uah = dgrd_cyc_cap;
+		if (vdr_temps[VDR_TEMP_HIGH] == -EINVAL ||
+		    vdr_temps[VDR_TEMP_NORMAL] ==-EINVAL ||
+		    vdr_temps[VDR_TEMP_LOW] == -EINVAL ||
+		    vdr_temps[VDR_TEMP_VERY_LOW] == -EINVAL) {
+			vdr_temps[VDR_TEMP_HIGH] = DGRD_TEMP_H_DEFAULT;
+			vdr_temps[VDR_TEMP_NORMAL] = DGRD_TEMP_M_DEFAULT;
+			vdr_temps[VDR_TEMP_LOW] = DGRD_TEMP_L_DEFAULT;
+			vdr_temps[VDR_TEMP_VERY_LOW] = DGRD_TEMP_VL_DEFAULT;
+		}
+
+		pwr->min_voltage = param_max_voltage;
+		pwr->max_voltage = param_min_voltage;
+		pwr->low_thr_voltage = param_thr_voltage;
+		pwr->battery_cap = battery_cap_mah * 1000;
+		pwr->gdesc.degrade_cycle_uah = dgrd_cyc_cap;
 	}
 	if (!pwr->min_voltage || !pwr->max_voltage || !pwr->battery_cap) {
 		dev_err(pwr->dev, "Battery parameters missing\n");
@@ -2245,37 +2353,11 @@ static int bd71828_get_cycle(struct simple_gauge *sw, int *cycle)
 	return ret;
 }
 
-static int get_vdr_from_dt(struct bd71827_power *pwr)
-{
-	int ret;
-	struct fwnode_handle * node;
-
-	node = dev_fwnode(dev);
-	if (!node) {
-		dev_err(dev, "no charger node\n");
-		return -ENODEV;
-	}
-
-	num_values = fwnode_property_count_u32(fw, name);
-	if (num_values != NUM_BAT_PARAMS) {
-		dev_err(pwr->dev, "Bad VDR table size. Expected %d parameters",
-			NUM_BAT_PARAMS);
-		return -EINVAL;
-	}
-	ret = fwnode_property_read_u32_array(pwr->dev->of_node,
-					    "rohm,volt-drop-temp-millikelvin"
-					    &vdr_table[0], num_values);)
-
-	}
-
-}
-
 static void fgauge_initial_values(struct bd71827_power *pwr)
 {
 	struct simple_gauge_desc *d = &pwr->gdesc;
 	struct simple_gauge_ops *o = &pwr->ops;
 	bool use_vdr = false;
-	int sz;
 
 	/* TODO: See if these could be get from DT? */
 	d->poll_interval = JITTER_DEFAULT; /* 3 seconds */
@@ -2290,23 +2372,16 @@ static void fgauge_initial_values(struct bd71827_power *pwr)
 	o->get_cycle = bd71828_get_cycle;			/* Ok */
 	o->get_vsys = bd71827_get_vsys_min;
 
+	/*
+	 * We have custom OCV table => provide our own volt_to_cap and
+	 * ocv_by_soc which utilize the custom tables.
+	 */
 	if (ocv_table[0]) {
 		dev_dbg(pwr->dev, "OCV values given as parameters\n");
 		o->get_soc_by_ocv = &bd71827_voltage_to_capacity;
 		o->get_ocv_by_soc = &bd71827_get_ocv;
-	} else if (!of_find_property(pwr->dev->of_node, "ocv-capacity-celsius",
-			      &sz)) {
-		dev_err(pwr->dev, "No Open Circuit Voltages for battery\n");
-		return -EINVAL;
-	} else {
-		dev_dbg(pwr->dev, "OCV values given from DT\n");
 	}
 
-	if (of_find_property(pwr->dev->of_node, "rohm,volt-drop-temp-millikelvin")) {
-		ret = get_vdr_from_dt(pwr);
-		if (ret)
-			return ret;
-	}
 	if (vdr_table_h[0] && vdr_table_m[0] && vdr_table_l[0] &&
 		   vdr_table_vl[0])
 		use_vdr = true;
@@ -2402,6 +2477,7 @@ static int bd71827_power_probe(struct platform_device *pdev)
 		return ret;
 	}
 	fgauge_initial_values(pwr);
+
 	pwr->gdesc.drv_data = pwr;
 
 	ret = bd7182x_get_rsens(pwr);
@@ -2496,6 +2572,9 @@ MODULE_PARM_DESC(soc_est_max_num, "soc_est_max_num:SOC estimation max repeat num
 
 module_param_array(ocv_table, int, NULL, 0444);
 MODULE_PARM_DESC(ocv_table, "ocv_table:Open Circuit Voltage table (uV)");
+
+module_param_array(vdr_temps, int, NULL, 0444);
+MODULE_PARM_DESC(vdr_temps, "vdr_temps:temperatures for VDR tables. (0.1C)");
 
 module_param_array(vdr_table_h, int, NULL, 0444);
 MODULE_PARM_DESC(vdr_table_h, "vdr_table_h:Voltage Drop Ratio temperature high area table");
