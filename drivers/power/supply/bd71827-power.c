@@ -596,7 +596,7 @@ static int bd71827_voltage_to_capacity(struct simple_gauge *sw, int ocv, int tem
 	struct bd71827_power *pwr;
 
 	/* If ocv_table is not given try luck with batinfo */
-	if (!use_load_bat_params) {
+	if (!use_load_bat_params || !ocv_table[0]) {
 		if (!sw)
 			return -EINVAL;
 
@@ -859,12 +859,16 @@ static int calibration_coulomb_counter(struct bd71827_power *pwr)
 
 	/* Get initial OCV */
 	bd71827_get_init_voltage(pwr, &ocv);
+	pr_info("Initial OCV %u\n", ocv);
 	dev_dbg(pwr->dev, "ocv %d\n", ocv);
 
 	if (pwr->ops.get_soc_by_ocv) {
+		pr_info("Calling SOC by OCV\n");
 		ret = pwr->ops.get_soc_by_ocv(NULL, ocv, 0, &soc);
+		pr_info("%s(): SOC by OCV: ocv %u, soc %u\n", __func__, ocv, soc);
 	} else {
 		soc = power_supply_batinfo_ocv2dcap(&pwr->batinfo, ocv, 0);
+		pr_info("%s(): SOC by OCV from batinfo: ocv %u, soc %u\n", __func__, ocv, soc);
 		if (soc < 0)
 			return soc;
 	}
@@ -876,6 +880,9 @@ static int calibration_coulomb_counter(struct bd71827_power *pwr)
 
 	bcap = UAH_to_CC(pwr, pwr->battery_cap) * soc / 1000;
 	write_cc(pwr, bcap + UAH_to_CC(pwr, pwr->battery_cap) / 200);
+
+	pr_info("Setting initial CC to %u (SOC %u [0.1%%])\n", bcap, soc);
+	msleep(5000);
 
 	tmpret = write_cc(pwr, bcap);
 	if (tmpret)
@@ -1400,7 +1407,7 @@ static int bd71827_set_battery_parameters(struct bd71827_power *pwr)
 		pwr->gdesc.degrade_cycle_uah = pwr->batinfo.degrade_cycle_uah;
 
 		soc_est_max_num = SOC_EST_MAX_NUM_DEFAULT;
-
+/*
 		for (i = 0; i < NUM_BAT_PARAMS; i++) {
 			soc_table[i] = soc_table_default[i];
 			vdr_table_h[i] = vdr_table_h_default[i];
@@ -1408,7 +1415,7 @@ static int bd71827_set_battery_parameters(struct bd71827_power *pwr)
 			vdr_table_l[i] = vdr_table_l_default[i];
 			vdr_table_vl[i] = vdr_table_vl_default[i];
 		}
-
+*/
 		return 0;
 	} else {
 	for (i = 0; i < NUM_BAT_PARAMS; i++)
@@ -2238,10 +2245,36 @@ static int bd71828_get_cycle(struct simple_gauge *sw, int *cycle)
 	return ret;
 }
 
+static int get_vdr_from_dt(struct bd71827_power *pwr)
+{
+	int ret;
+	struct fwnode_handle * node;
+
+	node = dev_fwnode(dev);
+	if (!node) {
+		dev_err(dev, "no charger node\n");
+		return -ENODEV;
+	}
+
+	num_values = fwnode_property_count_u32(fw, name);
+	if (num_values != NUM_BAT_PARAMS) {
+		dev_err(pwr->dev, "Bad VDR table size. Expected %d parameters",
+			NUM_BAT_PARAMS);
+		return -EINVAL;
+	}
+	ret = fwnode_property_read_u32_array(pwr->dev->of_node,
+					    "rohm,volt-drop-temp-millikelvin"
+					    &vdr_table[0], num_values);)
+
+	}
+
+}
+
 static void fgauge_initial_values(struct bd71827_power *pwr)
 {
 	struct simple_gauge_desc *d = &pwr->gdesc;
 	struct simple_gauge_ops *o = &pwr->ops;
+	bool use_vdr = false;
 	int sz;
 
 	/* TODO: See if these could be get from DT? */
@@ -2257,20 +2290,26 @@ static void fgauge_initial_values(struct bd71827_power *pwr)
 	o->get_cycle = bd71828_get_cycle;			/* Ok */
 	o->get_vsys = bd71827_get_vsys_min;
 
-	/*
-	 * TODO: Add VDR stuff to DT and add this call-back conditionally.
-	 * We should not require the VDR parameters here - if user has no
-	 * interest/need for more accurate SOC estimation then he should not
-	 * be forced to get the VDR parameters from ROHM.
-	 */
-
-	if (!of_find_property(pwr->dev->of_node, "ocv-capacity-celsius",
-			      &sz)) {
+	if (ocv_table[0]) {
+		dev_dbg(pwr->dev, "OCV values given as parameters\n");
 		o->get_soc_by_ocv = &bd71827_voltage_to_capacity;
 		o->get_ocv_by_soc = &bd71827_get_ocv;
+	} else if (!of_find_property(pwr->dev->of_node, "ocv-capacity-celsius",
+			      &sz)) {
+		dev_err(pwr->dev, "No Open Circuit Voltages for battery\n");
+		return -EINVAL;
 	} else {
 		dev_dbg(pwr->dev, "OCV values given from DT\n");
 	}
+
+	if (of_find_property(pwr->dev->of_node, "rohm,volt-drop-temp-millikelvin")) {
+		ret = get_vdr_from_dt(pwr);
+		if (ret)
+			return ret;
+	}
+	if (vdr_table_h[0] && vdr_table_m[0] && vdr_table_l[0] &&
+		   vdr_table_vl[0])
+		use_vdr = true;
 
 	/* TODO:
 	 *	o->suspend_calibrate = bd71828_suspend_calibrate;
@@ -2278,21 +2317,25 @@ static void fgauge_initial_values(struct bd71827_power *pwr)
 	switch (pwr->chip_type) {
 	case ROHM_CHIP_TYPE_BD71828:
 		o->get_temp = bd71828_get_temp;
-		o->zero_cap_adjust = bd71828_zero_correct;
 		o->is_relaxed = bd71828_is_relaxed;
+		if (use_vdr)
+			o->zero_cap_adjust = bd71828_zero_correct;
 		break;
 	case ROHM_CHIP_TYPE_BD71827:
 		o->get_temp = bd71827_get_temp;
 		o->is_relaxed = bd71827_is_relaxed;
- 		o->zero_cap_adjust = bd71828_zero_correct;
+		if (use_vdr)
+	 		o->zero_cap_adjust = bd71828_zero_correct;
  		break;
 	case ROHM_CHIP_TYPE_BD71815:
 		o->get_temp = bd71827_get_temp;
 		o->is_relaxed = bd71828_is_relaxed;
-		/* TODO: BD71815 has not been used with VDR. Use default
-		 * zero-correction by setting thresholds and by populating
-		 * correct SOC-OCV tables
+		/* TODO: BD71815 has not been used with VDR. This is untested
+		 * but I don't see why it wouldn't work by setting thresholds
+		 * and by populating correct SOC-OCV tables.
 		 */
+		if (use_vdr)
+	 		o->zero_cap_adjust = bd71828_zero_correct;
 		break;
 	/*
 	 * No need to handle default here as this is done already in probe.
@@ -2311,6 +2354,7 @@ static int bd71827_power_probe(struct platform_device *pdev)
 	int ret;
 	struct regmap *regmap;
 
+	pr_info("%s() probed\n", __func__);
 	psycfg = gauge_psy_config;
 
 	regmap = dev_get_regmap(pdev->dev.parent, NULL);
