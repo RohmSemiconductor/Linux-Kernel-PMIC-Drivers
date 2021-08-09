@@ -11,8 +11,10 @@ voltage scaling. Programmable output voltage, sequencing and power state
 control support a wide variety of processors and system implementations.
 The BD2657 also provides 2 general purpose outputs and a power button support.
 
-You can check the [unofficial repository for the development](https://github.com/M-Vaittinen/linux/tree/bd2657-dev).
-Please note the branches in this repository are rebased/moved/edited without a warning.
+You can check the [bd2657-dev branch](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/commits/bd2657-dev) for the unstable development version.
+Please note the branch can be rebased/moved/edited without a warning.
+
+### configs
 
 ```
 * CONFIG_MFD_ROHM_BD2657 for BD2657 core
@@ -20,8 +22,8 @@ Please note the branches in this repository are rebased/moved/edited without a w
 * CONFIG_GPIO_BD2657 for GPIO control
 ```
 
-The linux dt-documentations
+### The device-tree documentation
 
-```
-TBD
-```
+[core](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/blob/bd2657-dev/Documentation/devicetree/bindings/mfd/rohm%2Cbd2657-pmic.yaml)
+[regulators](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/blob/bd2657-dev/Documentation/devicetree/bindings/regulator/rohm%2Cbd2657-regulator.yaml)
+
