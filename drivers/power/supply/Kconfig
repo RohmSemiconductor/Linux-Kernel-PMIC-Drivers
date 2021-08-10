@@ -12,6 +12,15 @@ if POWER_SUPPLY
 config POWER_SIMPLE_GAUGE
 	tristate
 
+config POWER_SUPPLY_BD71815_GAUGE_TEST
+	tristate "Test bd71815 fuel-gauge"
+	select POWER_SIMPLE_GAUGE
+	help
+	  Say Y here to enable test for BD71815 driver fuel-gauge logic.
+	  Test operates on set of measured battery-data and computes
+	  register values for the driver which further computes the
+	  SoC based on it.
+
 config POWER_SUPPLY_SIMPLE_GAUGE_TEST
 	tristate "Test simple-gauge"
 	select POWER_SIMPLE_GAUGE
