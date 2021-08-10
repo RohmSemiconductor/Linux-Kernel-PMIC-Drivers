@@ -2421,6 +2421,46 @@ static void fgauge_initial_values(struct bd71827_power *pwr)
 	}
 }
 
+static void test(struct regmap *r) {
+	int val, ret, tmp;
+	char arr[4] = { 0xAA, 0xAB, 0xAF, 0xAD };
+	char rd[4];
+
+	ret = regmap_write(r, 2, 0xAA);
+	if (ret)
+		pr_err("regmap write returned %d\n", ret);
+
+	ret = regmap_read(r, 2, &val);
+	if (ret)
+		pr_err("regmap read returned %d\n", ret);
+	if (val != 0xAA)
+		pr_err("Wrote 0xAA - read back 0x%02x\n", val);
+
+	ret = regmap_update_bits(r, 2, 0x8A, 0x89);
+	if (!ret)
+		pr_err("regmap_update_bits returned %d\n", ret);
+
+	ret = regmap_read(r, 2, &val);
+	if (ret)
+		pr_err("regmap read returned %d\n", ret);
+
+	tmp = 0xAA & ~(0x8A);
+	tmp |= (0x89 & 0x8A);
+	if (val != tmp )
+		pr_err("Wrote (bits) 0x%02x - read back 0x%02x\n", tmp, val);
+
+	ret = regmap_bulk_write(r, 2, &arr[0], sizeof(arr));
+	if (ret)
+		pr_err("Bulk write failed %d\n", ret);
+
+	ret = regmap_bulk_read(r, 2, &rd[0], sizeof(rd));
+	if (*((uint32_t *)&rd[0]) != *((uint32_t *)&arr[0]))
+		pr_err("bulk read/write failed (read 0x%02x 0x%02x 0x%02x 0x%02xi)\n",
+		       rd[0], rd[1],rd[2],rd[3]);
+
+	pr_info("regmap test done\n");
+}
+
 static int bd71827_power_probe(struct platform_device *pdev)
 {
 	struct bd71827_power *pwr;
@@ -2437,6 +2477,8 @@ static int bd71827_power_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "No parent regmap\n");
 		return -EINVAL;
 	}
+
+	test(regmap);
 
 	pwr = devm_kzalloc(&pdev->dev, sizeof(*pwr), GFP_KERNEL);
 	if (!pwr)
