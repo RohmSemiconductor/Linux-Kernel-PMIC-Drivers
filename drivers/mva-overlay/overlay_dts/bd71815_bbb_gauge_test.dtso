@@ -14,12 +14,11 @@
 	fragment@1 {
 		target-path = "/";
 		__overlay__ {
-			battery: test_battery {
+			test_battery: test_battery {
 				compatible ="simple-battery";
  				voltage-min-design-microvolt = <3400000>;
 				voltage-max-design-microvolt = <4350000>;
 				charge-full-design-microamp-hours = <1738000>;
-
 
 				ocv-capacity-celsius = <0>;
 				ocv-capacity-table-0 = <4350000 100>,
@@ -33,7 +32,17 @@
 				/* there could be <3019825 (-5)> -not sure if
 				   it would be handled correctly though
 				*/
-
+				/*
+				  45C 25C 5C 0C
+				  45000mC 25000mC 5000mC 0mC
+				  45000+273150 25000+273150 5000+273150 273150
+				 */
+				rohm,volt-drop-temp-millikelvin = <318150 298150 278150 273150>;
+				/* TBD */
+				rohm,volt-drop-high-temp-microvolt = <0>;
+				rohm,volt-drop-normal-temp-microvolt = <0>;
+				rohm,volt-drop-low-temp-microvolt = <0>;
+				rohm,volt-drop-very-low-temp-microvolt = <0>;
 
 /* TODO: Add rest of the needed properties like OCV tables etc...
   over-voltage-threshold-microvolt:
@@ -150,7 +159,7 @@ examples:
 				 * assuming 1MOhm Rsense
 				 */
 				rohm,charger-sense-resistor-ohms = <10000000>;
-        			monitored-battery = <&battery>;
+        			monitored-battery = <&test_battery>;
 			};
 		};
 	};
