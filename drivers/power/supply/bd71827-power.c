@@ -72,12 +72,6 @@ static const struct linear_range dcin_collapse = {
 #define BD718XX_MASK_VSYS_MIN_AVG_CLR		0x10
 
 #define JITTER_DEFAULT				3000000
-//#define BATTERY_CAP_MAH_DEFAULT			1529
-//#define MAX_VOLTAGE_DEFAULT			(ocv_table_default[0])
-/*
- #define MIN_VOLTAGE_DEFAULT			3400000
- #define THR_VOLTAGE_DEFAULT			4250000
-*/
 #define MAX_CURRENT_DEFAULT			890000		/* uA */
 #define AC_NAME					"bd71827_ac"
 #define BAT_NAME				"bd71827_bat"
@@ -261,34 +255,15 @@ static struct pwr_regs pwr_regs_bd71815 = {
 #endif
 };
 
-/*  1 micro V */
 /*
-static int ocv_table_default[NUM_BAT_PARAMS] = {
-	4350000,
-	4325945,
-	4255935,
-	4197476,
-	4142843,
-	4090615,
-	4047113,
-	3987352,
-	3957835,
-	3920815,
-	3879834,
-	3827010,
-	3807239,
-	3791379,
-	3779925,
-	3775038,
-	3773530,
-	3756695,
-	3734099,
-	3704867,
-	3635377,
-	3512942,
-	3019825
-};
-*/
+ * unit 0.1%
+ *
+ * These are the SOCs we use at zero-correction. If OCV is given via DT
+ * we interpolate the OCV tables to get the OCV corresponding these SOCs.
+ *
+ * If VDR tables are given we will ovrride these SOCs by SOCs corresponding
+ * the VDR values.
+ */
 /* unit 0.1% */
 static int soc_table_default[NUM_BAT_PARAMS] = {
 	1000,
@@ -315,111 +290,6 @@ static int soc_table_default[NUM_BAT_PARAMS] = {
 	0,
 	-50
 };
-#if 0
-static int vdr_table_h_default[NUM_BAT_PARAMS] = {
-	100,
-	100,
-	102,
-	104,
-	105,
-	108,
-	111,
-	115,
-	122,
-	138,
-	158,
-	96,
-	108,
-	112,
-	117,
-	123,
-	137,
-	109,
-	131,
-	150,
-	172,
-	136,
-	218
-};
-
-static int vdr_table_m_default[NUM_BAT_PARAMS] = {
-	100,
-	100,
-	100,
-	100,
-	102,
-	104,
-	114,
-	110,
-	127,
-	141,
-	139,
-	96,
-	102,
-	106,
-	109,
-	113,
-	130,
-	134,
-	149,
-	188,
-	204,
-	126,
-	271
-};
-
-static int vdr_table_l_default[NUM_BAT_PARAMS] = {
-	100,
-	100,
-	98,
-	96,
-	96,
-	96,
-	105,
-	94,
-	108,
-	105,
-	95,
-	89,
-	90,
-	92,
-	99,
-	112,
-	129,
-	143,
-	155,
-	162,
-	156,
-	119,
-	326
-};
-
-static int vdr_table_vl_default[NUM_BAT_PARAMS] = {
-	100,
-	100,
-	98,
-	96,
-	95,
-	97,
-	101,
-	92,
-	100,
-	97,
-	91,
-	89,
-	90,
-	93,
-	103,
-	115,
-	128,
-	139,
-	148,
-	148,
-	156,
-	246,
-	336
-};
-#endif
 
 /* Module parameters */
 static int use_load_bat_params;
@@ -1127,19 +997,17 @@ static int bd71828_zero_correct(struct simple_gauge *sw, int *effective_cap,
 	 * Use unit of 0.1% for dsoc to improve accuracy
 	 */
 	dsoc = CAP2DSOC(cc_uah, *effective_cap);
-	dev_dbg(pwr->dev,  "dsoc = %d\n", dsoc);
+	dev_dbg(pwr->dev, "dsoc = %d\n", dsoc);
 
 	ret = bd71827_get_ocv(sw, dsoc, 0, &ocv);
 	if (ret)
 		return ret;
 
-	/* FIXME: if batinfo is used for OCV, then the ocv_table is not populated.
-	 * populate ocv table from DT values.
-	 *
-	 * FIXME: The amount of OCV values and VDR values should match - as
-	 * should the SOCs for VDR and OCV values. Either do sanity checks
-	 * at probe - or make algorithm more flexible.
-	 */
+	if (!ocv_table[0]) {
+		for (i = 0; i < NUM_BAT_PARAMS; i++)
+			ocv_table[i] = power_supply_batinfo_dcap2ocv(&pwr->batinfo,
+								     soc_table[i], temp);
+	}
 	for (i = 1; i < NUM_BAT_PARAMS; i++) {
 		ocv_table_load[i] = ocv_table[i] - (ocv - vbat);
 		if (ocv_table_load[i] <= pwr->min_voltage) {
@@ -1404,14 +1272,19 @@ static int get_vdr_from_dt(struct bd71827_power *pwr, int temp_bytes)
 
 	for (i = 0; i < NUM_VDR_TEMPS; i++) {
 		const char *prop[] = {
+			/* SOC in units of 0.1 percent. TODO: Check if we have
+			 * standard DT unit for percentage with higher accuracy
+			 */
+			"rohm,volt-drop-soc",
 			"rohm,volt-drop-high-temp-microvolt",
 			"rohm,volt-drop-normal-temp-microvolt",
 			"rohm,volt-drop-low-temp-microvolt",
 			"rohm,volt-drop-very-low-temp-microvolt",
 		};
-		int32_t *tables[4] = {
-			&vdr_table_h[0], &vdr_table_m[0], &vdr_table_l[0],
-			&vdr_table_vl[0] };
+		int32_t *tables[5] = {
+			&soc_table[0], &vdr_table_h[0], &vdr_table_m[0],
+			&vdr_table_l[0], &vdr_table_vl[0]
+		};
 
 		num_values = fwnode_property_count_u32(node, prop[i]);
 		if (num_values != NUM_BAT_PARAMS) {
@@ -1504,21 +1377,7 @@ static int bd71827_set_battery_parameters(struct bd71827_power *pwr)
 			vdr_temps[VDR_TEMP_LOW] = DGRD_TEMP_L_DEFAULT;
 			vdr_temps[VDR_TEMP_VERY_LOW] = DGRD_TEMP_VL_DEFAULT;
 		}
-
-/*
-		for (i = 0; i < NUM_BAT_PARAMS; i++) {
-			soc_table[i] = soc_table_default[i];
-			vdr_table_h[i] = vdr_table_h_default[i];
-			vdr_table_m[i] = vdr_table_m_default[i];
-			vdr_table_l[i] = vdr_table_l_default[i];
-			vdr_table_vl[i] = vdr_table_vl_default[i];
-		}
-*/
-		return 0;
 	} else {
-		for (i = 0; i < NUM_BAT_PARAMS; i++)
-			soc_table[i] = soc_table_default[i];
-
 		if (vdr_temps[VDR_TEMP_HIGH] == -EINVAL ||
 		    vdr_temps[VDR_TEMP_NORMAL] ==-EINVAL ||
 		    vdr_temps[VDR_TEMP_LOW] == -EINVAL ||
@@ -1535,6 +1394,11 @@ static int bd71827_set_battery_parameters(struct bd71827_power *pwr)
 		pwr->battery_cap = battery_cap_mah * 1000;
 		pwr->gdesc.degrade_cycle_uah = dgrd_cyc_cap;
 	}
+	/* SOC table is expected to be in descending order. */
+	if (!soc_table[0])
+		for (i = 0; i < NUM_BAT_PARAMS; i++)
+			soc_table[i] = soc_table_default[i];
+
 	if (!pwr->min_voltage || !pwr->max_voltage || !pwr->battery_cap) {
 		dev_err(pwr->dev, "Battery parameters missing\n");
 
@@ -2248,7 +2112,7 @@ static int bd7182x_get_rsens(struct bd71827_power *pwr)
 	dev_dbg(pwr->dev, "Setting curr-factor to %u\n", pwr->curr_factor);
 	return 0;
 }
- 
+
 /*
  * BD71827 has no proper support for detecting relaxed battery.
  * Driver has implemented current polling and logic has been that:
