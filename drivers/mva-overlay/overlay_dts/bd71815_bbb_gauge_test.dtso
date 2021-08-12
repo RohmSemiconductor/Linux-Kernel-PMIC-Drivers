@@ -21,6 +21,21 @@
 				charge-full-design-microamp-hours = <1738000>;
 
 				ocv-capacity-celsius = <0>;
+				/* This I think was from UT batdata? */
+				ocv-capacity-table-0 = <4400000 100>,
+					<4375377 100>, <4314793 95>,
+					<4257284 90>, <4200969 85>,
+					<4146652 80>, <4094464 75>,
+					<4048556 70>, <3997034 65>,
+					<3959858 60>, <3917668 55>,
+					<3860165 50>, <3837491 45>,
+					<3817893 40>, <3801408 35>,
+					<3788071 30>, <3775836 25>,
+					<3752263 20>, <3732625 15>,
+					<3698262 10>, <3680138 5>, <3637500 0>;
+/*					2668849 (-5) */
+/*
+This was hard-coded to driver methinks.
 				ocv-capacity-table-0 = <4350000 100>,
 				<4325945 100>, <4255935 95>, <4197476 90>,
 				<4142843 85>, <4090615 80>, <4047113 75>,
@@ -29,6 +44,7 @@
 				<3791379 40>, <3779925 35>, <3775038 30>,
 				<3773530 25>, <3756695 20>, <3734099 15>,
 				<3704867 10>, <3635377 5>, <3512942 0>;
+*/
 				/* there could be <3019825 (-5)> -not sure if
 				   it would be handled correctly though
 				*/
@@ -39,10 +55,24 @@
 				 */
 				rohm,volt-drop-temp-millikelvin = <318150 298150 278150 273150>;
 				/* TBD */
-				rohm,volt-drop-high-temp-microvolt = <0>;
-				rohm,volt-drop-normal-temp-microvolt = <0>;
-				rohm,volt-drop-low-temp-microvolt = <0>;
-				rohm,volt-drop-very-low-temp-microvolt = <0>;
+				rohm,volt-drop-high-temp-microvolt = <100 100
+					102 104 107 110 114 122 126 139 155 94
+					107 113 120 129 113 104 110 109 116 128
+					/* 525 */>;
+				rohm,volt-drop-normal-temp-microvolt = <100 100
+					100 100 100 100 100 100 98 95 90 85 85
+					90 93 95 98 98 100 106 109 130 /* 451 */>;
+				rohm,volt-drop-low-temp-microvolt = <100 100 98
+					96 95 96 98 110 105 108 95 86 87 90 92
+					96 102 109 111 122 144 219 /* 393 */>;
+				rohm,volt-drop-very-low-temp-microvolt = <100
+					100 98 95 94 94 95 105 96 97 87 84 84 86
+					90 93 101 110 117 130 157 195 /* 31 */>;
+				rohm,volt-drop-soc = <1000 1000 950 900 850 800
+						      750 700 650 600 550 500
+						      450 400 350 300 250 200
+						      150 100 50 0 /* -50 */>;
+
 
 /* TODO: Add rest of the needed properties like OCV tables etc...
   over-voltage-threshold-microvolt:
