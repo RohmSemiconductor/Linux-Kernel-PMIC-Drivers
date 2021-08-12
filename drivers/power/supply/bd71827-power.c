@@ -96,7 +96,15 @@ static const struct linear_range dcin_collapse = {
 #define PWRCTRL_NORMAL				0x22
 #define PWRCTRL_RESET				0x23
 
+/*
+ * Originally we relied upon a fixed size table of OCV and VDR params.
+ * However the exising linux power-supply batinfo interface for getting the OCV
+ * values from DT does not have fixed amount of OCV values. Thus we use fixed
+ * parameter amount only for values provided as module params - and use this
+ * only as maximum number of parameters when values come from DT.
+ */
 #define NUM_BAT_PARAMS				23
+#define MAX_NUM_VDR_VALUES NUM_BAT_PARAMS
 
 struct pwr_regs {
 	int used_init_regs;
@@ -142,7 +150,15 @@ enum {
 	VDR_TEMP_VERY_LOW,
 	NUM_VDR_TEMPS
 };
+
+/*
+ * This works as long as we have only one instance of this driver (which is
+ * likely to be the case even with DT originated battery info). Anyways,
+ * consider moving these in allocated data just to pretend to know what I am
+ * doing XD
+ */
 static int vdr_temps[NUM_VDR_TEMPS] = { -EINVAL, -EINVAL, -EINVAL, -EINVAL};
+static int g_num_vdr_params;
 
 static struct pwr_regs pwr_regs_bd71827 = {
 	.vbat_init = BD71827_REG_VM_OCV_PRE_U,
@@ -488,6 +504,7 @@ static int bd71827_voltage_to_capacity(struct simple_gauge *sw, int ocv, int tem
 		return 0;
 	}
 
+	/* Default or module param OCV table. We have NUM_BAT_PARAMS */
 	if (ocv > ocv_table[0]) {
 		*dsoc = soc_table[0];
 	} else {
@@ -881,7 +898,7 @@ static int bd71827_get_ocv(struct simple_gauge *sw, int dsoc, int temp, int *ocv
 	struct bd71827_power *pwr;
 
 	/* If soc_table is not given try luck with batinfo */
-	if (!use_load_bat_params) {
+	if (!use_load_bat_params || !ocv_table[0]) {
 		if (!sw)
 			return -EINVAL;
 
@@ -892,6 +909,8 @@ static int bd71827_get_ocv(struct simple_gauge *sw, int dsoc, int temp, int *ocv
 
 		return 0;
 	}
+
+	/* Default or module param OCV table. We have NUM_BAT_PARAMS */
 
 	if (dsoc > soc_table[0]) {
 		*ocv = pwr->max_voltage;
@@ -938,30 +957,30 @@ static int bd71827_get_vdr(struct bd71827_power *pwr, int dsoc, int temp)
 
 	/* Calculate VDR by temperature */
 	if (temp >= vdr_temps[VDR_TEMP_HIGH])
-		for (i = 0; i < NUM_BAT_PARAMS; i++)
+		for (i = 0; i < g_num_vdr_params; i++)
 			vdr_table[i] = vdr_table_h[i];
 	else if (temp >= vdr_temps[VDR_TEMP_NORMAL])
 		calc_vdr(vdr_table, vdr_table_m, temp, vdr_temps[VDR_TEMP_NORMAL],
 			 vdr_table_h, vdr_temps[VDR_TEMP_HIGH],
-			 NUM_BAT_PARAMS);
+			 g_num_vdr_params);
 	else if (temp >= vdr_temps[VDR_TEMP_LOW])
 		calc_vdr(vdr_table, vdr_table_l, temp, vdr_temps[VDR_TEMP_LOW],
 			 vdr_table_m, vdr_temps[VDR_TEMP_NORMAL],
-			 NUM_BAT_PARAMS);
+			 g_num_vdr_params);
 	else if (temp >= vdr_temps[VDR_TEMP_VERY_LOW])
 		calc_vdr(vdr_table, vdr_table_vl, temp,
 			 vdr_temps[VDR_TEMP_VERY_LOW], vdr_table_l,
-			 vdr_temps[VDR_TEMP_LOW], NUM_BAT_PARAMS);
+			 vdr_temps[VDR_TEMP_LOW], g_num_vdr_params);
 	else
-		for (i = 0; i < NUM_BAT_PARAMS; i++)
+		for (i = 0; i < g_num_vdr_params; i++)
 			vdr_table[i] = vdr_table_vl[i];
 
 	if (dsoc > soc_table[0]) {
 		vdr = 100;
 	} else if (dsoc == 0) {
-		vdr = vdr_table[NUM_BAT_PARAMS - 2];
+		vdr = vdr_table[g_num_vdr_params - 1];
 	} else {
-		for (i = 0; i < NUM_BAT_PARAMS - 1; i++)
+		for (i = 0; i < g_num_vdr_params - 1; i++)
 			if ((dsoc <= soc_table[i]) && (dsoc > soc_table[i+1])) {
 				vdr = LINEAR_INTERPOLATE(vdr_table[i],
 							 vdr_table[i+1],
@@ -970,7 +989,7 @@ static int bd71827_get_vdr(struct bd71827_power *pwr, int dsoc, int temp)
 
 				break;
 			}
-		if (i == NUM_BAT_PARAMS - 1)
+		if (i == g_num_vdr_params - 1)
 			vdr = vdr_table[i];
 	}
 	dev_dbg(pwr->dev, "vdr = %d\n", vdr);
@@ -982,6 +1001,8 @@ static int bd71828_zero_correct(struct simple_gauge *sw, int *effective_cap,
 {
 	int ocv_table_load[NUM_BAT_PARAMS];
 	int i, ret;
+	/* Assume fixed-size module param table */
+	static int params = NUM_BAT_PARAMS;
 	int ocv;
 	int dsoc;
 	struct bd71827_power *pwr = simple_gauge_get_drvdata(sw);
@@ -998,11 +1019,16 @@ static int bd71828_zero_correct(struct simple_gauge *sw, int *effective_cap,
 		return ret;
 
 	if (!ocv_table[0]) {
-		for (i = 0; i < NUM_BAT_PARAMS; i++)
+		for (i = 0; i < g_num_vdr_params; i++)
 			ocv_table[i] = power_supply_batinfo_dcap2ocv(&pwr->batinfo,
 								     soc_table[i], temp);
+		/*
+		 * Update amount of OCV values id we didn't have the fixed size
+		 * module param table
+		 */
+		params = g_num_vdr_params;
 	}
-	for (i = 1; i < NUM_BAT_PARAMS; i++) {
+	for (i = 1; i < params; i++) {
 		ocv_table_load[i] = ocv_table[i] - (ocv - vbat);
 		if (ocv_table_load[i] <= pwr->min_voltage) {
 			dev_dbg(pwr->dev, "ocv_table_load[%d] = %d\n", i,
@@ -1016,13 +1042,36 @@ static int bd71828_zero_correct(struct simple_gauge *sw, int *effective_cap,
 	 * battery voltage drop curves to do further SOC estimation improvement.
 	 * If VDR tables are available we perform these corrections.
 	 */
-	if (i < NUM_BAT_PARAMS) {
+	if (i < params) {
+		int zero_soc_pos;
 		int j, k, m;
 		int dv;
 		int lost_cap, new_lost_cap;
 		int dsoc0;
 		int vdr, vdr0;
 		int soc_range;
+
+		/* The original ROHM algorith had fixed amount of OCV and VDR
+		 * values. The quiet expectation of the algorithm was that the
+		 * second last value in these tables correspond zero SOC. In
+		 * order to relax this assumption when values come from DT we
+		 * try to scan the SOC table for zero SOC.
+		 */
+		for (zero_soc_pos = params - 1; zero_soc_pos >= 0;
+		     zero_soc_pos--)
+			if (soc_table[zero_soc_pos] >= 0)
+				break;
+
+		if (soc_table[zero_soc_pos])
+			dev_warn_once(pwr->dev,
+				      "VDR/OCV: zero SOC not found\n");
+
+		/*
+		 * We want to know the zero soc position from the last entry
+		 * in SOC table so that we know where the fully depleted cap
+		 * is met.
+		 */
+		zero_soc_pos = params - zero_soc_pos;
 
 		soc_range = (soc_table[i - 1] - soc_table[i]) / 10;
 		dv = (ocv_table_load[i - 1] - ocv_table_load[i]) / soc_range; /* was hard coded 5 */
@@ -1033,7 +1082,7 @@ static int bd71828_zero_correct(struct simple_gauge *sw, int *effective_cap,
 			}
 		}
 
-		lost_cap = ((NUM_BAT_PARAMS - 2 - i) * soc_range /* was 5 */ +
+		lost_cap = ((params - zero_soc_pos - i) * soc_range /* was 5 */ +
 			   (j - 1)) * *effective_cap / 100;
 		dev_dbg(pwr->dev, "lost_cap-1 = %d\n", lost_cap);
 
@@ -1049,7 +1098,7 @@ static int bd71828_zero_correct(struct simple_gauge *sw, int *effective_cap,
 			vdr = bd71827_get_vdr(pwr, dsoc, temp);
 			vdr0 = bd71827_get_vdr(pwr, dsoc0, temp);
 
-			for (k = 1; k < NUM_BAT_PARAMS; k++) {
+			for (k = 1; k < params; k++) {
 				ocv_table_load[k] = ocv_table[k] -
 						    (ocv - vbat) * vdr0 / vdr;
 				if (ocv_table_load[k] <= pwr->min_voltage) {
@@ -1059,7 +1108,7 @@ static int bd71828_zero_correct(struct simple_gauge *sw, int *effective_cap,
 					break;
 				}
 			}
-			if (k < NUM_BAT_PARAMS) {
+			if (k < params) {
 				dv = (ocv_table_load[k-1] -
 				     ocv_table_load[k]) / 5;
 				for (j = 1; j < 5; j++)
@@ -1067,7 +1116,7 @@ static int bd71828_zero_correct(struct simple_gauge *sw, int *effective_cap,
 					     pwr->min_voltage)
 						break;
 
-				new_lost_cap = ((NUM_BAT_PARAMS - 2 - k) *
+				new_lost_cap = ((params - zero_soc_pos - k) *
 						 5 + (j - 1)) *
 						*effective_cap / 100;
 				if (soc_est_max_num == 1)
@@ -1264,7 +1313,13 @@ static int get_vdr_from_dt(struct bd71827_power *pwr, int temp_bytes)
 	for (i = 0; i < NUM_VDR_TEMPS; i++)
 		vdr_temps[i] = MK_2_100MCELSIUS(vdr_kelvin[i]);
 
-	for (i = 0; i < NUM_VDR_TEMPS; i++) {
+	num_values = fwnode_property_count_u32(node, "rohm,volt-drop-soc");
+	if (num_values <= 0 || num_values > MAX_NUM_VDR_VALUES) {
+		dev_err(pwr->dev, "malformed voltage drop parameters\n");
+		return -EINVAL;
+	}
+	g_num_vdr_params = num_values;
+	for (i = 0; i < NUM_VDR_TEMPS + 1; i++) {
 		const char *prop[] = {
 			/* SOC in units of 0.1 percent. TODO: Check if we have
 			 * standard DT unit for percentage with higher accuracy
@@ -1280,11 +1335,10 @@ static int get_vdr_from_dt(struct bd71827_power *pwr, int temp_bytes)
 			&vdr_table_l[0], &vdr_table_vl[0]
 		};
 
-		num_values = fwnode_property_count_u32(node, prop[i]);
-		if (num_values != NUM_BAT_PARAMS) {
+		if (num_values != fwnode_property_count_u32(node, prop[i])) {
 			dev_err(pwr->dev,
-				"Bad VDR table size. Expected %d parameters",
-				NUM_BAT_PARAMS);
+				"%s: Bad size. Expected %d parameters",
+				prop[i], num_values);
 			return -EINVAL;
 		}
 		ret = fwnode_property_read_u32_array(node, prop[i], tables[i],
