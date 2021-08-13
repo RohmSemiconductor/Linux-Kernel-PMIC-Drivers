@@ -1311,6 +1311,11 @@ static int get_vdr_from_dt(struct bd71827_power *pwr, int temp_bytes)
 		dev_err(pwr->dev, "no charger node\n");
 		return -ENODEV;
 	}
+	node = fwnode_find_reference(node, "monitored-battery", 0);
+	if (IS_ERR(node)) {
+		dev_err(pwr->dev, "No battery node found\n");
+		return PTR_ERR(node);
+	}
 
 	if (temp_bytes != NUM_VDR_TEMPS * 4) {
 		dev_err(pwr->dev, "Bad VDR temperature table size (%dB). Expected %dB",
