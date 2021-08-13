@@ -1079,6 +1079,11 @@ static int bd71828_zero_correct(struct simple_gauge *sw, int *effective_cap,
 		zero_soc_pos = params - zero_soc_pos;
 
 		soc_range = (soc_table[i - 1] - soc_table[i]) / 10;
+		if (soc_range < 1) {
+			dev_err_once(pwr->dev, "Bad SOC table values %u, %u\n",
+				soc_table[i - 1], soc_table[i]);
+			return -EINVAL;
+		}
 		dv = (ocv_table_load[i - 1] - ocv_table_load[i]) / soc_range; /* was hard coded 5 */
 		for (j = 1; j < soc_range/* was 5 */; j++) {
 			if ((ocv_table_load[i] + dv * j) >
@@ -1104,6 +1109,11 @@ static int bd71828_zero_correct(struct simple_gauge *sw, int *effective_cap,
 			vdr0 = bd71827_get_vdr(pwr, dsoc0, temp);
 
 			for (k = 1; k < params; k++) {
+				if (!vdr) {
+					dev_err(pwr->dev,
+						"VDR zero-correction failed\n");
+					break;
+				}
 				ocv_table_load[k] = ocv_table[k] -
 						    (ocv - vbat) * vdr0 / vdr;
 				if (ocv_table_load[k] <= pwr->min_voltage) {
