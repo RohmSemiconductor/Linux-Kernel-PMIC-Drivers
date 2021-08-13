@@ -17,11 +17,11 @@ battery fuel-gauge implemented in BD71815 driver you may:
 
 I would definitely go with option 1 or 3. The upstream driver is likely to be receiving
 testing and bug-fixes by others. It is also likely to be ported on new kernel versions.
-The old reference driver below is not maintained.
+The old reference driver linked to bottom of the page is not maintained.
 
 - [upstream kernel](https://www.kernel.org)
-- [swgauge RFC (no BD71815)](https://lore.kernel.org/lkml/cover.1607085199.git.matti.vaittinen@fi.rohmeurope.com/)
-- [swgauge + BD71815 unofficial development version](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/bd71815-for-v5.13) BEWARE: UNSTABLE, MAY BE REBASED!
+- [swgauge RFC (OUTDATED, see unofficial development version below) (no BD71815)](https://lore.kernel.org/lkml/cover.1607085199.git.matti.vaittinen@fi.rohmeurope.com/)
+- [swgauge + BD71815 unofficial development version](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/swgauge-on-5.13) BEWARE: UNSTABLE, MAY BE REBASED!
 
 ### Reference driver ported on Linux v.4.9.99
 
