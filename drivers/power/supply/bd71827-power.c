@@ -1430,9 +1430,7 @@ static int bd71827_set_battery_parameters(struct bd71827_power *pwr)
 			vdr_temps[VDR_TEMP_LOW] = DGRD_TEMP_L_DEFAULT;
 			vdr_temps[VDR_TEMP_VERY_LOW] = DGRD_TEMP_VL_DEFAULT;
 		}
-/*		return 0; Do not return here so low_thr_voltage gets computed */
 	} else {
-
 		if (vdr_temps[VDR_TEMP_HIGH] == -EINVAL ||
 		    vdr_temps[VDR_TEMP_NORMAL] ==-EINVAL ||
 		    vdr_temps[VDR_TEMP_LOW] == -EINVAL ||
