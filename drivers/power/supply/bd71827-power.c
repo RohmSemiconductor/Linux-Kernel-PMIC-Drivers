@@ -349,13 +349,16 @@ struct bd71827_power {
 	struct power_supply_battery_info batinfo;
 };
 
-#define CC_to_UAH(pwr, cc)				\
+#define __CC_to_UAH(pwr, cc)				\
 ({							\
-	u64 __tmp = ((u64)(cc)) * 1000000000000LLU;	\
+	u64 __tmp = ((u64)(cc)) * 1000000000LLU;	\
 							\
-	do_div(__tmp, (pwr)->rsens * 36);		\
-	(int)__tmp;					\
+	do_div(__tmp, (pwr)->rsens * 36 / 1000);	\
+	__tmp;						\
 })
+
+#define CC16_to_UAH(pwe, cc) ((int)__CC_to_UAH((pwr), (cc)))
+#define CC32_to_UAH(pwe, cc) ((int)(__CC_to_UAH((pwr), (cc)) >> 16))
 
 /*
  * rsens is typically tens of Mohms so dividing by 1000 should be ok. (usual
@@ -383,10 +386,11 @@ enum {
 
 static int bd7182x_write16(struct bd71827_power *pwr, int reg, uint16_t val)
 {
+	__be16 tmp;
 
-	val = cpu_to_be16(val);
+	tmp = cpu_to_be16(val);
 
-	return regmap_bulk_write(pwr->regmap, reg, &val, sizeof(val));
+	return regmap_bulk_write(pwr->regmap, reg, &tmp, sizeof(tmp));
 }
 
 static int bd7182x_read16_himask(struct bd71827_power *pwr, int reg, int himask,
@@ -394,12 +398,13 @@ static int bd7182x_read16_himask(struct bd71827_power *pwr, int reg, int himask,
 {
 	struct regmap *regmap = pwr->regmap;
 	int ret;
-	u8 *tmp = (u8 *) val;
+	__be16 rvals;
+	u8 *tmp = (u8 *) &rvals;
 
-	ret = regmap_bulk_read(regmap, reg, val, sizeof(*val));
+	ret = regmap_bulk_read(regmap, reg, &rvals, sizeof(*val));
 	if (!ret) {
 		*tmp &= himask;
-		*val = be16_to_cpu(*val);
+		*val = be16_to_cpu(rvals);
 	}
 	return ret;
 }
@@ -456,7 +461,7 @@ static int bd71827_get_vbat(struct bd71827_power *pwr, int *vcell)
 
 static int bd71827_get_current_ds_adc(struct bd71827_power *pwr, int *curr, int *curr_avg)
 {
-	uint16_t tmp_curr;
+	__be16 tmp_curr;
 	char *tmp = (char *)&tmp_curr;
 	int dir = 1;
 	int regs[] = { pwr->regs->ibat, pwr->regs->ibat_avg };
@@ -499,6 +504,7 @@ static int bd71827_voltage_to_capacity(struct simple_gauge *sw, int ocv, int tem
 
  		pwr = simple_gauge_get_drvdata(sw);
 		*dsoc = power_supply_batinfo_ocv2dcap(&pwr->batinfo, ocv, 0);
+		pr_info("Converted OCV %u to dcap %u using DT values\n", ocv, *dsoc);
 		if (*dsoc < 0)
 			return *dsoc;
 
@@ -521,6 +527,7 @@ static int bd71827_voltage_to_capacity(struct simple_gauge *sw, int ocv, int tem
 		if (i == NUM_BAT_PARAMS)
 			*dsoc = soc_table[i - 1];
 	}
+	pr_info("Converted OCV %u to dcap %u using ocv tables\n", ocv, *dsoc);
 
 	return 0;
 }
@@ -641,8 +648,8 @@ static int __write_cc(struct bd71827_power *pwr, uint16_t bcap,
 		      unsigned int reg, uint32_t *new)
 {
 	int ret;
-	uint32_t tmp;
-	uint16_t *swap_hi = (uint16_t *)&tmp;
+	__be32 tmp;
+	__be16 *swap_hi = (__be16 *)&tmp;
 	uint16_t *swap_lo = swap_hi + 1;
 
 	*swap_hi = cpu_to_be16(bcap & BD7182x_MASK_CC_CCNTD_HI);
@@ -654,7 +661,7 @@ static int __write_cc(struct bd71827_power *pwr, uint16_t bcap,
 		return ret;
 	}
 	if (new)
-		*new = cpu_to_be32(tmp);
+		*new = be32_to_cpu(tmp);
 
 	return ret;
 }
@@ -723,7 +730,7 @@ static int bd71828_set_uah(struct simple_gauge *sw, int bcap)
 static int __read_cc(struct bd71827_power *pwr, u32 *cc, unsigned int reg)
 {
 	int ret;
-	u32 tmp_cc;
+	__be32 tmp_cc;
 
 	ret = regmap_bulk_read(pwr->regmap, reg, &tmp_cc, sizeof(tmp_cc));
 	if (ret) {
@@ -843,6 +850,8 @@ static int bd71828_get_uah_from_full(struct simple_gauge *sw, int *from_full_uah
 	u32 cc;
 	int diff_coulomb_cnt;
 
+	pr_err("In %s()\n", __func__);
+
 	pwr = simple_gauge_get_drvdata(sw);
 	regmap = pwr->regmap;
 
@@ -875,7 +884,7 @@ static int bd71828_get_uah_from_full(struct simple_gauge *sw, int *from_full_uah
 	if (diff_coulomb_cnt > 0)
 		diff_coulomb_cnt = 0;
 
-	*from_full_uah = CC_to_UAH(pwr, diff_coulomb_cnt);
+	*from_full_uah = CC16_to_UAH(pwr, diff_coulomb_cnt);
 
 	return 0;
 }
@@ -886,9 +895,13 @@ static int bd71828_get_uah(struct simple_gauge *sw, int *uah)
 	u32 cc;
 	int ret;
 
+	pr_err("In %s()\n", __func__);
 	ret = read_cc(pwr, &cc);
+	pr_err("Read CC 0x%x\n", cc);
+
 	if (!ret)
-		*uah = CC_to_UAH(pwr, cc);
+		*uah = CC32_to_UAH(pwr, cc);
+	pr_err("Corresponds uah %u (0x%x)\n", *uah, *uah);
 
 	return ret;
 }
@@ -910,6 +923,7 @@ static int bd71827_get_ocv(struct simple_gauge *sw, int dsoc, int temp, int *ocv
 
 		pwr = simple_gauge_get_drvdata(sw);
 		*ocv = power_supply_batinfo_dcap2ocv(&pwr->batinfo, dsoc, temp);
+		pr_info("Converted dcap %u to OCV %u using DT values\n", dsoc, *ocv);
 		if (*ocv < 0)
 			return *ocv;
 
@@ -1018,7 +1032,7 @@ static int bd71828_zero_correct(struct simple_gauge *sw, int *effective_cap,
 	 * Use unit of 0.1% for dsoc to improve accuracy
 	 */
 	dsoc = CAP2DSOC(cc_uah, *effective_cap);
-	dev_dbg(pwr->dev, "dsoc = %d\n", dsoc);
+	dev_dbg(pwr->dev, "start zero-correct: eff_cap =%u, dsoc = %d\n", *effective_cap, dsoc);
 
 	ret = bd71827_get_ocv(sw, dsoc, 0, &ocv);
 	if (ret)
@@ -1080,6 +1094,11 @@ static int bd71828_zero_correct(struct simple_gauge *sw, int *effective_cap,
 		zero_soc_pos = params - zero_soc_pos;
 
 		soc_range = (soc_table[i - 1] - soc_table[i]) / 10;
+		if (soc_range < 1) {
+			dev_err_once(pwr->dev, "Bad SOC table values %u, %u\n",
+				soc_table[i - 1], soc_table[i]);
+			return -EINVAL;
+		}
 		dv = (ocv_table_load[i - 1] - ocv_table_load[i]) / soc_range; /* was hard coded 5 */
 		for (j = 1; j < soc_range/* was 5 */; j++) {
 			if ((ocv_table_load[i] + dv * j) >
@@ -1105,6 +1124,11 @@ static int bd71828_zero_correct(struct simple_gauge *sw, int *effective_cap,
 			vdr0 = bd71827_get_vdr(pwr, dsoc0, temp);
 
 			for (k = 1; k < params; k++) {
+				if (!vdr) {
+					dev_err(pwr->dev,
+						"Oh no. VDR calculation failed\n");
+					break;
+				}
 				ocv_table_load[k] = ocv_table[k] -
 						    (ocv - vbat) * vdr0 / vdr;
 				if (ocv_table_load[k] <= pwr->min_voltage) {
@@ -1139,6 +1163,7 @@ static int bd71828_zero_correct(struct simple_gauge *sw, int *effective_cap,
 
 		*effective_cap -= lost_cap;
 	}
+	dev_dbg(pwr->dev, "end zero-correct: eff_cap =%u, dsoc = %d\n", *effective_cap, CAP2DSOC(cc_uah, *effective_cap));
 
 	return 0;
 }
@@ -1302,17 +1327,23 @@ static int get_vdr_from_dt(struct bd71827_power *pwr, int temp_bytes)
 		dev_err(pwr->dev, "no charger node\n");
 		return -ENODEV;
 	}
+	node = fwnode_find_reference(node, "monitored-battery", 0);
+	if (IS_ERR(node)) {
+		dev_err(pwr->dev, "No battery node found\n");
+		return PTR_ERR(node);
+	}
 
 	if (temp_bytes != NUM_VDR_TEMPS * 4) {
 		dev_err(pwr->dev, "Bad VDR temperature table size (%dB). Expected %dB",
 			temp_bytes, NUM_VDR_TEMPS * 4);
 		return -EINVAL;
 	}
+	pr_info("Expect %d temps", NUM_VDR_TEMPS);
 	ret = fwnode_property_read_u32_array(node,
 					    "rohm,volt-drop-temp-millikelvin",
 					    &vdr_kelvin[0], NUM_VDR_TEMPS);
 	if (ret) {
-		dev_err(pwr->dev, "Invalid VDR temperatures in device-tree");
+		dev_err(pwr->dev, "Invalid VDR temperatures in device-tree ret %d", ret);
 		return ret;
 	}
 	/* Convert millikelvin to .1 celsius as is expected by VDR algo */
