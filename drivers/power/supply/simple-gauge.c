@@ -560,9 +560,7 @@ static int compute_soc_by_cc(struct simple_gauge *sw, int state)
 	bool do_zero_correct, changed = false;
 
 	ret = sw->ops.get_uah(sw, &cc_uah);
-	/*
-	 * The CC value should never exceed designed_cap as CC value.
-	 */
+	/* The CC value should never exceed designed_cap as CC value. */
 	if (cc_uah > sw->designed_cap) {
 		cc_uah = sw->designed_cap;
 		sw->ops.update_cc_uah(sw, sw->designed_cap);
@@ -570,11 +568,16 @@ static int compute_soc_by_cc(struct simple_gauge *sw, int state)
 
 	current_cap_uah = sw->designed_cap;
 
+	dev_dbg(sw->dev, "iteration started - CC %u, cap %u (SOC %u)\n",
+		cc_uah, current_cap_uah,
+		SOC_BY_CAP(cc_uah, sw->soc_rounding, current_cap_uah));
+
 	ret = age_correct_cap(sw, &current_cap_uah);
 	if (ret) {
 		dev_err(sw->dev, "Age correction of battery failed\n");
 		return ret;
 	}
+
 	if (current_cap_uah == 0) {
 		dev_warn(sw->dev, "Battery EOL\n");
 		spin_lock(&sw->lock);
@@ -633,6 +636,10 @@ static int compute_soc_by_cc(struct simple_gauge *sw, int state)
 			dev_warn(sw->dev, "Low voltage adjustment failed\n");
 	}
 
+	dev_dbg(sw->dev, "Corrected cap %u, designed-cap %u (SOC %u)\n",
+		current_cap_uah, sw->designed_cap,
+		SOC_BY_CAP(cc_uah, sw->soc_rounding, current_cap_uah));
+
 	if (cc_uah > sw->designed_cap)
 		cc_uah = sw->designed_cap;
 
@@ -651,7 +658,7 @@ static int compute_soc_by_cc(struct simple_gauge *sw, int state)
 		changed = true;
 
 	sw->soc = new_soc;
-	if (state & SW_GAUGE_CLAMP_SOC) {
+	if (sw->clamped_soc >= 0 && state & SW_GAUGE_CLAMP_SOC) {
 		if (sw->clamped_soc < sw->soc)
 			sw->soc = sw->clamped_soc;
 	}
@@ -1082,6 +1089,8 @@ struct simple_gauge *__must_check psy_register_simple_gauge(struct device *paren
 	}
 	new->dev = parent;
 	new->custom_is_writable = pcfg->is_writable;
+	/* We don't want to clamp SOC before it is initialized */
+	new->clamped_soc = -1;
 
 	init_waitqueue_head(&new->wq);
 
