@@ -6,6 +6,8 @@
  * Author: Matti Vaittinen <matti.vaittien@fi.rohmeurope.com>
  */
 
+/* Define me to non zero if you wish excessive printing from CCNTD setting */
+#define DEBUG_CCNTD_COUNTER 0
 
 #include <linux/interrupt.h>
 #include <kunit/test.h>
@@ -359,7 +361,7 @@ static int test_get_vsys_uv(int iter)
 	return test_vsys[iter % ARRAY_SIZE(test_vsys)];
 }
 
-int get_delta_ccntd(int iter)
+static int get_delta_ccntd(int iter)
 {
 	return test_ccntd[iter % ARRAY_SIZE(test_ccntd)];
 }
@@ -369,11 +371,13 @@ enum {
 	STATE_CHARGING,
 };
 
+#if 0
 /* TODO: See from battery data what is the change of charge/time-unit */
-bool test_is_relaxed(int iter)
+static bool test_is_relaxed(int iter)
 {
 	return false;
 }
+#endif
 
 static u8 g_reg_arr[BD71815_MAX_REGISTER] = { 0 };
 
@@ -395,6 +399,9 @@ retry:
 	}
 
 	for (i = 0; i < VALUES * 25; i++) {
+		/* We must not use clamped_soc prior initializing it. */
+		if (i && !(i % VALUES))
+			g->clamped_soc = -1;
 		psp = POWER_SUPPLY_PROP_CAPACITY;
 		ret = power_supply_get_property(g->psy, psp, &soc);
 		psp = POWER_SUPPLY_PROP_CHARGE_FULL;
@@ -417,12 +424,12 @@ retry:
 		/* Let's see how aging impacts and add the cycle count by
 		 * adjusting the full charged CC register
 		 */
-		if (i != 0 && !(i%VALUES)) {
-			g_reg_arr[BD71815_REG_CCNTD_CHG_3] = 0xff;
-			g_reg_arr[BD71815_REG_CCNTD_CHG_2] = 0xff;
-			g_reg_arr[BD71815_REG_CCNTD_CHG_2 + 1] = 0xff;
-			g_reg_arr[BD71815_REG_CCNTD_CHG_2 + 2] = 0xff;
-		}
+//		if (i != 0 && !(i%VALUES)) {
+//			g_reg_arr[BD71815_REG_CCNTD_CHG_3] = 0xff;
+//			g_reg_arr[BD71815_REG_CCNTD_CHG_2] = 0xff;
+//			g_reg_arr[BD71815_REG_CCNTD_CHG_2 + 1] = 0xff;
+//			g_reg_arr[BD71815_REG_CCNTD_CHG_2 + 2] = 0xff;
+//		}
 		/* Set next set of simulated values to 'registers' */
 		update_register_vals(i + 1);
 		/* Run the gauge loop and compute new SOC etc */
@@ -445,23 +452,44 @@ static int test_regmap_write(void *ctx, unsigned int reg, unsigned int val)
 {
 	u8 *reg_base = ctx;
 
+	reg_base[reg] = (u8)val;
+
+#if DEBUG_CCNTD_COUNTER
 	if (reg == BD71815_REG_CC_CCNTD_3)
-		pr_info("Writing CC[3] byte to 0x%x\n", val);
+		pr_info("Wrote CC[3] byte to 0x%x\n", val);
 	if (reg == BD71815_REG_CC_CCNTD_2)
-		pr_info("Writing CC[2] byte to 0x%x\n", val);
+		pr_info("Wrote CC[2] byte to 0x%x\n", val);
 	if (reg == BD71815_REG_CC_CCNTD_1)
-		pr_info("Writing CC[1] byte to 0x%x\n", val);
+		pr_info("Wrote CC[1] byte to 0x%x\n", val);
 	if (reg == BD71815_REG_CC_CCNTD_0) {
-		pr_info("Writing CC[0] byte to 0x%x\n", val);
+		__be32 *c = (__be32 *)&reg_base[BD71815_REG_CC_CCNTD_3];
+		uint64_t helper, check;
+
+		pr_info("Wrote CC[0] byte to 0x%x\n", val);
+		pr_info("Whole CCNTD 0x%x (%u) host form 0x%x (%u)\n", *c, *c,
+			be32_to_cpu(*c), be32_to_cpu(*c));
+
+		check = helper = be32_to_cpu(*c);
+		/*
+		 * Format is 10As << 16
+		 * Convert to 10uAs << 16
+		 */
+
+		helper = helper * 1000 * 1000;
+
+		/* divide to be uAh << 16 */
+		do_div(helper, 6 * 60);
+
+		pr_info("which equals to %llu uAh (0x%llx)\n", (unsigned long long) (helper >> 16), (unsigned long long) (helper >> 16));
+
 		msleep(5000);
 	}
-
-	reg_base[reg] = (u8)val;
+#endif
 
 	return 0;
 }
 
-const struct regmap_bus bd71815_test_bus = {
+static const struct regmap_bus bd71815_test_bus = {
 	.fast_io = true,
 	.reg_write = test_regmap_write,
 	.reg_read = test_regmap_read,
@@ -479,7 +507,7 @@ static void set_temp_registers(int temp)
  */
 static void set_current_regs(int current_ua)
 {
-	u16 *curr_reg = (u16 *)&g_reg_arr[BD71815_REG_CC_CURCD_U];
+	__be16 *curr_reg = (__be16 *)&g_reg_arr[BD71815_REG_CC_CURCD_U];
 
 	*curr_reg = cpu_to_be16(current_ua/1000);
 
@@ -492,12 +520,20 @@ static void set_current_regs(int current_ua)
 static void set_ccntd(int32_t d_ccntd)
 {
 	uint32_t ccntd;
-	u32 *ccntdptr = (u32 *)&g_reg_arr[BD71815_REG_CC_CCNTD_3];
+	uint32_t tmpprint;
+	__be32 *ccntdptr = (__be32 *)&g_reg_arr[BD71815_REG_CC_CCNTD_3];
 
 	ccntd = be32_to_cpu(*ccntdptr);
-
+	tmpprint = ccntd;
 	ccntd += d_ccntd;
+#if DEBUG_CCNTD_COUNTER
+	pr_info("Setting CCNTD value. Old CCNTD (in host order) %u, delta %d, new %u\n",
+		tmpprint, d_ccntd, ccntd);
+#endif
 	*ccntdptr = cpu_to_be32(ccntd);
+#if DEBUG_CCNTD_COUNTER
+	msleep(1000);
+#endif
 }
 
 /*
@@ -506,7 +542,7 @@ static void set_ccntd(int32_t d_ccntd)
  */
 static void set_vbat_avg(int voltage_uv)
 {
-	u16 *vbat_avg_reg = (u16 *)&g_reg_arr[BD71815_REG_VM_SA_VBAT_U];
+	__be16 *vbat_avg_reg = (__be16 *)&g_reg_arr[BD71815_REG_VM_SA_VBAT_U];
 
 	*vbat_avg_reg = cpu_to_be16(0x1FFF & (voltage_uv/1000));
 
@@ -514,12 +550,12 @@ static void set_vbat_avg(int voltage_uv)
 
 static void set_min_vsys(int voltage_uv)
 {
-	u16 *min_reg = (u16 *)&g_reg_arr[BD71815_REG_VM_SA_VSYS_MIN_U];
+	__be16 *min_reg = (__be16 *)&g_reg_arr[BD71815_REG_VM_SA_VSYS_MIN_U];
 	u16 min;
 
 	min = be16_to_cpu(*min_reg);
 	if (!min || min > voltage_uv / 1000)
-		*min_reg = cpu_to_be16(*min_reg);
+		*min_reg = cpu_to_be16((u16)(voltage_uv / 1000));
 }
 
 /*
@@ -568,7 +604,7 @@ static void set_charge_status(int curr, int temp)
  * The bd71827-power.c does not utilize rex_cc - only the
  * REG_REX_SA_VBAT. No need to set REX_CC.
  */
-void set_relax_status(int curr, int time)
+static void set_relax_status(int curr, int time)
 {
 	static int rex_time = 0;
 	u8 *rex_vbat = &g_reg_arr[BD71815_REG_REX_SA_VBAT_U];
@@ -591,8 +627,8 @@ void set_relax_status(int curr, int time)
 
 static void initialize_initial_ocv_regs(int uv)
 {
-	u16 *pre_reg = (u16 *)&g_reg_arr[BD71815_REG_VM_OCV_PRE_U],
-	    *post_reg = (u16 *)&g_reg_arr[BD71815_REG_VM_OCV_PST_U];
+	__be16 *pre_reg = (__be16 *)&g_reg_arr[BD71815_REG_VM_OCV_PRE_U],
+	    *post_reg = (__be16 *)&g_reg_arr[BD71815_REG_VM_OCV_PST_U];
 	u16 mv = uv/1000;
 
 	*pre_reg = cpu_to_be16(mv);
@@ -674,7 +710,6 @@ static int test_probe(struct platform_device *pdev)
 		dev_err(dev, "Failed to initialize Regmap\n");
 		return PTR_ERR(regmap);
 	}
-	pr_info("YaY! Regmap initilized\n");
 
 	ret = devm_regmap_add_irq_chip(dev, regmap, irq,
 				       IRQF_ONESHOT, 0, &bd71815_irq_chip, &irq_data);
@@ -682,10 +717,8 @@ static int test_probe(struct platform_device *pdev)
 		dev_err(dev, "Failed to add IRQ chip\n");
 		return ret;
 	}
-	pr_info("YaY! Regmap IRQ irqchip added\n");
 
 	initialize_register_vals();
-	pr_info("Regvals initialized\n");
 
 	ret = devm_mfd_add_devices(dev, PLATFORM_DEVID_AUTO, bd71815_mfd_cells,
 				   ARRAY_SIZE(bd71815_mfd_cells), NULL, 0,
