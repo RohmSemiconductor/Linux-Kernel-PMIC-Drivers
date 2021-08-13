@@ -348,13 +348,16 @@ struct bd71827_power {
 	struct power_supply_battery_info batinfo;
 };
 
-#define CC_to_UAH(pwr, cc)				\
+#define __CC_to_UAH(pwr, cc)				\
 ({							\
-	u64 __tmp = ((u64)(cc)) * 1000000000000LLU;	\
+	u64 __tmp = ((u64)(cc)) * 1000000000LLU;	\
 							\
-	do_div(__tmp, (pwr)->rsens * 36);		\
-	(int)__tmp;					\
+	do_div(__tmp, (pwr)->rsens * 36 / 1000);	\
+	__tmp;						\
 })
+
+#define CC16_to_UAH(pwe, cc) ((int)__CC_to_UAH((pwr), (cc)))
+#define CC32_to_UAH(pwe, cc) ((int)(__CC_to_UAH((pwr), (cc)) >> 16))
 
 /*
  * rsens is typically tens of Mohms so dividing by 1000 should be ok. (usual
@@ -869,7 +872,7 @@ static int bd71828_get_uah_from_full(struct simple_gauge *sw, int *from_full_uah
 	if (diff_coulomb_cnt > 0)
 		diff_coulomb_cnt = 0;
 
-	*from_full_uah = CC_to_UAH(pwr, diff_coulomb_cnt);
+	*from_full_uah = CC16_to_UAH(pwr, diff_coulomb_cnt);
 
 	return 0;
 }
@@ -882,7 +885,7 @@ static int bd71828_get_uah(struct simple_gauge *sw, int *uah)
 
 	ret = read_cc(pwr, &cc);
 	if (!ret)
-		*uah = CC_to_UAH(pwr, cc);
+		*uah = CC32_to_UAH(pwr, cc);
 
 	return ret;
 }
