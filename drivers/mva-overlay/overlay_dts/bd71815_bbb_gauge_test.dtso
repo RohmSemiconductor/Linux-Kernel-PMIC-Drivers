@@ -54,21 +54,20 @@ This was hard-coded to driver methinks.
 				  45000+273150 25000+273150 5000+273150 273150
 				 */
 				rohm,volt-drop-temp-millikelvin = <318150 298150 278150 273150>;
-				/* TBD */
-				rohm,volt-drop-high-temp-microvolt = <100 100
+				rohm,volt-drop-high-temp-microvolt = <100
 					102 104 107 110 114 122 126 139 155 94
 					107 113 120 129 113 104 110 109 116 128
 					/* 525 */>;
-				rohm,volt-drop-normal-temp-microvolt = <100 100
+				rohm,volt-drop-normal-temp-microvolt = <100
 					100 100 100 100 100 100 98 95 90 85 85
 					90 93 95 98 98 100 106 109 130 /* 451 */>;
-				rohm,volt-drop-low-temp-microvolt = <100 100 98
+				rohm,volt-drop-low-temp-microvolt = <100 98
 					96 95 96 98 110 105 108 95 86 87 90 92
 					96 102 109 111 122 144 219 /* 393 */>;
-				rohm,volt-drop-very-low-temp-microvolt = <100
+				rohm,volt-drop-very-low-temp-microvolt = <
 					100 98 95 94 94 95 105 96 97 87 84 84 86
 					90 93 101 110 117 130 157 195 /* 31 */>;
-				rohm,volt-drop-soc = <1000 1000 950 900 850 800
+				rohm,volt-drop-soc = <1000 950 900 850 800
 						      750 700 650 600 550 500
 						      450 400 350 300 250 200
 						      150 100 50 0 /* -50 */>;
