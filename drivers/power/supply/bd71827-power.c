@@ -385,10 +385,11 @@ enum {
 
 static int bd7182x_write16(struct bd71827_power *pwr, int reg, uint16_t val)
 {
+	__be16 tmp;
 
-	val = cpu_to_be16(val);
+	tmp = cpu_to_be16(val);
 
-	return regmap_bulk_write(pwr->regmap, reg, &val, sizeof(val));
+	return regmap_bulk_write(pwr->regmap, reg, &tmp, sizeof(tmp));
 }
 
 static int bd7182x_read16_himask(struct bd71827_power *pwr, int reg, int himask,
@@ -396,12 +397,13 @@ static int bd7182x_read16_himask(struct bd71827_power *pwr, int reg, int himask,
 {
 	struct regmap *regmap = pwr->regmap;
 	int ret;
-	u8 *tmp = (u8 *) val;
+	__be16 rvals;
+	u8 *tmp = (u8 *) &rvals;
 
-	ret = regmap_bulk_read(regmap, reg, val, sizeof(*val));
+	ret = regmap_bulk_read(regmap, reg, &rvals, sizeof(*val));
 	if (!ret) {
 		*tmp &= himask;
-		*val = be16_to_cpu(*val);
+		*val = be16_to_cpu(rvals);
 	}
 	return ret;
 }
@@ -458,7 +460,7 @@ static int bd71827_get_vbat(struct bd71827_power *pwr, int *vcell)
 
 static int bd71827_get_current_ds_adc(struct bd71827_power *pwr, int *curr, int *curr_avg)
 {
-	uint16_t tmp_curr;
+	__be16 tmp_curr;
 	char *tmp = (char *)&tmp_curr;
 	int dir = 1;
 	int regs[] = { pwr->regs->ibat, pwr->regs->ibat_avg };
@@ -643,8 +645,8 @@ static int __write_cc(struct bd71827_power *pwr, uint16_t bcap,
 		      unsigned int reg, uint32_t *new)
 {
 	int ret;
-	uint32_t tmp;
-	uint16_t *swap_hi = (uint16_t *)&tmp;
+	__be32 tmp;
+	__be16 *swap_hi = (__be16 *)&tmp;
 	uint16_t *swap_lo = swap_hi + 1;
 
 	*swap_hi = cpu_to_be16(bcap & BD7182x_MASK_CC_CCNTD_HI);
@@ -656,7 +658,7 @@ static int __write_cc(struct bd71827_power *pwr, uint16_t bcap,
 		return ret;
 	}
 	if (new)
-		*new = cpu_to_be32(tmp);
+		*new = be32_to_cpu(tmp);
 
 	return ret;
 }
@@ -725,7 +727,7 @@ static int bd71828_set_uah(struct simple_gauge *sw, int bcap)
 static int __read_cc(struct bd71827_power *pwr, u32 *cc, unsigned int reg)
 {
 	int ret;
-	u32 tmp_cc;
+	__be32 tmp_cc;
 
 	ret = regmap_bulk_read(pwr->regmap, reg, &tmp_cc, sizeof(tmp_cc));
 	if (ret) {
