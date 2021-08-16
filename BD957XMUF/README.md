@@ -18,7 +18,7 @@ The PMIC allows configuring per regulator notification limits for over/under vol
 limits when PMIC will shut down regulator outputs to protect the hardware from further damages.
 
 ROHM has in co-operation with the Linux kernel community developed Linux regulator framework extension so that these warnings can be fully utilized.
-This extension is expeted to be included in the upcoming Linux release v5.14-rc1. See the regulator subsystem [pull-request](https://lore.kernel.org/lkml/20210628145501.EC10F60C3E@mail.kernel.org/) for more information. You can specify board specific safety limits via device-tree and
+This extension is expeted to be included in the Linux release v5.14. See the regulator subsystem [pull-request](https://lore.kernel.org/lkml/20210628145501.EC10F60C3E@mail.kernel.org/) for more information. You can specify board specific safety limits via device-tree and
 implement own handlers the regulator core notifiers will call to cope with the safety warnings/errors prior hardware originated forced shutdown.
 
 Configuration options may want to enable are:
