@@ -1,11 +1,8 @@
 # SPDX-License-Identifier: GPL-2.0
 config MVA_OVERLAY
-	tristate "Dynamic DT overlay via sysfs support"
+	tristate "Overlay DT blobs for few tests"
 	help
-	  Dynamic DT overlay adding helper to support driver development
-	  by adding DT overlays on the fly. Allows adding DT overlays to
-	  running system. NOTE: You mustäve built the board DT (base DT)
-	  with -@ option.
+	  Compile overlay blobs for few tests. (simple-gauge, few IC drivers).
 
 	  If unsure, say no.
 
