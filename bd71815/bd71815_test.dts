@@ -1,0 +1,182 @@
+/dts-v1/;
+/plugin/;
+
+/{ /* this is our device tree overlay root node */
+
+	compatible = "ti,beaglebone", "ti,beaglebone-black";
+	part-number = "BBB-I2C1"; // you can choose any name here but it should be memorable
+ 	version = "00A0";
+//	fragment@0 {
+//		target = <&ocp>;
+//		__overlay__ {
+//			P9_19_pinmux { status = "disabled"; };	/* i2c2_scl */
+//			P9_20_pinmux { status = "disabled"; };	/* i2c2_sda */
+//		};
+//	};
+//	fragment@1 {
+
+//		target = <&am33xx_pinmux>; // this is a link to an already defined node in the device tree, so that node is overlayed with our modification
+
+//		__overlay__ {
+//			i2c2_pins: pinmux_i2c2_pins {
+//				pinctrl-single,pins = <
+				/* 0x158 - pin 17.
+				   0x15C - pin 18
+					0x72:
+					b[2:0] = 2 => mux mode 2 (i2c1 p17/p18,SCL/SDA)
+					b[3] = 0 => pullup/pulldown enabled
+					b[4] = 1 => pull-up, not pull down
+					b[5] = 1 => receiver active
+					b[6] = 1 => slew control slow
+				*/
+//				0x17C 0x73 /* P9_19 (I2C-2 SCL) (input, pull-u, mode 3) */
+//				0x178 0x73 /* P9_20 (I2C-2 SDA) (input, pull-u, mode 3)*/
+          			/* 0x158 0x72   spi0_d1.i2c1_sda */ 
+          			/* 0x15C 0x72  spi0_cs0.i2c1_sdl */
+/*				0xA4 0x7    */ /* pin 46, GPIO 2_7 mode 7 */
+/*				0xA0 0x7    */ /* pin 45, GPIO 2_6 mode 7 */
+/*				0x0c 0x7    */ /* pin 3, GPIO 1_6 mode 7 */
+/*				0x10 0x7    */ /* pin 4, GPIO 1_7 mode 7 */
+//        			>;
+//			};
+//		};
+//	};
+	fragment@2 {
+		target-path = "/";
+		__overlay__ {
+			/* external oscillator */
+			osc: oscillator {
+				compatible = "fixed-clock";
+				#clock-cells = <1>;
+				clock-frequency  = <32768>;
+				clock-output-names = "osc";
+			};
+		};
+	};
+
+	fragment@3 {
+		target = <&i2c2>;
+
+		__overlay__ {
+			pinctrl-0 = <&i2c2_pins>;
+			clock-frequency = <100000>;
+			status = "okay";
+
+
+
+			bdpmic: bd71815@4b {
+				reg = <0x4b>;
+				compatible = "rohm,bd71815";
+				interrupt-parent = <&gpio1>;
+				interrupts = <29 8>;
+				clocks = <&osc 0>;
+				#clock-cells = <0>;
+				clock-output-names = "bd71815-32k-out";
+				rohm,clkout-open-drain = <0>;
+				#gpio-cells = <2>;
+				gpio-controller;
+
+				rohm,charger-sense-resistor-ohms = <10000000>;
+
+				regulators {
+					buck1: buck1 {
+						regulator-name = "buck1";
+						regulator-min-microvolt = <800000>;
+						regulator-max-microvolt = <2000000>;
+						regulator-boot-on;
+						regulator-always-on;
+						regulator-ramp-delay = <1250>;
+						rohm,dvs-run-voltage = <1150000>;
+						rohm,dvs-suspend-voltage = <950000>;
+					};
+					buck2: buck2 {
+						regulator-name = "buck2";
+						regulator-min-microvolt = <800000>;
+						regulator-max-microvolt = <2000000>;
+						regulator-boot-on;
+						regulator-always-on;
+						regulator-ramp-delay = <1250>;
+						rohm,dvs-run-voltage = <1150000>;
+						rohm,dvs-suspend-voltage = <950000>;
+					};
+					buck3: buck3 {
+						regulator-name = "buck3";
+						regulator-min-microvolt = <1200000>;
+						regulator-max-microvolt = <2700000>;
+						regulator-always-on;
+					};
+					buck4: buck4 {
+						regulator-name = "buck4";
+						regulator-min-microvolt = <1100000>;
+						regulator-max-microvolt = <1850000>;
+						regulator-always-on;
+					};
+					buck5: buck5 {
+						regulator-name = "buck5";
+						regulator-min-microvolt = <1800000>;
+						regulator-max-microvolt = <3300000>;
+						regulator-always-on;
+					};
+					ldo1: ldo1 {
+						regulator-name = "ldo1";
+						regulator-min-microvolt = <800000>;
+						regulator-max-microvolt = <3300000>;
+						regulator-always-on;
+					};
+					ldo2: ldo2 {
+						regulator-name = "ldo2";
+						regulator-min-microvolt = <800000>;
+						regulator-max-microvolt = <3300000>;
+						regulator-always-on;
+					};
+					ldo3: ldo3 {
+						regulator-name = "ldo3";
+						regulator-min-microvolt = <800000>;
+						regulator-max-microvolt = <3300000>;
+						regulator-always-on;
+					};
+					ldo4: ldo4 {
+						regulator-name = "ldo4";
+						regulator-min-microvolt = <800000>;
+						regulator-max-microvolt = <3300000>;
+						regulator-always-on;
+					};
+					ldo5: ldo5 {
+						regulator-name = "ldo5";
+						regulator-min-microvolt = <800000>;
+						regulator-max-microvolt = <3300000>;
+						regulator-always-on;
+					};
+					ldo6: ldodvref {
+						regulator-name = "ldodvref";
+						regulator-always-on;
+					};
+					ldo7: ldolpsr {
+						regulator-name = "ldolpsr";
+						regulator-always-on;
+					};
+					boost: wled {
+						regulator-name = "wled";
+						regulator-min-microamp = <10>;
+						regulator-max-microamp = <25000>;
+					};
+				};
+			};
+		};
+	};
+
+	fragment@4 {
+		target-path = "/";
+		__overlay__ {
+			clktest: dummy {
+				compatible = "rohm,clktest-bd71815";
+				clocks = <&bdpmic>;
+				clock-names = "foo-in";
+			};
+			gpiotest: gpouser {
+				compatible = "rohm,foo-bd71815-gpio";
+				my-gpios = <&bdpmic 0 0>;
+			};
+		};
+	};
+}; /* root node end */

@@ -1,0 +1,135 @@
+IC_NAME=bd71828
+# List driver modules which should be checked to be load
+IC_MODULES=(bd71828-regulator rohm-bd71828 gpio-bd71828 clk-bd718x7 rtc-bd70528)
+
+I2C_SLAVE=0x4b
+DTS_PATH=/proc/device-tree/ocp/interconnect\@48000000/segment\@0/target-module\@2a000/i2c\@0/pmic\@4b/regulators
+
+ALL_BUCKS=(buck1 buck2)
+#(buck1 buck2 buck3 buck4 buck5 buck6 buck7)
+ALL_LDOS=
+#(ldo1 ldo2 ldo3 ldo4 ldo5 ldo6 ldo7)
+
+#BD71828 has 7 Bucks and 7 LDOs (last s SNVS LDO)
+LDO_START=8
+
+BUCK_IS_PARENT=(x 0 0)
+
+DVS_BUCKS=(buck1 buck2)
+
+#
+#Registers
+#
+declare -a BUCK1267_VOLTS
+declare -a BUCK1267_VOLT_REGVAL
+declare -a BUCK3_VOLTS
+declare -a BUCK3_VOLT_REGVAL
+declare -a BUCK4_VOLTS
+declare -a BUCK4_VOLT_REGVAL
+declare -a BUCK5_VOLTS
+declare -a BUCK5_VOLT_REGVAL
+
+BUCK_DISABLE_REG=(0 0x08 0x12 0x1c 0x0x1f 0x22 0x25 0x2f)
+RUN_CTRL_REG=0x04
+BUCK_RUN_CTRL_MASK=(x 0x10 0x20 x x x 0x40 0x80)
+BUCK_ENABLE_MASK=0x8
+
+BUCK_VOLT_REGS=(0 0x0D 0x17 0x1E 0x21 0x24 0x2A 0x34)
+BUCK_VOLT_MASKS=(x 0xFF 0xFF 0x1F 0x3F 0x1F 0xFF 0xFF)
+
+BUCK_VOLT_MULTIPLIER=1
+declare -a BUCK1_VOLT_REGVAL
+declare -a BUCK1_VOLTAGES
+
+VOLTAGE_ARRAY_NAMES=(x BUCK1267_VOLTAGES BUCK1267_VOLTAGES BUCK3_VOLTAGES BUCK4_VOLTAGES BUCK5_VOLTAGES BUCK1267_VOLTAGES BUCK1267_VOLTAGES)
+VOLT_REG_ARRAY_NAMES=(x BUCK1267_VOLT_REGVAL BUCK1267_VOLT_REGVAL BUCK3_VOLT_REGVAL BUCK4_VOLT_REGVAL BUCK5_VOLT_REGVAL BUCK12676_VOLT_REGVAL BUCK1267_VOLT_REGVAL)
+
+function init_volt_regvals() {
+	local i
+	for (( i=0 ; i <= 0x0F ; i++ ))
+	do
+		BUCK3_VOLT_REGVAL[$i]=$i
+		BUCK5_VOLT_REGVAL[$i]=$i
+
+		# Buck 3: 0x00 to 0x0F = 1.2V offset, 50mV step
+		BUCK3_VOLTAGES[$i]=$((1200000+$i*50000))
+
+		# Buck 5: 0x00 to 0x0F = 2.5V offset, 50mV step
+		BUCK5_VOLTAGES[$i]=$((2500000++$i*50000))
+	done
+	for (( i=0x10 ; i <= 0x1f ; i++ ))
+	do
+		BUCK3_VOLT_REGVAL[$i]=$i
+		BUCK5_VOLT_REGVAL[$i]=$i
+
+		# Buck 3: 0x10 to 0x1F = 2.0V
+		BUCK3_VOLTAGES[$i]=2000000
+
+		# Buck 5: 0x10 to 0x1F = 3.3V
+		BUCK5_VOLTAGES[$i]=3300000
+	done
+#
+# Buck 4: 0x00 to 0x1F = 1.0 V offset, 25mV step
+#	  0x20 to 0x3F = 1.8V
+	for (( i=0 ; i <= 0x1F ; i++ ))
+	do
+		BUCK4_VOLT_REGVAL[$i]=$i
+		BUCK4_VOLTAGES[$i]=$((1000000+$i*25000))
+	done
+	for (( i=0x20 ; i <= 0x3F ; i++ ))
+	do
+		BUCK4_VOLT_REGVAL[$i]=$i
+		BUCK4_VOLTAGES[$i]=1800000
+	done
+#
+# Buck 1,2,6,7:
+#	0x00 to 0xEF = 0.5V offset, 6,25mV step
+#	0xF0 to 0xFF = 2.0V
+	for (( i=0 ; i <= 0xEF ; i++ ))
+	do
+		BUCK1267_VOLT_REGVAL[$i]=$i
+		BUCK1267_VOLTAGES[$i]=$((500000+$i*6250))
+	done
+	for (( i=0xF0; i<=0xFF; i++))
+	do
+		BUCK1267_VOLT_REGVAL[$i]=$i
+		BUCK1267_VOLTAGES[$i]=2000000
+	done
+}
+
+BUCK_IS_RUNCTRL_CABABLE=(x 1 1 0 0 0 1 1 0 0 0 0 0 0 0)
+
+function buck_not_register_controlled() {
+	BUCK=$1
+	local BUCK_NO=$(get_linear_buckno $BUCK)
+
+	if [ ${BUCK_IS_RUNCTRL_CABABLE[$BUCK_NO]} -eq 0 ]
+	then
+		echo 0
+		return 0
+	fi
+
+	REGVAL=`i2cget -f -y 1 $I2C_SLAVE $RUN_CTRL_REG`
+	if [ $(($REGVAL & ${BUCK_RUN_CTRL_MASK[$BUCK_NO]})) - eq 0 ]
+	then
+		echo 0
+	else
+		echo 0
+	fi
+	return 0
+}
+
+function IC_SPECIFIC_init() {
+	init_volt_regvals
+
+	for foo in ${ALL_REGULATORS[*]}
+	do
+		local BUCK_NO=$(get_linear_buckno $foo)
+		NO_RAW_STATUS[$BUCK_NO]=$(buck_not_register_controlled $foo)
+	done
+}
+
+function IC_SPECIFIC_buck_on_at_hwctrl_raw()
+{
+	echo "ERROR ERROR ERROR - No IC specific HWCTRL for BD71847"
+}

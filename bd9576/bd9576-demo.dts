@@ -1,0 +1,139 @@
+/dts-v1/;
+/plugin/;
+
+/{ /* this is our device tree overlay root node */
+
+	compatible = "ti,beaglebone", "ti,beaglebone-black";
+	part-number = "BBB-I2C1";
+ 	version = "00A0";
+
+	fragment@0 {
+		target = <&am33xx_pinmux>;
+
+		__overlay__ {
+			i2c1_pins: pinmux_i2c1_pins {
+				pinctrl-single,pins = <
+          			0x158 0x72 /* spi0_d1.i2c1_sda */ 
+          			0x15C 0x72 /* spi0_cs0.i2c1_sdl */
+        			>;
+			};
+		};
+	};
+/*
+	fragment@1 {
+		target-path = "/";
+		__overlay__ {
+			 external oscillator
+			osc: oscillator {
+				compatible = "fixed-clock";
+				#clock-cells = <1>;
+				clock-frequency  = <32768>;
+				clock-output-names = "osc";
+			};
+		};
+	};
+*/
+
+	fragment@1 {
+		target = <&i2c2>;
+
+		__overlay__ {
+			pinctrl-0 = <&i2c2_pins>;
+			clock-frequency = <100000>;
+			status = "okay";
+
+
+
+			pmic: pmic@30 {
+				compatible = "rohm,bd9576";
+				reg = <0x30>;
+				/* Let's try using GPIO1_29 as irq pin */
+				interrupt-parent = <&gpio1>;
+				/* GPIO 1_29 - (connector 8, pin 26) for irq */
+				interrupts = <29 8>;
+				rohm,vout1-en-low;
+				rohm,vout1-en-gpios = <&gpio2 6 0>;
+				rohm,ddr-sel-low;
+				rohm,watchdog-enable-gpios = <&gpio2 7 0>;
+				rohm,watchdog-ping-gpios = <&gpio2 8 0>;
+				hw_margin_ms = <30>;
+				rohm,hw-margin-min-ms = <4>;
+
+				regulators {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					boost1: regulator-vd50 {
+						regulator-name = "VD50";
+						regulator-ov-protection-microvolt = <1>;
+						regulator-ov-error-microvolt = <230000>;
+						regulator-uv-protection-microvolt = <1>;
+						regulator-uv-error-microvolt = <230000>;
+						regulator-temp-protection-kelvin = <1>;
+						regulator-temp-warn-kelvin = <0>;
+					};
+					buck1: regulator-vd18 {
+						regulator-name = "VD18";
+						regulator-ov-protection-microvolt = <1>;
+						regulator-ov-error-microvolt = <18000>;
+						regulator-uv-protection-microvolt = <1>;
+						regulator-uv-error-microvolt = <18000>;
+						regulator-temp-protection-kelvin = <1>;
+						regulator-temp-warn-kelvin = <1>;
+					};
+					buck2: regulator-vdddr {
+						regulator-name = "VDDDR";
+						regulator-ov-protection-microvolt = <1>;
+						regulator-ov-warn-microvolt = <18000>;
+						regulator-uv-protection-microvolt = <1>;
+						regulator-uv-warn-microvolt = <18000>;
+						regulator-temp-protection-kelvin = <1>;
+						regulator-temp-error-kelvin = <0>;
+					};
+					buck3: regulator-vd10 {
+						regulator-name = "VD10";
+						regulator-ov-protection-microvolt = <1>;
+						regulator-ov-warn-microvolt = <18000>;
+						regulator-uv-protection-microvolt = <1>;
+						regulator-uv-error-microvolt = <18000>;
+						regulator-temp-protection-kelvin = <1>;
+						regulator-temp-warn-kelvin = <1>;
+					};
+					ldo: regulator-voutl1 {
+						regulator-name = "VOUTL1";
+						regulator-ov-protection-microvolt = <1>;
+						regulator-ov-error-microvolt = <36000>;
+						regulator-uv-protection-microvolt = <1>;
+						regulator-uv-error-microvolt = <34000>;
+						regulator-temp-protection-kelvin = <1>;
+						regulator-temp-warn-kelvin = <0>;
+					};
+
+					sw: regulator-vouts1 {
+						regulator-name = "VOUTS1";
+					/*	regulator-oc-protection-microamp = <180000>; */
+						regulator-oc-protection-microamp = <0>;
+						regulator-oc-error-microamp = <200000>;
+						regulator-oc-warn-microamp = <200000>;
+/*						rohm,ocw-fet-ron-micro-ohms = <100>; */
+					};
+				};
+			};
+		};
+	};
+
+	fragment@3 {
+		target-path = "/";
+		__overlay__ {
+			irqtest: dummy {
+/* dummy node
+				compatible = "rohm,foo-bd71837-irq";
+				interrupt-parent = <&pmic>;
+				interrupts = <0>, <1>, <2>, <3>, <4>, <5>, <6>;
+				interrupt-names = "irq-btn", "irq-btn-s", "irq-btn-l", "irq-swrst", "irq-wdog", "irq-on", "irq-stb";
+				clocks = <&pmic>;
+				clock-names = "foo-in";
+*/
+			};
+		};
+	};
+}; /* root node end */

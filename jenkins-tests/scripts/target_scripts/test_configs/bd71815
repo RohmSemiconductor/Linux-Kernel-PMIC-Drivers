@@ -1,0 +1,272 @@
+IC_NAME=bd71815
+# List driver modules which should be checked to be load
+IC_MODULES=(bd71815-regulator rohm-bd71828 gpio-bd71815 clk-bd718x7 rtc-bd70528)
+
+I2C_SLAVE=0x4b
+I2C_BUS=2
+DTS_PATH=/proc/device-tree/ocp/interconnect\@48000000/segment\@0/target-module\@2a000/i2c\@0/pmic\@4b/regulators
+
+ALL_BUCKS=(buck1 buck2 buck3 buck4 buck5)
+#(buck1 buck2 buck3 buck4 buck5 buck6 buck7)
+ALL_LDOS=(ldo1 ldo2 ldo3 ldo4 ldo5)
+#(ldo1 ldo2 ldo3 ldo4 ldo5 ldo6 ldo7)
+
+#BD71815 has 5 Bucks and 5 LDOs
+LDO_START=6
+source /test_generic_enable_helpers.sh
+source /test_buck_numbering_helpers.sh
+
+#
+#Registers
+#
+
+#Checked for BD71815
+BUCK_DISABLE_REG=(0 0x02 0x03 0x04 0x05 0x06 0x10 0x11 0x11 0x12 0x12)
+BUCK_DISABLE_MASK=(0 0x04 0x04 0x04 0x04 0x04 0x40 0x04 0x40 0x04 0x40)
+DVS_CFG_REG=(x 0x07 0x09)
+DVS_REG_SEL_MASK=0x80
+DVS_HI_REG=(x 0x07 0x09)
+DVS_LO_REG=(x 0x08 0x0A)
+DVS_VOLT_MASK=0x3F
+
+# Voltage regs for BUCK3, .., LDO4 (which have single reg).
+# Assume LDO5_H TODO: Check which one should be used for LDO5.
+VOLT_REGS=(x x x 0x0b 0x0c 0x0d 0x14 0x15 0x16 0x17 0x18)
+
+VOLT_REG_ARRAY_NAMES=(x BUCK12_VOLTS BUCK12_VOLTS BUCK3_VOLTS BUCK4_VOLTS BUCK5_VOLTS LDO_VOLTS LDO_VOLTS LDO_VOLTS LDO_VOLTS LDO_VOLTS)
+
+BUCK12_VOLTS=()
+BUCK3_VOLTS=()
+BUCK4_VOLTS=()
+BUCK5_VOLTS=()
+LDO_VOLTS=()
+
+source ../test_generic_of_helpers.sh
+init_on_state_by_dt
+
+function i2c_reg_read() {
+	i2cget -f -y $I2C_BUS $I2C_SLAVE $1
+}
+
+function init_volt_regvals() {
+	local i
+
+#BUCK 1 and 2
+#0.8V, ..., 2.0V (25mV step) Max SEL 48
+	for (( i=0 ; i <= 48 ; i++ ))
+	do
+		BUCK12_VOLTS[$i]=$(($i * 25000 + 800000))
+	done
+#BUCK3
+#1.2, ..., 2.7V (50mVstep) max SEL 30
+	for (( i=0 ; i <= 30 ; i++ ))
+	do
+		BUCK3_VOLTS[$i]=$(($i * 50000 + 1200000))
+	done
+#BUCK4
+#1.1, ..., 1.85V (25mVstep) max SEL 30
+	for (( i=0 ; i <= 30 ; i++ ))
+	do
+		BUCK4_VOLTS[$i]=$(($i * 25000 + 1100000))
+	done
+#BUCK5
+#1.8, ..., 3.3V (50 mVstep) max SEL 30
+	for (( i=0 ; i <= 30 ; i++ ))
+	do
+		BUCK5_VOLTS[$i]=$(($i * 50000 + 1800000))
+	done
+#LDOs
+#0.8V, ..., 3.3V (5mV step) max SEL 50
+	for (( i=0 ; i <= 50 ; i++ ))
+	do
+		LDO_VOLTS[$i]=$(($i * 5000 + 800000))
+	done
+}
+
+function regulator_expect_enabled() {
+	local BUCK=$1
+	local ENDIS=$2
+	local BUCK_NO=$(buck_to_no $BUCK)
+	local EN_MASK=${BUCK_DISABLE_MASK[$BUCK_NO]}
+	local REG=${BUCK_DISABLE_REG[$BUCK_NO]}
+
+	local EN_VAL=$(i2c_reg_read ${BUCK_DISABLE_REG[$BUCK_NO]})
+	if [[ $(($EN_VAL & $EN_MASK)) -eq $EN_MASK ]]
+	then
+		if [ $2 -eq 1 ]
+		then
+			return 0
+		fi
+	else
+		if [ $2 -ne 1 ]
+		then
+			return 0
+		fi
+	fi
+	echo "enable check failed for buck $1. expect_enabled was $2. Reg ${BUCK_DISABLE_REG[$BUCK_NO]}), mask $EN_MASK value $EN_VAL"
+
+	return -1
+}
+
+function regulator_check_enabled() {
+	regulator_expect_enabled $1 1
+}
+
+function regulator_check_disabled() {
+	regulator_expect_enabled $1 0
+}
+
+function can_enable() {
+	#All BD71815 regulators can be enabled unless DT says no...
+	if [ $(is_always_on $1) -eq 1 ]
+	then
+		echo 0
+	else
+		echo 1
+	fi
+}
+
+function can_disable() {
+	#... and disabled
+	if [ $(is_always_on $1) -eq 1 ]
+	then
+		echo 0
+	else
+		echo 1
+	fi
+}
+
+function bd71815_get_volt_reg() {
+	local BUCK=$1
+	local VOLTAGE=$2
+	local BUCK_NO=$(buck_to_no $BUCK)
+
+	echo ${VOLT_REGS[$BUCK_NO]}
+}
+function bd71815_get_dvs_volt_reg() {
+	local BUCK=$1
+	local VOLTAGE=$2
+	local BUCK_NO=$(buck_to_no $BUCK)
+	local VOLT_CFG_REG=${DVS_CFG_REG[$BUCK_NO]}
+	local CFG=$(i2c_reg_read $VOLT_CFG_REG)
+	local HIREG
+
+	HIREG=$(($CFG & $DVS_REG_SEL_MASK))
+
+	if [ $HIREG -eq $DVS_REG_SEL_MASK ]
+	then
+		echo ${DVS_HI_REG[$BUCK_NO]}
+	else
+		echo ${DVS_LO_REG[$BUCK_NO]}
+	fi
+}
+
+function check_voltage() {
+	local BUCK=$1
+	local VOLTAGE=$2
+	local BUCK_NO=$(buck_to_no $BUCK)
+	local RARRAY_NAMES=VOLT_REG_ARRAY_NAMES[$BUCK_NO]
+	local REG
+	local VOLTAGE_REG_VAL
+	local VOLTAGE_FROM_REG
+
+	if [ $BUCK_NO -eq 1 ] || [ $BUCK_NO -eq 2 ]
+	then
+	# Bucks 1 and 2 have two voltage registers. See which one is
+	# in use, and read the voltage from that register
+
+		REG=$(bd71815_get_dvs_volt_reg $BUCK_NO)
+	else
+		REG=$(bd71815_get_volt_reg $BUCK_NO)
+	fi
+
+	VOLTAGE_REG_VAL=$(i2c_reg_read $REG)
+	VOLTAGE_REG_VAL=$(($VOLTAGE_REG_VAL & $DVS_VOLT_MASK))
+
+	eval VOLTAGE_FROM_REG=${!RARRAY_NAMES}[$VOLTAGE_REG_VAL]
+
+	if [[ $VOLTAGE_FROM_REG -ne $VOLTAGE ]]
+	then
+		echo "Voltage mismatch, register val $VOLTAGE_REG_VAL equals $VOLTAGE_FROM_REG - framework reports $VOLTAGE"
+		return -1
+	fi
+
+	return 0
+}
+
+function regulator_get_all_voltages() {
+	local -n V_ARR = $2
+	local BUCK=$1
+	local BUCK_NO=$(buck_to_no $BUCK)
+	local i=0
+
+	if [ $BUCK_NO -eq 1 ] || [ $BUCK_NO -eq 2 ]
+	then
+		for VOL in ${BUCK12_VOLTS[*]}
+		do
+			$V_ARR[$i]=$VOL
+			i=$(($i + 1))
+		done
+		return 0
+	fi
+
+	i=0
+
+	if [ $BUCK_NO -eq 3 ]
+	then
+		for VOL in ${BUCK3_VOLTS[*]}
+		do
+			$V_ARR[$i]=$VOL
+			i=$(($i + 1))
+		done
+		return 0
+	fi
+
+	i=0
+
+	if [ $BUCK_NO -eq 4 ]
+	then
+		for VOL in ${BUCK4_VOLTS[*]}
+		do
+			$V_ARR[$i]=$VOL
+			i=$(($i + 1))
+		done
+		return 0
+	fi
+
+	i=0
+
+	if [ $BUCK_NO -eq 5 ]
+	then
+		for VOL in ${BUCK5_VOLTS[*]}
+		do
+			$V_ARR[$i]=$VOL
+			i=$(($i + 1))
+		done
+		return 0
+	fi
+
+	for VOL in ${LDO_VOLTS[*]}
+	do
+		$V_ARR[$i]=$VOL
+		i=$(($i + 1))
+	done
+}
+
+BUCK_VOLT_MULTIPLIER=1
+
+
+function IC_SPECIFIC_init() {
+	init_volt_regvals
+
+#	for foo in ${ALL_REGULATORS[*]}
+#	do
+#		local BUCK_NO=$(get_linear_buckno $foo)
+#		NO_RAW_STATUS[$BUCK_NO]=$(buck_not_register_controlled $foo)
+#	done
+}
+
+function IC_SPECIFIC_buck_on_at_hwctrl_raw()
+{
+	echo "ERROR ERROR ERROR - No IC specific HWCTRL for BD71815"
+}

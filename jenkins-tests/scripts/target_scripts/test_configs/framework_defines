@@ -1,0 +1,22 @@
+HW_CTRL_STATE_IC_SPECIFIC=2
+HW_CTRL_STATE_ON=1
+HW_CTRL_STATE_OFF=0
+
+#
+# By default we expect there is no AIN connections to regulator output
+# This can be overriden from IC specific config
+#
+MEASURETEST_BUCKS=(none)
+MEASURETEST_AINS=(none)
+
+#
+# Let's skip the modules by default. Again, can be overriden from IC test cfg
+#
+IC_MODULES=()
+
+#
+# Usually the break-out board is connected to I2C1 - override this from IC specifig config if this is not the case.
+#
+I2C_BUS=1
+#by default we do not set NO_RAW_STATUS to true for any regulators
+NO_RAW_STATUS=(0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0)
