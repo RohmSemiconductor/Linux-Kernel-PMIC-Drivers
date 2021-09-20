@@ -1,0 +1,10 @@
+#
+# Server/script related configs - should not change unless server side or
+# scripts are changed
+#
+export CONFIG_FOLDER=jenkins-tests/configs/
+
+export ROHM_PMIC_GIT_URL=https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers.git
+export TORVALDS_GIT_URL=git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
+export LINUX_NEXT_GIT_URL=git://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git
+

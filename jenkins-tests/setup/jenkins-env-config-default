@@ -1,0 +1,18 @@
+#
+# Work environment configs - change to match your setup.
+#
+
+#export LOCAL_WORKDIR='/var/jenkins/workspace/PMIC_testing_job/logs'
+export LOCAL_WORKDIR='/home/mvaittin/jenkins-test'
+export TORVALDS_GIT=torvalds
+export ROHM_PMIC_GIT=Linux-Kernel-PMIC-Drivers
+export LINUX_NEXT_GIT=linux-next
+export GIT_FOLDER_NAME=remotes
+
+#
+# Server/script related configs - should not change unless server side or
+# scripts are changed
+#
+export ROHM_PMIC_GIT_URL=https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers.git
+export CONFIG_FOLDER=jenkins-tests/configs
+export ROHM_PMIC_GIT_JENKINS_BRANCH='unstable-pmic-tests-devel'
