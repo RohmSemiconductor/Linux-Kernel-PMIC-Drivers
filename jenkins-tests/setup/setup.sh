@@ -80,7 +80,7 @@ fi
 
 cd "$LOCAL_WORKDIR"/gits/"$GIT_FOLDER_NAME" || install_fail
 
-git remote show "$TORVALDS_GIT"
+git remote show "$TORVALDS_GIT" > /dev/null
 if [ $? -eq 0 ]
 then
 	ask_continue "remote $TORVALDS_GIT found, skipping git setup. Continue (y/n)?" || exit 0
@@ -89,7 +89,7 @@ else
 	git remote add "$TORVALDS_GIT" "$TORVALDS_GIT_URL" || install_fail
 fi
 
-git remote show "$LINUX_NEXT_GIT"
+git remote show "$LINUX_NEXT_GIT" > /dev/null
 if [ $? -eq 0 ]
 then
 	ask_continue "remote $LINUX_NEXT_GIT found, skipping git setup. Continue (y/n)?" || exit 0
