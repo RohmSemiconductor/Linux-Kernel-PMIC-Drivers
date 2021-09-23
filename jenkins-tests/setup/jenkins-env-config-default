@@ -2,17 +2,52 @@
 # Work environment configs - change to match your setup.
 #
 
-#export LOCAL_WORKDIR='/var/jenkins/workspace/PMIC_testing_job/logs'
-export LOCAL_WORKDIR='/home/mvaittin/jenkins-test'
-export TORVALDS_GIT=torvalds
-export ROHM_PMIC_GIT=Linux-Kernel-PMIC-Drivers
-export LINUX_NEXT_GIT=linux-next
-export GIT_FOLDER_NAME=remotes
+#export CFG_LOCAL_WORKDIR='/var/jenkins/workspace/PMIC_testing_job/logs'
+
+#Directory where the jenkins environment is created.
+#Folder will be created by the setup script
+#export CFG_LOCAL_WORKDIR='/home/mvaittin/jenkins-test'
+export CFG_LOCAL_WORKDIR='/home/mvaittin/jenkins-test2'
+
+#Root folder where BBB firmware and compilers are stored.
+#(Expects $CFG_BBB_REPO_PATH/$CFG_BBB_REPO_NAME/<tool-folder>)
+export CFG_BBB_REPO_PATH='/home/mvaittin/test-gits/'
+
+#Own git folder for tests. We need tests and kernel sources to be available
+#at the same time. It's easier if they're checked out in separate folders.
+#Other option would be having tests as patches that would be applied on
+#tested tree. I prefer tests as out-of-tree modules as applying patches
+#and especially patching the KConfig/Makefiles is easily a source of conflicts
+export CFG_TESTS_FOLDER='test-modules'
+
+#Name of folder where we get the gits containing releases we test.
+export CFG_GIT_FOLDER_NAME='remotes'
+
+#We use these names for remotes at local git.
+#Torvalds' tree
+export CFG_TORVALDS_GIT=torvalds
+#ROHM tree
+export CFG_ROHM_PMIC_GIT=Linux-Kernel-PMIC-Drivers
+#linux-next integration tree
+export CFG_LINUX_NEXT_GIT=linux-next
+
 
 #
 # Server/script related configs - should not change unless server side or
 # scripts are changed
 #
-export ROHM_PMIC_GIT_URL=https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers.git
-export CONFIG_FOLDER=jenkins-tests/configs
-export ROHM_PMIC_GIT_JENKINS_BRANCH='unstable-pmic-tests-devel'
+export CFG_ROHM_PMIC_GIT_URL=https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers.git
+export CFG_ROHM_PMIC_GIT_JENKINS_BRANCH='unstable-pmic-tests-devel'
+
+export CFG_BBB_REPO_NAME="tetrao-urogallus"
+
+#Folder where we have jenkins-server side details and where we copy configs.
+export CFG_CONFIG_PATH="$CFG_LOCAL_WORKDIR"/gits/"$CFG_TESTS_FOLDER"/jenkins-tests/configs
+# Name of the branch where we load test kernel modules and jenkins scripts.
+#export CFG_ROHM_PMIC_TEST_MODULE_BRANCH='unstable-pmic-tests-devel'
+
+export CFG_BBB_REPO_URL=https://mvaittinen@bitbucket.org/Kionix-Rohm/tetrao-urogallus.git
+export CFG_BBB_REPO_BRANCH="master"
+
+export CFG_BBB_COMPILER_PATH="$CFG_BBB_REPO_PATH"/"$CFG_BBB_REPO_NAME"/bb-compiler
+

@@ -1,10 +1,27 @@
 #
 # Server/script related configs - should not change unless server side or
 # scripts are changed
-#
-export CONFIG_FOLDER=jenkins-tests/configs/
 
-export ROHM_PMIC_GIT_URL=https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers.git
-export TORVALDS_GIT_URL=git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
-export LINUX_NEXT_GIT_URL=git://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git
+#Jenkins script folders in the repo
+export CFG_JENKINS_ROOT_FOLDER=jenkins-tests
+export CFG_CONFIG_FOLDER=configs
+export CFG_SCRIPT_FOLDER=scripts
+
+#URLs of git repos we use:
+#URL for tests and the ROHM not-upstreamed-drivers branch
+export CFG_ROHM_PMIC_GIT_URL=https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers.git
+#URL for upstream torvalds' tree
+export CFG_TORVALDS_GIT_URL=git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
+#URL for Linux-next integration tree
+export CFG_LINUX_NEXT_GIT_URL=git://git.kernel.org/pub/scm/linux/kernel/git/next/linux-next.git
+
+#folder in tetrao-urogallus where the BBB FW is stored.
+export CFG_BBB_FIRMWARE_FOLDER=bbb_linux_firmware
+
+#The branch where we run tests for not-upstreamed-drivers
+#TODO: Master jenkins gives this as a parameter - and knows this
+#as it implements the polling. Should we just drop the define here?
+#This is mainly useful when we execute tests manually and want to omit
+#the branch target - which is not terribly useful IMHO.
+export CFG_ROHM_PMIC_TEST_DEFAULT_BRANCH=rohm-pmic-test-temporary
 

@@ -1,12 +1,17 @@
 #!/bin/bash
 
 #
-# Main test file. Here it all starts. This is kicked by Jenkins when 
+# Main test file. Here it all starts. This is kicked by Jenkins when
 # it determines that testing is needed.
 #
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
-JENKINS_LOG_STORAGE=/var/jenkins/workspace/PMIC_testing_job/logs
+source $DIR/configs/jenkins-env-config || exit -1
+source $DIR/configs/jenkins-server-configs || exit -1
+
+JENKINS_LOG_STORAGE="$CFG_LOCAL_WORKDIR"/logs
+
+#/var/jenkins/workspace/PMIC_testing_job/logs
 
 #
 # HW targets
@@ -18,25 +23,30 @@ TARGETS="bd71847 bd71837 bd9576"
 #
 # Git stuff
 #
-GIT_ROHM_POWER=$DIR/gits/Linux-Kernel-PMIC-Drivers/
+
 #BOWER_BRANCHES="v4.9.99-BD71815AGW tests-devel"
 #BOWER_BRANCHES="tests-devel"
 
-FOLDER_DEFAULT="$GIT_ROHM_POWER"
-TEST_GIT_DEFAULT="linux-next"
-TEST_BRANCH_TARGET_DEFAULT="tests-devel"
+FOLDER_DEFAULT="$RUNCFG_REMOTES_PATH"
+TEST_GIT_DEFAULT="$CFG_LINUX_NEXT_GIT"
+#"linux-next"
+TEST_BRANCH_TARGET_DEFAULT=$CFG_ROHM_PMIC_TEST_DEFAULT_BRANCH
+#"tests-devel"
+
+#
+# Path helper variables
+#
+SCRIPT_PATH="$RUNCFG_JENKINS_SCRIPT_PATH"
 
 #
 # Commands
 #
-COMPILE=$DIR/gits/tetrao-urogallus/jenkins-tests/scripts/paalaa.sh
-RUN_TESTS=$DIR/gits/tetrao-urogallus/jenkins-tests/scripts/run_tests.sh
-REBOOT=$DIR/gits/tetrao-urogallus/jenkins-tests/scripts/powercycle_bbb.sh
-SETUP_BBB_ENV=$DIR/gits/tetrao-urogallus/jenkins-tests/scripts/setup_bbb_env.sh
-UPDATE_TGT_SCRIPTS=$DIR/gits/tetrao-urogallus/jenkins-tests/scripts/update-target-scripts.sh
-POWERCTRL="$DIR/gits/tetrao-urogallus/jenkins-tests/scripts/ip-power-control.sh"
-
-
+COMPILE="$SCRIPT_PATH"/paalaa.sh
+RUN_TESTS="$SCRIPT_PATH"/run_tests.sh
+REBOOT="$SCRIPT_PATH"/powercycle_bbb.sh
+SETUP_BBB_ENV="$SCRIPT_PATH"/setup_bbb_env.sh
+UPDATE_TGT_SCRIPTS="$SCRIPT_PATH"/update-target-scripts.sh
+POWERCTRL="$SCRIPT_PATH"/ip-power-control.sh
 
 ORIG_ARGS="$@"
 
@@ -137,7 +147,7 @@ while getopts "$OPTSTRING" opt; do
 done
 shift $((OPTIND -1))
 
-MAIN_SCRIPT_TESTS=$DIR/gits/tetrao-urogallus/jenkins-tests/scripts/test.sh
+MAIN_SCRIPT_TESTS="$SCRIPT_PATH"/test.sh
 
 #
 # I hate it when git does not contain recent version of scripts. That will
@@ -153,7 +163,7 @@ if [[ $RESTART != "no" ]]
 then
 	#TBD - urogallus requires login... I don't want to script any git
 	#passwds here. Maybe do key based login?
-	cp $MAIN_SCRIPT_TESTS .
+	cp "$MAIN_SCRIPT_TESTS" .
 	echo "execing \"${BASH_SOURCE:-$0}\" \"$ORIG_ARGS -R\""
 	exec "${BASH_SOURCE:-$0}" $ORIG_ARGS -R
 fi
@@ -187,9 +197,9 @@ TESTLOG="$JENKINS_LOG_STORAGE/jenkins-log-$TIMESTAMP.txt"
 export LOGS=$TESTLOG
 
 date > $TESTLOG
-PARSE_LOG=$DIR/gits/tetrao-urogallus/jenkins-tests/scripts/parse_logs.sh
-COLLECT_MSGS=$DIR/gits/tetrao-urogallus/jenkins-tests/scripts/collect_messages.sh
-COLLECT_AND_CLEAN_LOGS=$DIR/gits/tetrao-urogallus/jenkins-tests/scripts/tar_and_clean_logs.sh
+PARSE_LOG="$SCRIPT_PATH"/parse_logs.sh
+COLLECT_MSGS="$SCRIPT_PATH"/collect_messages.sh
+COLLECT_AND_CLEAN_LOGS="$SCRIPT_PATH"/tar_and_clean_logs.sh
 
 function get_out() {
 	if [ $1 -eq 0 ]
@@ -228,7 +238,8 @@ FIRMWARE_TGT="$TEST_FOLDER/firmware/."
 #
 # Paths
 #
-FIRMWARE=$DIR/gits/tetrao-urogallus/bbb_linux_firmware/*
+FIRMWARE="$CFG_BBB_REPO_PATH"/"$CFG_BBB_FIRMWARE_FOLDER"
+#FIRMWARE=$DIR/gits/tetrao-urogallus/bbb_linux_firmware/*
 DTS_FOLDER="$TEST_FOLDER/arch/arm/boot/dts/"
 
 echo "update target test scripts" |tee -a $TESTLOG
