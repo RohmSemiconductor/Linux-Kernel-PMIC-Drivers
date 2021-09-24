@@ -9,8 +9,6 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 source $DIR/configs/jenkins-env-config || exit -1
 source $DIR/configs/jenkins-server-configs || exit -1
 
-JENKINS_LOG_STORAGE="$CFG_LOCAL_WORKDIR"/logs
-
 #/var/jenkins/workspace/PMIC_testing_job/logs
 
 #
@@ -193,7 +191,7 @@ else
 fi
 
 export TIMESTAMP=`date +%Y%m%d_%s`
-TESTLOG="$JENKINS_LOG_STORAGE/jenkins-log-$TIMESTAMP.txt"
+TESTLOG="$RUNCFG_LOGDIR/jenkins-log-$TIMESTAMP.txt"
 export LOGS=$TESTLOG
 
 date > $TESTLOG
@@ -207,11 +205,11 @@ function get_out() {
 		echo "SUCCESS" |tee -a $TESTLOG
 	else
 		echo "FAILED $1" |tee -a $TESTLOG
-	#	mv $TESTLOG $JENKINS_LOG_STORAGE/testlogs/jenkins-log-$TIMESTAMP.txt
+	#	mv $TESTLOG $RUNCFG_LOGDIR/testlogs/jenkins-log-$TIMESTAMP.txt
 	fi
 	#$PARSE_LOG
 	$COLLECT_AND_CLEAN_LOGS
-	#tar -cvzf $JENKINS_LOG_STORAGE/testlogs/$TESTLOG.tar.gz $TESTLOG 
+	#tar -cvzf $RUNCFG_LOGDIR/testlogs/$TESTLOG.tar.gz $TESTLOG 
 	#rm -r $TESTLOG
 
 	exit $1
@@ -238,7 +236,7 @@ FIRMWARE_TGT="$TEST_FOLDER/firmware/."
 #
 # Paths
 #
-FIRMWARE="$CFG_BBB_REPO_PATH"/"$CFG_BBB_FIRMWARE_FOLDER"
+FIRMWARE="$RUNCFG_BBB_REPO_ROOT"/"$CFG_BBB_FIRMWARE_FOLDER"
 #FIRMWARE=$DIR/gits/tetrao-urogallus/bbb_linux_firmware/*
 DTS_FOLDER="$TEST_FOLDER/arch/arm/boot/dts/"
 

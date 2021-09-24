@@ -1,8 +1,21 @@
 #!/bin/bash
 
+
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 
-source $DIR/../../bb-compiler/setcc
+#
+# Script assumed it is invoked from the tetrao-urogallus directory.
+# I changed this so that the RUNCFG_COMPILER_ENV_PATH should point to
+# file which we source to get the cross-compiler paths set up.
+#source $DIR/../../bb-compiler/setcc
+source $RUNCFG_COMPILER_ENV_PATH
+
+if [ $? -ne 0 ]
+then
+	echo "Could not source 'setcc' which sets paths to BBB gcc."
+#	echo "This scripts should be stored to tetrao-urogallus and ran from it"
+	exit -1
+fi
 
 function do_devtree() {
 	local DTREENAME=$1

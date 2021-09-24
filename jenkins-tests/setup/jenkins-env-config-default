@@ -6,6 +6,13 @@
 export CFG_ETH_IF_TARGETS=(enp0s25)
 export CFG_ETH_IF_SERVER_IPS=(192.168.255.126/24)
 
+# You should have the BBB rootfs on NFS share on the machine which
+# runt these test scripts. This path should point at the rootfs.
+# One possible rootfs package should be hosted in tetrao-urogallus but I guess
+# you can also load one for BBB from net. At least debian and ubuntu bases
+# rootfs packages were available as tar.gz
+export CFG_BBB_NFS_ROOT='/home/mvaittin/nfs'
+
 #Directory where the jenkins environment is created.
 #Folder will be created by the setup script
 #export CFG_LOCAL_WORKDIR='/home/mvaittin/jenkins-test'
@@ -42,6 +49,11 @@ export CFG_ROHM_PMIC_GIT_URL=https://github.com/RohmSemiconductor/Linux-Kernel-P
 export CFG_ROHM_PMIC_GIT_JENKINS_BRANCH='unstable-pmic-tests-devel'
 
 export CFG_BBB_REPO_NAME="tetrao-urogallus"
+#
+# Scripts which we source to get the cross-compiler set-up. The setcc script
+# which does this for BBB cross-compiler is stored in tetrao-urogallus at
+# the folder mentioned below.
+export CFG_BBB_COMPILER_ENV_SCRIPT='bb-compiler/setcc'
 
 #Folder where we have jenkins-server side details and where we copy configs.
 export CFG_CONFIG_PATH="$CFG_LOCAL_WORKDIR"/gits/"$CFG_TESTS_FOLDER"/jenkins-tests/configs
