@@ -291,7 +291,7 @@ else
 		fi
 
 		echo "Reset to branch $TEST_GIT/$TEST_BRANCH_TARGET" |tee -a $TESTLOG
-		git reset --hard $TEST_GIT/$TEST_BRANCH_TARGET
+		git reset --hard $TEST_GIT/$TEST_BRANCH_TARGET || err_out $?
 		#git checkout $TEST_BRANCH_TARGET || err_out $?
 	fi
 fi
@@ -306,7 +306,7 @@ else
 	then
 		git reset --hard $TEST_TAG  || err_out $?
 	else
-		git reset --hard $TEST_GIT/$TEST_BRANCH_TARGET
+		git reset --hard $TEST_GIT/$TEST_BRANCH_TARGET || err_out $?
 	fi
 fi
 
@@ -329,7 +329,7 @@ fi
 
 for t in $TARGETS
 do
-	source "$DIR/gits/tetrao-urogallus/jenkins-tests/configs/$t.conf"
+	source "$RUNCFG_JENKINS_CONFIG_PATH"/"$t.conf"
 
 	sudo $POWERCTRL $POWER_PORT 0
 	sleep 5

@@ -6,6 +6,8 @@
 export CFG_JENKINS_ROOT_FOLDER=jenkins-tests
 export CFG_CONFIG_FOLDER=configs
 export CFG_SCRIPT_FOLDER=scripts
+export CFG_TARGET_SCRIPT_FOLDER="$CFG_SCRIPT_FOLDER"/target_scripts
+export CFG_TARGET_CONFIG_FOLDER="$CFG_TARGET_SCRIPT_FOLDER"/configs
 
 #URLs of git repos we use:
 #URL for tests and the ROHM not-upstreamed-drivers branch
