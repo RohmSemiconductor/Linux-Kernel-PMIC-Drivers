@@ -2,7 +2,9 @@
 # Work environment configs - change to match your setup.
 #
 
-#export CFG_LOCAL_WORKDIR='/var/jenkins/workspace/PMIC_testing_job/logs'
+#Ethernet interface name for Interface the target HWs are connected
+export CFG_ETH_IF_TARGETS=(enp0s25)
+export CFG_ETH_IF_SERVER_IPS=(192.168.255.126/24)
 
 #Directory where the jenkins environment is created.
 #Folder will be created by the setup script

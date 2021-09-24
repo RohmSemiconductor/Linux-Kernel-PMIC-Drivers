@@ -245,11 +245,14 @@ DTS_FOLDER="$TEST_FOLDER/arch/arm/boot/dts/"
 echo "update target test scripts" |tee -a $TESTLOG
 $UPDATE_TGT_SCRIPTS || err_out $?
 
-echo "Setup host network etc - might be already done" |tee -a $TESTLOG
+#TODO: requiring sudo to not ask for passwd is a dirty hack. It's ok for system
+#like the one where this script is ran - we have nothing to really lose here.
+#But this is absolutely a terrible idea for any sensitive devices / networks...
+echo "Setup host network etc - might be already done - WARNING: uses sudo - sudo should be configured to not require passwd.." |tee -a $TESTLOG
 #
 # this should be done when PC is started (start tftp and nfs & configure interfaces)
 #
-sudo $DIR/gits/tetrao-urogallus/jenkins-tests/scripts/dothings.sh |tee -a $TESTLOG
+sudo -E "$SCRIPT_PATH"/dothings.sh |tee -a $TESTLOG
 
 #
 # Urogallus is not open for all to read. Skip it for now
