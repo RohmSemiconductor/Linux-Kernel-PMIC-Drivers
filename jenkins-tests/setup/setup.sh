@@ -288,6 +288,11 @@ then
 	mkdir "$CFG_LOCAL_WORKDIR"/logs/oldlogs
 fi
 
+if [ ! -f "$CFG_LOCAL_WORKDIR"/gits/"$CFG_GIT_FOLDER_NAME"/.config ]
+then
+	cp "$CFG_LOCAL_WORKDIR"/gits/"$CFG_TESTS_FOLDER"/default-jenkins-kernel-config "$CFG_LOCAL_WORKDIR"/gits/"$CFG_GIT_FOLDER_NAME"/.config
+fi
+
 install_succes
 #git checkout "
 

@@ -13,7 +13,10 @@
 # device-treee overlays. That would allow us to use the "root DTB" without
 # symbols - meaning that we could forget compiling the DTB with -@
 
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
+if [ -z ${DIR+x} ]
+then
+	DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
+fi
 
 #
 # Script assumed it is invoked from the tetrao-urogallus directory.
