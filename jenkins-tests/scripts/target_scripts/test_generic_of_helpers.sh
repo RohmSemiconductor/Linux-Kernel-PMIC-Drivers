@@ -15,8 +15,9 @@ fi
 function hw_controlled_by_dt() {
 	local BUCK=$1
 	local DTS_FOLDER="$DTS_PATH"/${BUCK^^}
+	local DTS_FOLDER2="$DTS_PATH/$BUCK"
 
-	if [ -f "$DTS_FOLDER/rohm,no-regulator-enable-control" ]
+	if [ -f "$DTS_FOLDER/rohm,no-regulator-enable-control" ] || [ -f  "$DTS_FOLDER2/rohm,no-regulator-enable-control" ]
 	then
 		echo 1
 	else
@@ -27,8 +28,9 @@ function hw_controlled_by_dt() {
 function boot_on_by_dt() {
 	local BUCK=$1
 	local DTS_FOLDER="$DTS_PATH"/${BUCK^^}
+	local DTS_FOLDER2="$DTS_PATH/$BUCK"
 
-	if [ -f "$DTS_FOLDER/regulator-boot-on" ]
+	if [ -f "$DTS_FOLDER/regulator-boot-on" ] || [ -f  "$DTS_FOLDER2/regulator-boot-on" ]
 	then
 		echo 1
 	else
@@ -39,8 +41,9 @@ function boot_on_by_dt() {
 function always_on_by_dt() {
 	local BUCK=$1
 	local DTS_FOLDER="$DTS_PATH"/${BUCK^^}
+	local DTS_FOLDER2="$DTS_PATH/$BUCK"
 
-	if [ -f "$DTS_FOLDER/regulator-always-on" ]
+	if [ -f "$DTS_FOLDER/regulator-always-on" ] || [ -f  "$DTS_FOLDER2/regulator-always-on" ]
 	then
 		echo 1
 	else
@@ -65,6 +68,7 @@ function init_on_state_by_dt() {
 			INITIAL_ENABLE[$id]=1
 		fi
 		HW_CTRL[$id]=$(hw_controlled_by_dt $_bck_)
+		echo "DT-parsed for $_bck_: always-on: ${ALWAYS_ON[$id]} initial-enable: ${INITIAL_ENABLE[$id]} hw-ctrl: ${HW_CTRL[$id]}"
 	done
 }
 

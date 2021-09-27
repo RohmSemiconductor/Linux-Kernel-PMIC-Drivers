@@ -45,17 +45,18 @@ do
 	CAN_CHECK_VOLTAGE=`can_check_voltage $b`
 	if [ $CAN_CHECK_VOLTAGE -eq 1 ]
 	then
-		VOLTAGE=get_voltage $b
+		VOLTAGE=`get_voltage $b`
 		echo "Check the read voltage $VOLTAGE for '$b' is correct"
 		check_voltage $b $VOLTAGE || err_out
 	fi
 
+	CAN_SET_VOLTAGE=`can_set_voltage $b`
 #TEST5 set and check the voltages
 	if [ $CAN_SET_VOLTAGE -eq 1 ]
 	then
-		local POSSIBLE_VOLTAGES=()
+		POSSIBLE_VOLTAGES=()
 
-		regulator_get_all_voltages $b $POSSIBLE_VOLTAGES
+		regulator_get_all_voltages $b POSSIBLE_VOLTAGES
 
 		for VOLT in ${POSSIBLE_VOLTAGES[*]}
 		do
@@ -71,3 +72,5 @@ do
 	fi
 done
 
+echo "TESTS PASSED" |tee -a $DEBUG_LOG
+echo "HELPPO HOMMA" |tee -a $DEBUG_LOG

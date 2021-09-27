@@ -61,7 +61,7 @@ function get_voltage()
 	local bar
 	local RV
 
-	cat /"$IC_NAME"_test/regulators/${BUCK}_set | (read -n1 bar; echo $bar)
+	cat /"$IC_NAME"_test/regulators/${BUCK}_set
 	RV=$?
 	return $RV
 }
@@ -71,6 +71,6 @@ function set_voltage()
 	local BUCK=$1
 	local VOLTAGE=$2
 
-	echo $VOLTAGE > /"$IC_NAME"_test/regulators/${BUCK}_set
+	echo $VOLTAGE $VOLTAGE > /"$IC_NAME"_test/regulators/${BUCK}_set
 }
 

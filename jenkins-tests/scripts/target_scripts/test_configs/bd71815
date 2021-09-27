@@ -4,7 +4,8 @@ IC_MODULES=(bd71815-regulator rohm-bd71828 gpio-bd71815 clk-bd718x7 rtc-bd70528)
 
 I2C_SLAVE=0x4b
 I2C_BUS=2
-DTS_PATH=/proc/device-tree/ocp/interconnect\@48000000/segment\@0/target-module\@2a000/i2c\@0/pmic\@4b/regulators
+#DTS_PATH=/proc/device-tree/ocp/interconnect\@48000000/segment\@0/target-module\@2a000/i2c\@0/pmic\@4b/regulators
+DTS_PATH=/proc/device-tree/ocp/interconnect@48000000/segment@100000/target-module@9c000/i2c@0/bd71815@4b/regulators
 
 ALL_BUCKS=(buck1 buck2 buck3 buck4 buck5)
 #(buck1 buck2 buck3 buck4 buck5 buck6 buck7)
@@ -79,14 +80,14 @@ function init_volt_regvals() {
 #0.8V, ..., 3.3V (5mV step) max SEL 50
 	for (( i=0 ; i <= 50 ; i++ ))
 	do
-		LDO_VOLTS[$i]=$(($i * 5000 + 800000))
+		LDO_VOLTS[$i]=$(($i * 50000 + 800000))
 	done
 }
 
 function regulator_expect_enabled() {
 	local BUCK=$1
 	local ENDIS=$2
-	local BUCK_NO=$(buck_to_no $BUCK)
+	local BUCK_NO=$(get_linear_buckno $BUCK)
 	local EN_MASK=${BUCK_DISABLE_MASK[$BUCK_NO]}
 	local REG=${BUCK_DISABLE_REG[$BUCK_NO]}
 
@@ -106,6 +107,14 @@ function regulator_expect_enabled() {
 	echo "enable check failed for buck $1. expect_enabled was $2. Reg ${BUCK_DISABLE_REG[$BUCK_NO]}), mask $EN_MASK value $EN_VAL"
 
 	return -1
+}
+
+function can_check_voltage() {
+	echo 1
+}
+
+function can_set_voltage() {
+	echo 1
 }
 
 function regulator_check_enabled() {
@@ -137,23 +146,20 @@ function can_disable() {
 }
 
 function bd71815_get_volt_reg() {
-	local BUCK=$1
+	local BUCK_NO=$1
 	local VOLTAGE=$2
-	local BUCK_NO=$(buck_to_no $BUCK)
-
 	echo ${VOLT_REGS[$BUCK_NO]}
 }
 function bd71815_get_dvs_volt_reg() {
-	local BUCK=$1
+	local BUCK_NO=$1
 	local VOLTAGE=$2
-	local BUCK_NO=$(buck_to_no $BUCK)
 	local VOLT_CFG_REG=${DVS_CFG_REG[$BUCK_NO]}
 	local CFG=$(i2c_reg_read $VOLT_CFG_REG)
 	local HIREG
 
 	HIREG=$(($CFG & $DVS_REG_SEL_MASK))
 
-	if [ $HIREG -eq $DVS_REG_SEL_MASK ]
+	if [ $HIREG -eq $(($DVS_REG_SEL_MASK)) ]
 	then
 		echo ${DVS_HI_REG[$BUCK_NO]}
 	else
@@ -164,7 +170,7 @@ function bd71815_get_dvs_volt_reg() {
 function check_voltage() {
 	local BUCK=$1
 	local VOLTAGE=$2
-	local BUCK_NO=$(buck_to_no $BUCK)
+	local BUCK_NO=$(get_linear_buckno $BUCK)
 	local RARRAY_NAMES=VOLT_REG_ARRAY_NAMES[$BUCK_NO]
 	local REG
 	local VOLTAGE_REG_VAL
@@ -185,9 +191,9 @@ function check_voltage() {
 
 	eval VOLTAGE_FROM_REG=${!RARRAY_NAMES}[$VOLTAGE_REG_VAL]
 
-	if [[ $VOLTAGE_FROM_REG -ne $VOLTAGE ]]
+	if [[ ${!VOLTAGE_FROM_REG} -ne $VOLTAGE ]]
 	then
-		echo "Voltage mismatch, register val $VOLTAGE_REG_VAL equals $VOLTAGE_FROM_REG - framework reports $VOLTAGE"
+		echo "$BUCK : Voltage mismatch, register $REG val $VOLTAGE_REG_VAL equals ${!VOLTAGE_FROM_REG} - framework reports $VOLTAGE"
 		return -1
 	fi
 
@@ -195,16 +201,16 @@ function check_voltage() {
 }
 
 function regulator_get_all_voltages() {
-	local -n V_ARR = $2
+	local -n V_ARR=$2
 	local BUCK=$1
-	local BUCK_NO=$(buck_to_no $BUCK)
+	local BUCK_NO=$(get_linear_buckno $BUCK)
 	local i=0
 
 	if [ $BUCK_NO -eq 1 ] || [ $BUCK_NO -eq 2 ]
 	then
 		for VOL in ${BUCK12_VOLTS[*]}
 		do
-			$V_ARR[$i]=$VOL
+			V_ARR[$i]=$VOL
 			i=$(($i + 1))
 		done
 		return 0
@@ -216,7 +222,7 @@ function regulator_get_all_voltages() {
 	then
 		for VOL in ${BUCK3_VOLTS[*]}
 		do
-			$V_ARR[$i]=$VOL
+			V_ARR[$i]=$VOL
 			i=$(($i + 1))
 		done
 		return 0
@@ -228,7 +234,7 @@ function regulator_get_all_voltages() {
 	then
 		for VOL in ${BUCK4_VOLTS[*]}
 		do
-			$V_ARR[$i]=$VOL
+			V_ARR[$i]=$VOL
 			i=$(($i + 1))
 		done
 		return 0
@@ -240,7 +246,7 @@ function regulator_get_all_voltages() {
 	then
 		for VOL in ${BUCK5_VOLTS[*]}
 		do
-			$V_ARR[$i]=$VOL
+			V_ARR[$i]=$VOL
 			i=$(($i + 1))
 		done
 		return 0
@@ -248,7 +254,7 @@ function regulator_get_all_voltages() {
 
 	for VOL in ${LDO_VOLTS[*]}
 	do
-		$V_ARR[$i]=$VOL
+		V_ARR[$i]=$VOL
 		i=$(($i + 1))
 	done
 }
