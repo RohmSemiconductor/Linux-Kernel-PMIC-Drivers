@@ -1,0 +1,75 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "ti,beaglebone", "ti,beaglebone-black";
+	part-number = "BBB-I2C1"; // you can choose any name here but it should be memorable
+ 	version = "00A0";
+
+	fragment@0 {
+		target = <&am33xx_pinmux>; // this is a link to an already defined node in the device tree, so that node is overlayed with our modification
+
+		__overlay__ {
+			i2c1_pins: pinmux_i2c1_pins {
+				pinctrl-single,pins = <
+				/* 0x158 - pin 17.
+				   0x15C - pin 18
+					0x72:
+					b[2:0] = 2 => mux mode 2 (i2c1 p17/p18,SCL/SDA)
+					b[3] = 0 => pullup/pulldown enabled
+					b[4] = 1 => pull-up, not pull down
+					b[5] = 1 => receiver active
+					b[6] = 1 => slew control slow
+				*/
+          			0x158 0x72 /* spi0_d1.i2c1_sda */ 
+          			0x15C 0x72 /* spi0_cs0.i2c1_sdl */
+        			>;
+			};
+		};
+	};
+
+	fragment@1 {
+		target-path = "/";
+		__overlay__ {
+			/* external oscillator */
+			testbattery: testbattery {
+				compatible = "simple-battery";
+				precharge-current-microamp = <256000>;
+				tricklecharge-current-microamp = <256000>;
+				constant-charge-current-max-microamp = <2560000>;
+				constant-charge-voltage-max-microvolt = <8400000>;
+				precharge-upper-limit-microvolt = <2048000>;
+				re-charge-voltage-microvolt = <8112000>;
+				over-voltage-threshold-microvolt = <8912000>;
+				charge-term-current-microamp = <64000>;
+			};
+		};
+	};
+
+	fragment@2 {
+
+		target = <&i2c1>;
+
+		__overlay__ {
+			pinctrl-0 = <&i2c1_pins>;
+			clock-frequency = <100000>;
+			status = "okay";
+
+			#address-cells = <1>;
+			#size-cells = <0>;
+			bh1792: bh1792@5b {
+				compatible = "rohm,bd99954";
+				reg = <0x9>;
+				monitored-battery = <&testbattery>;
+				/* pinctrl-names = "default"; */
+				/* bd9995x_irq-gpios=<&gpio 21 8>; */
+				interrupt-parent = <&gpio1>;
+				interrupts = <29 8>;
+				/* Mandatory parameters */
+				rohm,vsys-regulation-microvolt = <8960000>;
+				rohm,vbus-input-current-limit-microamp = <1472000>;
+				rohm,vcc-input-current-limit-microamp = <1472000>;
+        		};
+		};
+	};
+};
