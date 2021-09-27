@@ -5,12 +5,14 @@
 # set the CFG_BBB_NFS_ROOT
 if [ -z ${CFG_BBB_NFS_ROOT+x} ]
 then
+	echo "warning: CFG_BBB_NFS_ROOT not set? use default NFS path"
 	export CFG_BBB_NFS_ROOT=/home/mvaittin/nfs
 fi
 
 
 if [ -z ${RUNCFG_COMPILER_ENV_PATH+x} ]
 then
+	echo "warning RUNCFG_COMPILER_ENV_PATH not set: assuming tetrao-urogallus env"
 	source ../use-kernel-dir
 	cd ../bb-compiler/
 	source setcc
