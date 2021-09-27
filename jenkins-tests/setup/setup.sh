@@ -278,9 +278,14 @@ else
 	ln -s "$CFG_CONFIG_PATH" "$CFG_LOCAL_WORKDIR"/configs
 fi
 
-if [ ! -d "$CFG_LOCAL_WORKDIR"/logs ]
+if [ ! -d "$CFG_LOCAL_WORKDIR"/logs/testlogs ]
 then
-	mkdir "$CFG_LOCAL_WORKDIR"/logs
+	mkdir -p "$CFG_LOCAL_WORKDIR"/logs/testlogs
+fi
+
+if [ ! -d "$CFG_LOCAL_WORKDIR"/logs/oldlogs ]
+then
+	mkdir "$CFG_LOCAL_WORKDIR"/logs/oldlogs
 fi
 
 install_succes
