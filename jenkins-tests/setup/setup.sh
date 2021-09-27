@@ -226,6 +226,13 @@ cd "$CFG_LOCAL_WORKDIR"/gits/"$CFG_GIT_FOLDER_NAME" || install_fail
 git_remote_add "$CFG_TORVALDS_GIT" "$CFG_TORVALDS_GIT_URL"
 git_remote_add "$CFG_LINUX_NEXT_GIT" "$CFG_LINUX_NEXT_GIT_URL"
 
+#
+# Create folder for BBB firmware binaries
+if [ ! -d "$CFG_LOCAL_WORKDIR"/gits/"$CFG_GIT_FOLDER_NAME"/firmware ]
+then
+	mkdir "$CFG_LOCAL_WORKDIR"/gits/"$CFG_GIT_FOLDER_NAME"/firmware
+fi
+
 #git remote show "$CFG_TORVALDS_GIT" > /dev/null
 #if [ $? -eq 0 ]
 #then

@@ -236,7 +236,7 @@ FIRMWARE_TGT="$TEST_FOLDER/firmware/."
 #
 # Paths
 #
-FIRMWARE="$RUNCFG_BBB_REPO_ROOT"/"$CFG_BBB_FIRMWARE_FOLDER"
+FIRMWARE="$RUNCFG_BBB_REPO_ROOT"/"$CFG_BBB_FIRMWARE_FOLDER/*"
 #FIRMWARE=$DIR/gits/tetrao-urogallus/bbb_linux_firmware/*
 DTS_FOLDER="$TEST_FOLDER/arch/arm/boot/dts/"
 
@@ -310,6 +310,7 @@ fi
 
 echo "copying BBB firmware" |tee -a $TESTLOG
 cp $FIRMWARE $FIRMWARE_TGT || err_out $?
+git grep "copying BBB firmware"
 
 if [[ $BUILD_SW == "" ]]
 then
