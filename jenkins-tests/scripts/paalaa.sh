@@ -1,5 +1,17 @@
 #!/bin/bash
 
+#
+# Script for compiling the kernel for BBB.
+# Uses hard-coded kernel load-address 0x80008000 (check that the
+# u-boot env has same address so that u-boot knows where to put the
+# kernel
+#
+# Uses hard-coded tftpserver path,
+#
+# Compiles the device-tree using the intermediate build file created
+# by Linux. TODO: This could be changed by using absolute paths in the
+# device-treee overlays. That would allow us to use the "root DTB" without
+# symbols - meaning that we could forget compiling the DTB with -@
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 
@@ -113,7 +125,12 @@ then
 			exit 0
 		fi
 
-		sudo make ARCH=arm CROSS_COMPILE=${CC} LOADADDR=0x80008000 INSTALL_MOD_PATH=/home/mvaittin/nfs modules_install
+		if [ "$CFG_BBB_NFS_ROOT" = "" ]
+		then
+			echo "NFS share path not set"
+			exit -1
+		fi
+		sudo make ARCH=arm CROSS_COMPILE=${CC} LOADADDR=0x80008000 INSTALL_MOD_PATH="$CFG_BBB_NFS_ROOT" modules_install
 		RES=$?
 		if [ $RES -eq 0 ]
 		then

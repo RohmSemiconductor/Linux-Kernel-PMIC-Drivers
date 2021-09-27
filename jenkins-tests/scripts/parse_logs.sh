@@ -2,17 +2,10 @@
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 
-JENKINS_LOG_STORAGE=/var/jenkins/workspace/PMIC_testing_job/logs
-
-#
-# Hard-coding path is bad, Okay?
-# Well, this NFS path is hardcoded also in test makefiles so I might as well hard-code it here.
-#
-LOGDIR=/home/mvaittin/nfs
+LOGDIR="$CFG_BBB_NFS_ROOT"
 
 SYSTEM_LOG="var/log/messages"
 
-#TBD add also bd71837_test_log.txt when done
 TEST_LOGS="testlogs/$1_test_log.txt"
 
 #echo "Sleep a little to give NFS time to update logs - should probably implement sync..."
@@ -24,7 +17,7 @@ echo "" >> $DIR/messages_cut$TIMESTAMP
 echo "" >> $DIR/messages_cut$TIMESTAMP
 echo "********************************************************" >> $DIR/messages_cut$TIMESTAMP
 echo "RUN FOR $1" >> $DIR/messages_cut$TIMESTAMP
-tail -n5000 $LOGDIR/$SYSTEM_LOG > $DIR/messages_cut$TIMESTAMP
+tail -n5000 $LOGDIR/$SYSTEM_LOG >> $DIR/messages_cut$TIMESTAMP
 
 #export LOGS="$LOGS $DIR/messages_cut$TIMESTAMP"
 #echo LOGS now $LOGS

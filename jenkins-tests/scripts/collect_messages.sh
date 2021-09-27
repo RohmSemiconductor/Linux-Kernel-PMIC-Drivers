@@ -6,7 +6,6 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 # Hard-coding path is bad, Okay?
 # Well, this NFS path is hardcoded also in test makefiles so I might as well hard-code it here.
 #
-#LOGDIR=/home/mvaittin/nfs
 
 LOGDIR="$CFG_BBB_NFS_ROOT"
 SYSTEM_LOG="var/log/messages"

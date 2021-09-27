@@ -15,9 +15,9 @@ clean:
 	make -C ${KERNEL_DIR} CROSS_COMPILE=${CC} ARCH=arm M=$(PWD) clean
 
 install:
-	cp bd71837-test.ko /home/mvaittin/nfs/.
-	cp bd71837_test.dtbo /home/mvaittin/nfs/.
-	cp bbb_only_I2C_1.dtbo /home/mvaittin/nfs/.
+	cp bd71837-test.ko  ${CFG_BBB_NFS_ROOT}/.
+	cp bd71837_test.dtbo  ${CFG_BBB_NFS_ROOT}/.
+	cp bbb_only_I2C_1.dtbo  ${CFG_BBB_NFS_ROOT}/.
 
 debug_cfg:
 	make -C ${KERNEL_DIR} CROSS_COMPILE=${CC} ARCH=arm M=$(PWD) CONFIG_DEBUG_SECTION_MISMATCH=y modules
