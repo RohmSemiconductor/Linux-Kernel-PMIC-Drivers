@@ -20,6 +20,8 @@ TEST_GIT_BASE="$DIR/../../"
 OVERLAY_SRC="$DIR/../../overlay_merger"
 NFS_DIR="$CFG_BBB_NFS_ROOT"
 
+echo "setup_bbb_env.sh - NFS dir set $CFG_BBB_NFS_ROOT"
+
 #
 # bd718x7 does not necessarily exist in all tested branches... TBD - how to do testing correctly?
 #
@@ -32,7 +34,7 @@ echo "Compiling overlay merger..."
 ./build.sh || exit -1
 
 echo "Installing overlay merger..."
-sudo ./build.sh install || exit -1
+sudo -E ./build.sh install || exit -1
 
 cd -
 
@@ -44,7 +46,7 @@ do
 	./build.sh || exit -1
 
 	echo "Installing $t tests..."
-	sudo ./build.sh install || exit -1
+	sudo -E ./build.sh install || exit -1
 
 	cd -
 done
