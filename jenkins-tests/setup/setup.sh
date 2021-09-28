@@ -267,6 +267,11 @@ then
 	ask_continue "Old $CFG_LOCAL_WORKDIR/test.sh found, overwrite (y/n)?" || exit 0
 fi
 
+if [ ! -f "$CFG_LOCAL_WORKDIR"/gits/"$CFG_GIT_FOLDER_NAME"/manual_paalaa.sh ]
+then
+	cp "$DIR"/manual_paalaa.sh "$CFG_LOCAL_WORKDIR"/gits/"$CFG_GIT_FOLDER_NAME"/.
+fi
+
 cp "$CFG_LOCAL_WORKDIR"/gits/"$CFG_TESTS_FOLDER"/"$CFG_JENKINS_ROOT_FOLDER"/"$CFG_SCRIPT_FOLDER"/test.sh "$CFG_LOCAL_WORKDIR"/.
 
 if [ -e "$CFG_LOCAL_WORKDIR"/configs ]
