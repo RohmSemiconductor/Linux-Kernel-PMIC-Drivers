@@ -123,7 +123,10 @@ cd "$CFG_LOCAL_WORKDIR"/gits || install_fail
 
 #
 # Chek out the tests from ROHM Power to a test folder.
-#
+# TODO: We could spare time and disk-space by using:
+# --branch <test-branch-name> --single-branch
+# when cloning. One should check how updating the tests works if only single
+# branch has ben checked out.
 echo check out the tests
 #git_remote_add "$CFG_ROHM_PMIC_GIT" "$CFG_ROHM_PMIC_GIT_URL"
 
