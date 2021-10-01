@@ -1,15 +1,18 @@
 # Collection of test scripts for testing ROHM PMIC ICs
 
-We test the PMICs using test setup where we have
+We test the PMICs using test setup where we have:
 
  - PMIC break out boards
  - BeagleBone Black board(s)
  - Test PC running Jenkins slave
- - Power outlet connected to ethernet and controllable using telent
+ - Server with master Jenkins
+ - Ethernet (telnet) controllable Power outlet (IP Power 9850)
 
-- We compile the Linux kernel + modules on PC.
-- We run the compiled Linux + drivers + tests on beagle bone black boards
-- The Beaglebone Black boards are connected to PMIC break-out boards via I2C
+Test procedure:
+
+ - Master Jenkins polls every now and then the upstream repositories for new releases (tags)
+ - When new tag appears slave jenkins compiles the Linux kernel + modules on PC.
+ - Slave jenkins runs the compiled Linux + drivers + tests on beagle bone black boards which are connected to the PMIC break-out boards via I2C
 
 Test software tests enabling/disabling the PMIC regulators and changing the
 regulator voltages using Linux APIs. The driver is verified to work by
@@ -18,6 +21,8 @@ the register values match the set states.
 
 Some PMIC power outputs are also connected to beaglebone black ADC and
 actual voltages are measured. This testing is not accurate though.
+
+For some PMICs we perform additional tests for other features but the regulators.
 
 
     Inaccurate picture to illustrate the potential setup.
