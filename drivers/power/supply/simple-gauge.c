@@ -333,6 +333,11 @@ static int adjust_cc_full(struct simple_gauge *sw)
 	int ret = 0, from_full_uah = 0;
 	int full_uah = sw->designed_cap;
 
+	/*
+	 * Some ICs are able to provide the uAh lost since the battery was
+	 * fully charged. Decrease this from the designed capacity and set
+	 * the CC value accordingly.
+	 */
 	if (sw->ops.get_uah_from_full)
 		ret = sw->ops.get_uah_from_full(sw, &from_full_uah);
 
@@ -577,6 +582,8 @@ static int compute_soc_by_cc(struct simple_gauge *sw, int state)
 		dev_err(sw->dev, "Age correction of battery failed\n");
 		return ret;
 	}
+	pr_info("After age correction, battery-cap reduced from %d by %d to %d\n",
+		sw->designed_cap, sw->designed_cap - current_cap_uah, current_cap_uah);
 
 	if (current_cap_uah == 0) {
 		dev_warn(sw->dev, "Battery EOL\n");
@@ -603,6 +610,12 @@ static int compute_soc_by_cc(struct simple_gauge *sw, int state)
 		dev_warn(sw->dev,
 			 "Couldn't do temperature correction to battery cap\n");
 
+	pr_info("After age and temp correction, battery-cap reduced from %d by %d to %d\n",
+		sw->designed_cap, sw->designed_cap - current_cap_uah, current_cap_uah);
+
+	if ((sw->designed_cap - current_cap_uah) > cc_uah)
+		pr_info("Oh Shit. FULL CC based on ideal battery is %u, cap lost is _more_ than this %u\n",
+			cc_uah, sw->designed_cap - current_cap_uah);
 	/*
 	 * We keep HW CC counter aligned to ideal battery CAP - EG, when
 	 * battery is full, CC is set according to ideal battery capacity.
@@ -642,6 +655,11 @@ static int compute_soc_by_cc(struct simple_gauge *sw, int state)
 
 	if (cc_uah > sw->designed_cap)
 		cc_uah = sw->designed_cap;
+
+	if (cc_uah < 0) {
+		pr_info("Shit happened - cc_uah < 0 (%d) => set to 0\n", cc_uah);
+		cc_uah = 0;
+	}
 
 	/* Store computed values */
 	spin_lock(&sw->lock);
