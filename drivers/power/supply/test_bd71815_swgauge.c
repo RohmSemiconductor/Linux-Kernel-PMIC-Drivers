@@ -435,6 +435,7 @@ retry:
 		/* Run the gauge loop and compute new SOC etc */
 		simple_gauge_run_blocking(g);
 	}
+	pr_info("Test done - bailing out\n");
 
 //	platform_device_put(pdev);
 }
@@ -731,7 +732,12 @@ static int test_probe(struct platform_device *pdev)
 
 	swgauge_test_soc(pdev);
 
-	return 0;
+	pr_info("SUCCESS!\n");
+
+	/* Fail the probe to initiate device clean-up */
+	return -ENODEV;
+
+	//return 0;
 }
 
 static const struct of_device_id test_of_match[] = {
