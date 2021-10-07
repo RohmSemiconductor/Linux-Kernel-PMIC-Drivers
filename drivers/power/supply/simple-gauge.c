@@ -878,6 +878,8 @@ static int gauge_thread(void *data)
 			break;
 		}
 
+		simple_gauge_forced_run = 0;
+
 		mutex_lock(&simple_gauge_lock);
 		list_for_each_entry(sw, &simple_gauges, node) {
 			gauge_get(sw);
@@ -896,10 +898,22 @@ static int gauge_thread(void *data)
 		g_iteration++;
 		mutex_unlock(&simple_gauge_lock);
 		wake_up(&simple_gauge_forced_wait);
-		pr_debug("sleeping %u msec\n", jiffies_to_msecs(timeout));
-		wait_event_interruptible_timeout(simple_gauge_thread_wait,
+
+		/*
+		 * If the last gauge exited we fall to sleep in order to not
+		 * go lopoping with zero timeout. New client registration will
+		 * wake us up.
+		 */
+		if (!timeout && list_empty(&simple_gauges)) {
+			pr_debug("No clients: going to sleep\n");
+			wait_event_interruptible(simple_gauge_thread_wait,
+						 simple_gauge_forced_run);
+		} else {
+			pr_debug("sleeping %u msec\n",
+				 jiffies_to_msecs(timeout));
+			wait_event_interruptible_timeout(simple_gauge_thread_wait,
 						 simple_gauge_forced_run, timeout);
-		simple_gauge_forced_run = 0;
+		}
 	}
 
 	return 0;
