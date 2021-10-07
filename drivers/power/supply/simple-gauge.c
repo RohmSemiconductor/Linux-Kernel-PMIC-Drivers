@@ -333,6 +333,11 @@ static int adjust_cc_full(struct simple_gauge *sw)
 	int ret = 0, from_full_uah = 0;
 	int full_uah = sw->designed_cap;
 
+	/*
+	 * Some ICs are able to provide the uAh lost since the battery was
+	 * fully charged. Decrease this from the designed capacity and set
+	 * the CC value accordingly.
+	 */
 	if (sw->ops.get_uah_from_full)
 		ret = sw->ops.get_uah_from_full(sw, &from_full_uah);
 
@@ -874,6 +879,11 @@ static int gauge_thread(void *data)
 			adjust_next_tmo(sw, &timeout, now);
 			gauge_put(sw);
 		}
+		/*
+		 * Increase iteration counter and wake up the waiters who have
+		 * requested the blocking forced run. NOTE: We must increase
+		 * iteration here inside the locking to avoid race.
+		 */
 		g_iteration++;
 		mutex_unlock(&simple_gauge_lock);
 		wake_up(&simple_gauge_forced_wait);
@@ -968,26 +978,6 @@ static int simple_gauge_is_writable(struct power_supply *psy,
 	return 0;
 }
 
-/**
- * psy_register_simple_gauge - register driver to simple_gauge
- *
- * @parent:	Parent device for power-supply class device.
- * @psycfg:	Confiurations for power-supply class.
- * @ops:	simple_gauge specific operations.
- * @desc:	simple_gauge configuration data.
- *
- * Return:	pointer to simple_gauge on success, an ERR_PTR on failure.
- *
- * A power-supply driver for a device with drifting coulomb counter (CC) can
- * register for periodical polling/CC correction. CC correction is done when
- * battery is reported to be FULL or relaxed. For FULL battery the CC is set
- * based on designed capacity and for relaxed battery CC is set based on open
- * circuit voltage. The simple_gauge takes care of registering a power-supply class
- * and reporting a few power-supply properties to user-space. See
- * SWGAUGE_PSY_PROPS. Swauge can also do battery capacity corretions based on
- * provided temperature/cycle degradation values and/or system voltage limit.
- */
-
 static int sgauge_config_check(struct device *dev, struct simple_gauge_psy *pcfg)
 {
 	const char *errstr = NULL;
@@ -1043,6 +1033,26 @@ void *simple_gauge_get_drvdata(struct simple_gauge *sg)
 	return sg->desc.drv_data;
 }
 EXPORT_SYMBOL_GPL(simple_gauge_get_drvdata);
+
+/**
+ * psy_register_simple_gauge - register driver to simple_gauge
+ *
+ * @parent:	Parent device for power-supply class device.
+ * @psycfg:	Confiurations for power-supply class.
+ * @ops:	simple_gauge specific operations.
+ * @desc:	simple_gauge configuration data.
+ *
+ * Return:	pointer to simple_gauge on success, an ERR_PTR on failure.
+ *
+ * A power-supply driver for a device with drifting coulomb counter (CC) can
+ * register for periodical polling/CC correction. CC correction is done when
+ * battery is reported to be FULL or relaxed. For FULL battery the CC is set
+ * based on designed capacity and for relaxed battery CC is set based on open
+ * circuit voltage. The simple_gauge takes care of registering a power-supply class
+ * and reporting a few power-supply properties to user-space. See
+ * SWGAUGE_PSY_PROPS. Swauge can also do battery capacity corretions based on
+ * provided temperature/cycle degradation values and/or system voltage limit.
+ */
 struct simple_gauge *__must_check psy_register_simple_gauge(struct device *parent,
 						    struct simple_gauge_psy *pcfg,
 						    struct simple_gauge_ops *ops,
