@@ -590,24 +590,24 @@ static int get_fwnode_tuple_array(struct device *dev, struct fwnode_handle *fw,
 	*tuple = devm_kcalloc(dev, num_values / 2, sizeof(*tuple),
 			       GFP_KERNEL);
 	if (!*tuple) {
-		kfree(tmp_table);
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto out;
 	}
 	ret = fwnode_property_read_u32_array(fw, name, tmp_table, num_values);
-	if (ret) {
-		kfree(tmp_table);
-		kfree(*tuple);
-		return ret;
-	}
+	if (ret)
+		goto out;
+
 	*num_tuple = num_values / 2;
 	for (i = 0; i < *num_tuple; i++)
 	{
 		(*tuple)[i].a = *tmp_table++;
 		(*tuple)[i].b = *tmp_table++;
 	}
+
+out:
 	kfree(tmp_table);
 
-	return 0;
+	return ret;
 }
 
 #define POWER_SUPPLY_TEMP_DGRD_MAX_VALUES 100
