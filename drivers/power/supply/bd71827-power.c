@@ -1300,26 +1300,15 @@ static int bd71827_init_hardware(struct bd71827_power *pwr)
 }
 
 #define MK_2_100MCELSIUS(m_kevl_in) (((int)(m_kevl_in) - 273150) / 100)
-static int get_vdr_from_dt(struct bd71827_power *pwr, int temp_bytes)
+static int get_vdr_from_dt(struct bd71827_power *pwr,
+			   struct fwnode_handle *node, int temp_values)
 {
-	int i, ret, num_values;
-	struct fwnode_handle * node;
+	int i, ret, num_values, *tmp_table;
 	u32 vdr_kelvin[NUM_VDR_TEMPS];
 
-	node = dev_fwnode(pwr->dev->parent);
-	if (!node) {
-		dev_err(pwr->dev, "no charger node\n");
-		return -ENODEV;
-	}
-	node = fwnode_find_reference(node, "monitored-battery", 0);
-	if (IS_ERR(node)) {
-		dev_err(pwr->dev, "No battery node found\n");
-		return PTR_ERR(node);
-	}
-
-	if (temp_bytes != NUM_VDR_TEMPS * 4) {
-		dev_err(pwr->dev, "Bad VDR temperature table size (%dB). Expected %dB",
-			temp_bytes, NUM_VDR_TEMPS * 4);
+	if (temp_values != NUM_VDR_TEMPS) {
+		dev_err(pwr->dev, "Bad VDR temperature table size (%d). Expected %d",
+			temp_values, NUM_VDR_TEMPS);
 		return -EINVAL;
 	}
 	ret = fwnode_property_read_u32_array(node,
@@ -1383,8 +1372,8 @@ static int bd71827_set_battery_parameters(struct bd71827_power *pwr)
 	 * or as module parameters.
 	 */
 	if (!use_load_bat_params) {
-		int ret, sz;
-		struct device_node *battery_np;
+		int ret, num_vdr;
+		struct fwnode_handle *node;
 
 		/*
 		 * power_supply_dev_get_battery_info uses devm internally
@@ -1432,11 +1421,20 @@ static int bd71827_set_battery_parameters(struct bd71827_power *pwr)
 
 		soc_est_max_num = SOC_EST_MAX_NUM_DEFAULT;
 
-		battery_np = of_parse_phandle(pwr->dev->parent->of_node,
-					      "monitored-battery", 0);
-		if (of_find_property(battery_np,
-				     "rohm,volt-drop-temp-millikelvin", &sz)) {
-			ret = get_vdr_from_dt(pwr, sz);
+		node = dev_fwnode(pwr->dev->parent);
+		if (!node) {
+			dev_err(pwr->dev, "no charger node\n");
+			return -ENODEV;
+		}
+		node = fwnode_find_reference(node, "monitored-battery", 0);
+		if (IS_ERR(node)) {
+			dev_err(pwr->dev, "No battery node found\n");
+			return PTR_ERR(node);
+		}
+
+		num_vdr = fwnode_property_count_u32(node, "rohm,volt-drop-temp-millikelvin");
+		if (num_vdr > 0) {
+			ret = get_vdr_from_dt(pwr, node, num_vdr);
 			if (ret)
 				return ret;
 		} else {
@@ -2143,18 +2141,18 @@ static int bd7182x_get_rsens(struct bd71827_power *pwr)
 {
 	u64 tmp = RSENS_CURR;
 	int rsens_ohm = RSENS_DEFAULT_30MOHM;
-	struct device_node *np = NULL;
+	struct fwnode_handle *node = NULL;
 
 	if (pwr->dev->parent)
-		np = pwr->dev->parent->of_node;
+		node = dev_fwnode(pwr->dev->parent);
 
-	if (np) {
+	if (node) {
 		int ret;
 		uint32_t rs;
 
-		ret = of_property_read_u32(np,
-					   "rohm,charger-sense-resistor-ohm",
-					   &rs);
+		ret = fwnode_property_read_u32(node,
+					       "rohm,charger-sense-resistor-ohm",
+					       &rs);
 		if (ret) {
 			if (ret == -EINVAL) {
 				rs = RSENS_DEFAULT_30MOHM;
@@ -2337,7 +2335,8 @@ static void fgauge_initial_values(struct bd71827_power *pwr)
 	case ROHM_CHIP_TYPE_BD71815:
 		o->get_temp = bd71827_get_temp;
 		o->is_relaxed = bd71828_is_relaxed;
-		/* TODO: BD71815 has not been used with VDR. This is untested
+		/*
+		 * TODO: BD71815 has not been used with VDR. This is untested
 		 * but I don't see why it wouldn't work by setting thresholds
 		 * and by populating correct SOC-OCV tables.
 		 */
