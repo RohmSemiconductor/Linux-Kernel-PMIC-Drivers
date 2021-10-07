@@ -648,6 +648,15 @@ static int compute_soc_by_cc(struct simple_gauge *sw, int state)
 	if (cc_uah > sw->designed_cap)
 		cc_uah = sw->designed_cap;
 
+	/*
+	 * With badly behaving CC or wrong VDR values we may make the CC to go
+	 * negative. Floor it to zero to avoid exhausting the battery W/O warning.
+	 */
+	if (cc_uah < 0) {
+		dev_warn(sw->dev,
+			 "Bad battery caoacity estimate\n");
+		cc_uah = 0;
+	}
 	/* Store computed values */
 	spin_lock(&sw->lock);
 	sw->cc_uah = cc_uah;
