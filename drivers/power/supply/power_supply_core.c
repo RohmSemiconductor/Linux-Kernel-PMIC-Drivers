@@ -747,7 +747,7 @@ int power_supply_dev_get_battery_info(struct device *dev,
 		err = len;
 		goto out_put_node;
 	}
-	/* table should consist of value pairs - maximum of 100 pairs */
+	/* table should consist of value triplets - maximum of 100 triplets */
 	if (len % 3 || len / 3 > POWER_SUPPLY_TEMP_DGRD_MAX_VALUES) {
 		dev_warn(dev,
 			 "bad amount of temperature-capacity degrade values\n");
@@ -792,6 +792,7 @@ int power_supply_dev_get_battery_info(struct device *dev,
 	len = fwnode_property_count_u32(battery_node, "ocv-capacity-celsius");
 	if (len == -EINVAL)
 		len = 0;
+
 	if (len < 0) {
 		dev_err(dev, "malformed ocv-capacity-celsius table\n");
 		err = len;
@@ -801,9 +802,19 @@ int power_supply_dev_get_battery_info(struct device *dev,
 		err = -EINVAL;
 		goto out_put_node;
 	} else if (len > 0) {
+		u32 *tmp;
+
+		tmp = kcalloc(len, sizeof(*tmp), GFP_KERNEL);
+		if (!tmp)
+			return -ENOMEM;
+
 		fwnode_property_read_u32_array(battery_node,
 					       "ocv-capacity-celsius",
-					       info->ocv_temp, len);
+					       tmp, len);
+		for (index = 0; index < len; index++)
+			info->ocv_temp[index] = tmp[index];
+
+		kfree(tmp);
 	}
 
 	for (index = 0; index < len; index++) {
