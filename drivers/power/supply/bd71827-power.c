@@ -1328,7 +1328,16 @@ static int get_vdr_from_dt(struct bd71827_power *pwr,
 		return -EINVAL;
 	}
 	g_num_vdr_params = num_values;
+
+	tmp_table = kcalloc(num_values, sizeof(int), GFP_KERNEL);
+	if (!tmp_table)
+		return -ENOMEM;
+	/*
+	 * We collect NUM_VDR_TEMPS + 1 tables, all temperature tables +
+	 * the SOC table
+	 */
 	for (i = 0; i < NUM_VDR_TEMPS + 1; i++) {
+		int index;
 		const char *prop[] = {
 			/* SOC in units of 0.1 percent. TODO: Check if we have
 			 * standard DT unit for percentage with higher accuracy
@@ -1339,7 +1348,7 @@ static int get_vdr_from_dt(struct bd71827_power *pwr,
 			"rohm,volt-drop-low-temp-microvolt",
 			"rohm,volt-drop-very-low-temp-microvolt",
 		};
-		int32_t *tables[5] = {
+		int *tables[5] = {
 			&soc_table[0], &vdr_table_h[0], &vdr_table_m[0],
 			&vdr_table_l[0], &vdr_table_vl[0]
 		};
@@ -1350,13 +1359,15 @@ static int get_vdr_from_dt(struct bd71827_power *pwr,
 				prop[i], num_values);
 			return -EINVAL;
 		}
-		ret = fwnode_property_read_u32_array(node, prop[i], tables[i],
+		ret = fwnode_property_read_u32_array(node, prop[i], tmp_table,
 						     num_values);
 		if (ret) {
 			dev_err(pwr->dev,
 				"Invalid VDR temperatures in device-tree");
 			return ret;
 		}
+		for (index = 0; index < num_values; index++)
+			tables[i][index] = tmp_table[index];
 	}
 
 	return 0;
