@@ -590,24 +590,24 @@ static int get_fwnode_tuple_array(struct device *dev, struct fwnode_handle *fw,
 	*tuple = devm_kcalloc(dev, num_values / 2, sizeof(*tuple),
 			       GFP_KERNEL);
 	if (!*tuple) {
-		kfree(tmp_table);
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto out;
 	}
 	ret = fwnode_property_read_u32_array(fw, name, tmp_table, num_values);
-	if (ret) {
-		kfree(tmp_table);
-		kfree(*tuple);
-		return ret;
-	}
+	if (ret)
+		goto out;
+
 	*num_tuple = num_values / 2;
 	for (i = 0; i < *num_tuple; i++)
 	{
 		(*tuple)[i].a = *tmp_table++;
 		(*tuple)[i].b = *tmp_table++;
 	}
+
+out:
 	kfree(tmp_table);
 
-	return 0;
+	return ret;
 }
 
 #define POWER_SUPPLY_TEMP_DGRD_MAX_VALUES 100
@@ -741,20 +741,24 @@ int power_supply_dev_get_battery_info(struct device *dev,
 	}
 
 	len = fwnode_property_count_u32(battery_node, "temp-degrade-table");
+	pr_info("fwnode_property_count_u32 temp-degrade-table returned %d\n", len);
 	if (len == -EINVAL)
 		len = 0;
+
 	if (len < 0) {
 		dev_err(dev, "malformed temp-degrade-table %d\n", len);
 		err = len;
 		goto out_put_node;
 	}
-	/* table should consist of value pairs - maximum of 100 pairs */
+	/* table should consist of value triplets - maximum of 100 triplets */
 	if (len % 3 || len / 3 > POWER_SUPPLY_TEMP_DGRD_MAX_VALUES) {
 		dev_warn(dev,
 			 "bad amount of temperature-capacity degrade values\n");
 		err = -EINVAL;
 		goto out_put_node;
 	}
+	pr_info("Found %d temp-degrade-table values - means %d triplets\n", len, len / 3);
+
 	info->temp_dgrd_values = len / 3;
 	if (info->temp_dgrd_values) {
 		info->temp_dgrd = devm_kcalloc(dev, info->temp_dgrd_values,
@@ -764,11 +768,14 @@ int power_supply_dev_get_battery_info(struct device *dev,
 			err = -ENOMEM;
 			goto out_put_node;
 		}
+		pr_info("Allocated %u bytes for temp dgrd values. Is %u bytes for a value (expecting 4)\n", info->temp_dgrd_values * sizeof(*info->temp_dgrd), (info->temp_dgrd_values * sizeof(*info->temp_dgrd) / info->temp_dgrd_values / 3) );
 		dgrd_table = kcalloc(len, sizeof(*dgrd_table), GFP_KERNEL);
 		if (!dgrd_table) {
 			err = -ENOMEM;
 			goto out_put_node;
 		}
+
+		pr_info("Allocated %u bytes space for %u values - %u bytes each\n", len * sizeof(*dgrd_table), len, sizeof(*dgrd_table));
 		err = fwnode_property_read_u32_array(battery_node,
 						     "temp-degrade-table",
 						     dgrd_table, len);
@@ -786,6 +793,8 @@ int power_supply_dev_get_battery_info(struct device *dev,
 			d->temp_degrade_1C = dgrd_table[index * 3];
 			d->degrade_at_set = dgrd_table[index * 3 + 1];
 			d->temp_set_point = dgrd_table[index * 3 + 2];
+			if ((index * 3 + 2) >= len)
+				pr_info("JDKSHKDSJHAJKSDHJSDFHLASHFLKHDAKLFHKLADHFDKLHALKAHDFLKHADLFKSHDAKLFHKDLAHFLAHFLKADHFKLADHKFHASDKLFHSDKL!!!!!!!!!!!!!! Eli voi paska\n");
 		}
 		kfree(dgrd_table);
 	}
@@ -793,6 +802,7 @@ int power_supply_dev_get_battery_info(struct device *dev,
 	len = fwnode_property_count_u32(battery_node, "ocv-capacity-celsius");
 	if (len == -EINVAL)
 		len = 0;
+
 	if (len < 0) {
 		dev_err(dev, "malformed ocv-capacity-celsius table\n");
 		err = len;
@@ -802,9 +812,23 @@ int power_supply_dev_get_battery_info(struct device *dev,
 		err = -EINVAL;
 		goto out_put_node;
 	} else if (len > 0) {
+		u32 *tmp;
+
+		tmp = kcalloc(len, sizeof(*tmp), GFP_KERNEL);
+		if (!tmp)
+			return -ENOMEM;
+
+		fwnode_property_read_u32_array(battery_node,
+					       "ocv-capacity-celsius",
+					       tmp, len);
+		for (index = 0; index < len; index++)
+			info->ocv_temp[index] = *tmp++;
+		/*
+		 * This assumes int is 32 bits, right? Is this safe?
 		fwnode_property_read_u32_array(battery_node,
 					       "ocv-capacity-celsius",
 					       info->ocv_temp, len);
+		 */
 	}
 
 	for (index = 0; index < len; index++) {

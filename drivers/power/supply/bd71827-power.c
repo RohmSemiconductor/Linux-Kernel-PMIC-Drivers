@@ -1316,26 +1316,15 @@ static int bd71827_init_hardware(struct bd71827_power *pwr)
 }
 
 #define MK_2_100MCELSIUS(m_kevl_in) (((int)(m_kevl_in) - 273150) / 100)
-static int get_vdr_from_dt(struct bd71827_power *pwr, int temp_bytes)
+static int get_vdr_from_dt(struct bd71827_power *pwr,
+			   struct fwnode_handle *node, int temp_values)
 {
-	int i, ret, num_values;
-	struct fwnode_handle * node;
+	int i, ret, num_values, *tmp_table;
 	u32 vdr_kelvin[NUM_VDR_TEMPS];
 
-	node = dev_fwnode(pwr->dev->parent);
-	if (!node) {
-		dev_err(pwr->dev, "no charger node\n");
-		return -ENODEV;
-	}
-	node = fwnode_find_reference(node, "monitored-battery", 0);
-	if (IS_ERR(node)) {
-		dev_err(pwr->dev, "No battery node found\n");
-		return PTR_ERR(node);
-	}
-
-	if (temp_bytes != NUM_VDR_TEMPS * 4) {
-		dev_err(pwr->dev, "Bad VDR temperature table size (%dB). Expected %dB",
-			temp_bytes, NUM_VDR_TEMPS * 4);
+	if (temp_values != NUM_VDR_TEMPS) {
+		dev_err(pwr->dev, "Bad VDR temperature table size (%d). Expected %d",
+			temp_values, NUM_VDR_TEMPS);
 		return -EINVAL;
 	}
 	pr_info("Expect %d temps", NUM_VDR_TEMPS);
@@ -1356,7 +1345,16 @@ static int get_vdr_from_dt(struct bd71827_power *pwr, int temp_bytes)
 		return -EINVAL;
 	}
 	g_num_vdr_params = num_values;
+
+	tmp_table = kcalloc(num_values, sizeof(int), GFP_KERNEL);
+	if (!tmp_table)
+		return -ENOMEM;
+	/*
+	 * We collect NUM_VDR_TEMPS + 1 tables, all temperature tables +
+	 * the SOC table
+	 */
 	for (i = 0; i < NUM_VDR_TEMPS + 1; i++) {
+		int index;
 		const char *prop[] = {
 			/* SOC in units of 0.1 percent. TODO: Check if we have
 			 * standard DT unit for percentage with higher accuracy
@@ -1367,7 +1365,7 @@ static int get_vdr_from_dt(struct bd71827_power *pwr, int temp_bytes)
 			"rohm,volt-drop-low-temp-microvolt",
 			"rohm,volt-drop-very-low-temp-microvolt",
 		};
-		int32_t *tables[5] = {
+		int *tables[5] = {
 			&soc_table[0], &vdr_table_h[0], &vdr_table_m[0],
 			&vdr_table_l[0], &vdr_table_vl[0]
 		};
@@ -1378,13 +1376,15 @@ static int get_vdr_from_dt(struct bd71827_power *pwr, int temp_bytes)
 				prop[i], num_values);
 			return -EINVAL;
 		}
-		ret = fwnode_property_read_u32_array(node, prop[i], tables[i],
+		ret = fwnode_property_read_u32_array(node, prop[i], tmp_table,
 						     num_values);
 		if (ret) {
 			dev_err(pwr->dev,
 				"Invalid VDR temperatures in device-tree");
 			return ret;
 		}
+		for (index = 0; index < num_values; index++)
+			tables[i][index] = tmp_table[index];
 	}
 
 	return 0;
@@ -1400,8 +1400,8 @@ static int bd71827_set_battery_parameters(struct bd71827_power *pwr)
 	 * or as module parameters.
 	 */
 	if (!use_load_bat_params) {
-		int ret, sz;
-		struct device_node *battery_np;
+		int ret, num_vdr;
+		struct fwnode_handle *node;
 
 		/*
 		 * power_supply_dev_get_battery_info uses devm internally
@@ -1449,11 +1449,20 @@ static int bd71827_set_battery_parameters(struct bd71827_power *pwr)
 
 		soc_est_max_num = SOC_EST_MAX_NUM_DEFAULT;
 
-		battery_np = of_parse_phandle(pwr->dev->parent->of_node,
-					      "monitored-battery", 0);
-		if (of_find_property(battery_np,
-				     "rohm,volt-drop-temp-millikelvin", &sz)) {
-			ret = get_vdr_from_dt(pwr, sz);
+		node = dev_fwnode(pwr->dev->parent);
+		if (!node) {
+			dev_err(pwr->dev, "no charger node\n");
+			return -ENODEV;
+		}
+		node = fwnode_find_reference(node, "monitored-battery", 0);
+		if (IS_ERR(node)) {
+			dev_err(pwr->dev, "No battery node found\n");
+			return PTR_ERR(node);
+		}
+
+		num_vdr = fwnode_property_count_u32(node, "rohm,volt-drop-temp-millikelvin");
+		if (num_vdr > 0) {
+			ret = get_vdr_from_dt(pwr, node, num_vdr);
 			if (ret)
 				return ret;
 		} else {
@@ -2160,18 +2169,18 @@ static int bd7182x_get_rsens(struct bd71827_power *pwr)
 {
 	u64 tmp = RSENS_CURR;
 	int rsens_ohm = RSENS_DEFAULT_30MOHM;
-	struct device_node *np = NULL;
+	struct fwnode_handle *node = NULL;
 
 	if (pwr->dev->parent)
-		np = pwr->dev->parent->of_node;
+		node = dev_fwnode(pwr->dev->parent);
 
-	if (np) {
+	if (node) {
 		int ret;
 		uint32_t rs;
 
-		ret = of_property_read_u32(np,
-					   "rohm,charger-sense-resistor-ohm",
-					   &rs);
+		ret = fwnode_property_read_u32(node,
+					       "rohm,charger-sense-resistor-ohm",
+					       &rs);
 		if (ret) {
 			if (ret == -EINVAL) {
 				rs = RSENS_DEFAULT_30MOHM;
@@ -2354,7 +2363,8 @@ static void fgauge_initial_values(struct bd71827_power *pwr)
 	case ROHM_CHIP_TYPE_BD71815:
 		o->get_temp = bd71827_get_temp;
 		o->is_relaxed = bd71828_is_relaxed;
-		/* TODO: BD71815 has not been used with VDR. This is untested
+		/*
+		 * TODO: BD71815 has not been used with VDR. This is untested
 		 * but I don't see why it wouldn't work by setting thresholds
 		 * and by populating correct SOC-OCV tables.
 		 */
@@ -2441,7 +2451,7 @@ static int bd71827_power_probe(struct platform_device *pdev)
 	case ROHM_CHIP_TYPE_BD71828:
 		pwr->bat_inserted = bd71828_bat_inserted;
 		pwr->regs = &pwr_regs_bd71828;
-		dev_info(pwr->dev, "Found ROHM BD718x8\n");
+		dev_info(pwr->dev, "Found ROHM BD71828\n");
 		psycfg.psy_name	= "bd71828-charger";
 		break;
 	case ROHM_CHIP_TYPE_BD71827:
@@ -2454,12 +2464,14 @@ static int bd71827_power_probe(struct platform_device *pdev)
 		pwr->bat_inserted = bd71815_bat_inserted;
 		pwr->regs = &pwr_regs_bd71815;
 		psycfg.psy_name	= "bd71815-charger";
+		dev_info(pwr->dev, "Found ROHM BD71815\n");
 	break;
 	default:
 		dev_err(pwr->dev, "Unknown PMIC\n");
 		return -EINVAL;
 	}
 
+	pr_err("%s(): Set battery parameters\n", __func__);
 	/* We need to set batcap etc before we do set fgauge initial values */
 	ret = bd71827_set_battery_parameters(pwr);
 	if (ret) {
@@ -2467,10 +2479,12 @@ static int bd71827_power_probe(struct platform_device *pdev)
 
 		return ret;
 	}
+	pr_err("%s(): Set fgauge initial values\n", __func__);
 	fgauge_initial_values(pwr);
 
 	pwr->gdesc.drv_data = pwr;
 
+	pr_err("%s(): get rsens\n", __func__);
 	ret = bd7182x_get_rsens(pwr);
 	if (ret) {
 		dev_err(&pdev->dev, "sense resistor missing\n");
@@ -2478,6 +2492,7 @@ static int bd71827_power_probe(struct platform_device *pdev)
 	}
 
 	dev_set_drvdata(&pdev->dev, pwr);
+	pr_err("%s(): init HW\n", __func__);
 	bd71827_init_hardware(pwr);
 
 	psycfg.attr_grp		= &bd71827_sysfs_attr_groups[0];
@@ -2486,7 +2501,7 @@ static int bd71827_power_probe(struct platform_device *pdev)
 	ac_cfg.supplied_to	= bd71827_ac_supplied_to;
 	ac_cfg.num_supplicants	= ARRAY_SIZE(bd71827_ac_supplied_to);
 	ac_cfg.drv_data		= pwr;
-
+#if 0
 	pwr->ac = devm_power_supply_register(&pdev->dev, &bd71827_ac_desc,
 					     &ac_cfg);
 	if (IS_ERR(pwr->ac)) {
@@ -2494,7 +2509,8 @@ static int bd71827_power_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to register ac: %d\n", ret);
 		return ret;
 	}
-
+#endif
+	pr_err("%s(): Register simple gauge\n", __func__);
 	pwr->sw = devm_psy_register_simple_gauge(pwr->dev, &psycfg, &pwr->ops,
 					&pwr->gdesc);
 	if (IS_ERR(pwr->sw)) {
@@ -2502,9 +2518,11 @@ static int bd71827_power_probe(struct platform_device *pdev)
 		return PTR_ERR(pwr->sw);
 	}
 
+	pr_err("%s(): Add simple-gauge to parent dev drvdata\n", __func__);
 	/* Add simple-gauge to test device's platform-data */
 	dev_set_drvdata(pdev->dev.parent, pwr->sw);
 
+	pr_err("get IRQs\n");
 	ret = bd7182x_get_irqs(pdev, pwr);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to request IRQs: %d\n", ret);
@@ -2512,8 +2530,13 @@ static int bd71827_power_probe(struct platform_device *pdev)
 	};
 
 	/* Configure wakeup capable */
+#if 0
+	pr_err("config wakeup\n");
 	device_set_wakeup_capable(pwr->dev, 1);
 	device_set_wakeup_enable(pwr->dev, 1);
+#else
+	pr_err("%s(): Skipping wake-up config\n", __func__);
+#endif
 
 	return 0;
 }

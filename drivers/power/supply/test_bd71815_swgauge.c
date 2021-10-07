@@ -381,6 +381,31 @@ static bool test_is_relaxed(int iter)
 
 static u8 g_reg_arr[BD71815_MAX_REGISTER] = { 0 };
 
+static void reset_cc(struct simple_gauge *g)
+{
+	/*
+	 * We assume the battery data starts with full charged battery. If
+	 * this is not the case then we should change this to compute the CC
+	 * value based on designed CAP
+	 *
+	 * CCNTD Format is 10As << 16 in BE.
+	 */
+	__be32 *ccntdptr = (__be32 *)&g_reg_arr[BD71815_REG_CC_CCNTD_3];
+	u64 tmp = test_uah[0];
+	u32 full_uah = 0;
+
+	/* Convert to uAh << 16 */
+	tmp <<= 16;
+	/* Convert to 10uAs << 16 */
+	tmp = div_u64(tmp,  60 * 6);
+	/* Convert to 10As */
+	tmp = div_u64(tmp, 1000000);
+	full_uah = (u32)tmp;
+
+	*ccntdptr = cpu_to_be32(full_uah);
+
+}
+
 static void swgauge_test_soc(struct platform_device *pdev)
 {
 	int i, ret;
@@ -388,7 +413,8 @@ static void swgauge_test_soc(struct platform_device *pdev)
 	enum power_supply_property psp;
 	union power_supply_propval soc, chg, chg_des, chg_now, cyc;
 
-	pr_info("Testing SOC\n");
+	msleep(1000);
+	pr_err("Testing SOC\n");
 
 retry:
 	g = dev_get_drvdata(&pdev->dev);
@@ -399,9 +425,16 @@ retry:
 	}
 
 	for (i = 0; i < VALUES * 25; i++) {
-		/* We must not use clamped_soc prior initializing it. */
-		if (i && !(i % VALUES))
+		if (i && !(i % VALUES)) {
+			/*
+			 * When we start new loop over battery data (just with
+			 * different aging) we need to reset the CC to the
+			 * 'ideal full' - Eg. to the designed CAP.
+			 */
+			reset_cc(g);
+			/* We must not use clamped_soc prior initializing it. */
 			g->clamped_soc = -1;
+		}
 		psp = POWER_SUPPLY_PROP_CAPACITY;
 		ret = power_supply_get_property(g->psy, psp, &soc);
 		psp = POWER_SUPPLY_PROP_CHARGE_FULL;
@@ -728,7 +761,7 @@ static int test_probe(struct platform_device *pdev)
 		dev_err(dev, "Failed to create subdevices\n");
 		return ret;
 	}
-	pr_info("MFD device added\n");
+	pr_err("MFD device added\n");
 
 	swgauge_test_soc(pdev);
 
