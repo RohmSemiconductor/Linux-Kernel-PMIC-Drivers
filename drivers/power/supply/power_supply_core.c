@@ -600,8 +600,8 @@ static int get_fwnode_tuple_array(struct device *dev, struct fwnode_handle *fw,
 	*num_tuple = num_values / 2;
 	for (i = 0; i < *num_tuple; i++)
 	{
-		(*tuple)[i].a = *tmp_table++;
-		(*tuple)[i].b = *tmp_table++;
+		(*tuple)[i].a = tmp_table[i];
+		(*tuple)[i].b = tmp_table[i + 1];
 	}
 
 out:
