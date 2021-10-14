@@ -587,7 +587,7 @@ static int get_fwnode_tuple_array(struct device *dev, struct fwnode_handle *fw,
 	if (!tmp_table)
 		return -ENOMEM;
 
-	*tuple = devm_kcalloc(dev, num_values / 2, sizeof(*tuple),
+	*tuple = devm_kcalloc(dev, num_values / 2, sizeof(**tuple),
 			       GFP_KERNEL);
 	if (!*tuple) {
 		ret = -ENOMEM;
