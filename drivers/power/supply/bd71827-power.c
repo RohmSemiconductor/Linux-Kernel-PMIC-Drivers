@@ -2391,19 +2391,20 @@ static int bd71827_power_probe(struct platform_device *pdev)
 	case ROHM_CHIP_TYPE_BD71828:
 		pwr->bat_inserted = bd71828_bat_inserted;
 		pwr->regs = &pwr_regs_bd71828;
-		dev_info(pwr->dev, "Found ROHM BD718x8\n");
+		dev_dbg(pwr->dev, "Found ROHM BD71828\n");
 		psycfg.psy_name	= "bd71828-charger";
 		break;
 	case ROHM_CHIP_TYPE_BD71827:
 		pwr->bat_inserted = bd71828_bat_inserted;
 		pwr->regs = &pwr_regs_bd71827;
-		dev_warn(pwr->dev, "BD71817 not tested\n");
+		dev_dbg(pwr->dev, "Found ROHM BD71817\n");
 		psycfg.psy_name	= "bd71827-charger";
 		break;
 	case ROHM_CHIP_TYPE_BD71815:
 		pwr->bat_inserted = bd71815_bat_inserted;
 		pwr->regs = &pwr_regs_bd71815;
 		psycfg.psy_name	= "bd71815-charger";
+		dev_dbg(pwr->dev, "Found ROHM BD71815\n");
 	break;
 	default:
 		dev_err(pwr->dev, "Unknown PMIC\n");
