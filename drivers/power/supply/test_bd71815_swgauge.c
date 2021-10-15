@@ -592,6 +592,13 @@ static void set_min_vsys(int voltage_uv)
 		*min_reg = cpu_to_be16((u16)(voltage_uv / 1000));
 }
 
+static void reset_min_vsys(int voltage_uv)
+{
+	__be16 *min_reg = (__be16 *)&g_reg_arr[BD71815_REG_VM_SA_VSYS_MIN_U];
+
+	*min_reg = cpu_to_be16((u16)(voltage_uv / 1000));
+}
+
 /*
  * uA TODO: Are these configurable? Can we trust them to be always set to
  * these values
@@ -700,7 +707,10 @@ static void update_register_vals(int iterator)
 	 * used by the driver. No need to set them.
 	 */
 	set_vbat_avg(voltage);
-	set_min_vsys(voltage);
+	if (iterator && !(iterator % VALUES))
+		reset_min_vsys(voltage);
+	else
+		set_min_vsys(voltage);
 	/*
  	 * This uses the VBAT_AVG to initialize VBAT_REX => The vbat_avg
  	 * must've been set (set_vbat_avg() been called) before this.
