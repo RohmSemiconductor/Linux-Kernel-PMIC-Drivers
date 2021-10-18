@@ -2162,7 +2162,7 @@ static int bd7182x_get_rsens(struct bd71827_power *pwr)
 		uint32_t rs;
 
 		ret = fwnode_property_read_u32(node,
-					       "rohm,charger-sense-resistor-ohm",
+					       "rohm,charger-sense-resistor-ohms",
 					       &rs);
 		if (ret) {
 			if (ret == -EINVAL) {
