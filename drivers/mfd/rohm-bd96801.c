@@ -41,7 +41,7 @@ static const struct resource regulator_irqs[] = {
 			     "bd96801-buck3-overcurr-h"),
 	DEFINE_RES_IRQ_NAMED(BD96801_BUCK3_OCPL_STAT,
 			     "bd96801-buck3-overcurr-l"),
-	DEFINE_RES_IRQ_NAMED(BD96801_BUCK1_OCPN_STAT,
+	DEFINE_RES_IRQ_NAMED(BD96801_BUCK3_OCPN_STAT,
 			     "bd96801-buck3-overcurr-n"),
 	DEFINE_RES_IRQ_NAMED(BD96801_BUCK3_OVD_STAT, "bd96801-buck3-overvolt"),
 	DEFINE_RES_IRQ_NAMED(BD96801_BUCK3_UVD_STAT, "bd96801-buck3-undervolt"),
