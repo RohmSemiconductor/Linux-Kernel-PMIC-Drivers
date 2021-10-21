@@ -33,6 +33,12 @@ patternProperties:
         pattern: "^ldo[5-7]$"
         description:
           should be "ldo5", ..., "ldo7"
+      rohm,initial-voltage-microvolt:
+        description:
+          Initial voltage for regulator. Voltage can be tuned +/-150 mV from
+          this value.
+        minimum: 300000
+        maximum: 3300000
 
   "^BUCK[1-4]$":
     type: object
@@ -46,6 +52,12 @@ patternProperties:
         pattern: "^buck[1-4]$"
         description:
           should be "buck1", ..., "buck4"
+      rohm,initial-voltage-microvolt:
+        description:
+          Initial voltage for regulator. Voltage can be tuned +/-150 mV from
+          this value.
+        minimum: 500000
+        maximum: 3300000
 
 #      rohm,dvs-run-voltage:
 #        allOf:
