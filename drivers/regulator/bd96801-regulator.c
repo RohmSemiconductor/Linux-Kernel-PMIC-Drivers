@@ -135,18 +135,18 @@ static const unsigned int buck_ramp_table[] = { 1000, 5000, 10000, 20000 };
  * linear_range - which should increase these ranges with
  * 150 mV getting all the values to >= 0.
  */
-static struct linear_range bd96801_buck_volts[] = {
-	REGULATOR_LINEAR_RANGE(150, 0x00, 0xF, 10000),
+static const struct linear_range bd96801_tune_volts[] = {
+	REGULATOR_LINEAR_RANGE(150000, 0x00, 0xF, 10000),
 	REGULATOR_LINEAR_RANGE(0, 0x10, 0x1F, 10000),
 };
 
-static struct linear_range bd96801_buck_init_volts[] = {
+static const struct linear_range bd96801_buck_init_volts[] = {
 	REGULATOR_LINEAR_RANGE(500000 - 150000, 0x00, 0xc8, 5000),
 	REGULATOR_LINEAR_RANGE(1550000 - 150000, 0xc9, 0xec, 50000),
 	REGULATOR_LINEAR_RANGE(3300000 - 150000, 0xed, 0xff, 0),
 };
 
-static struct linear_range bd96801_ldo_int_volts[] = {
+static const struct linear_range bd96801_ldo_int_volts[] = {
 	REGULATOR_LINEAR_RANGE(300000, 0x00, 0x78, 25000),
 	REGULATOR_LINEAR_RANGE(3300000, 0x79, 0x7f, 0),
 };
@@ -275,7 +275,7 @@ struct bd96801_irq_desc {
 
 struct bd96801_regulator_data {
 	struct regulator_desc desc;
-	struct linear_range *init_ranges;
+	const struct linear_range *init_ranges;
 	int num_ranges;
 	struct bd96801_irq_desc irq_desc;
 	int initial_voltage;
@@ -1080,6 +1080,35 @@ static int bd96801_buck_set_tw(struct regulator_dev *rdev, int lim, int severity
 	return 0;
 }
 
+static int bd96801_list_voltage_lr(struct regulator_dev *rdev,
+				   unsigned int selector)
+{
+	int voltage;
+	struct bd96801_regulator_data *data;
+
+	data = container_of(rdev->desc, struct bd96801_regulator_data, desc);
+
+	/*
+	 * The BD096801 has voltage setting in two registers. One giving the
+	 * "initial voltage" (can be changed only when regulator is disabled.
+	 * This driver caches the value and sets it only at startup. The other
+	 * register is voltage tuning value which applies -150 mV ... +150 mV
+	 * offset to the voltage.
+	 *
+	 * Note that the cached initial voltage stored in regulator data is
+	 * 'scaled down' by the 150 mV so that all of our tuning values are
+	 * >= 0. This is done because the linear_ranges uses unsigned values.
+	 *
+	 * As a result, we increase the tuning voltage which we get based on
+	 * the selector by the stored initial_voltage.
+	 */
+	voltage = regulator_list_voltage_linear_range(rdev, selector);
+	if (voltage < 0)
+		return voltage;
+
+	return voltage + data->initial_voltage;
+}
+
 static const struct regulator_ops bd96801_ldo_table_ops = {
 	.enable = regulator_enable_regmap,
 	.disable = regulator_disable_regmap,
@@ -1098,7 +1127,7 @@ static const struct regulator_ops bd96801_buck_ops = {
 	.enable = regulator_enable_regmap,
 	.disable = regulator_disable_regmap,
 	.is_enabled = regulator_is_enabled_regmap,
-	.list_voltage = regulator_list_voltage_linear_range,
+	.list_voltage = bd96801_list_voltage_lr,
 	.set_voltage_sel = regulator_set_voltage_sel_regmap,
 	.get_voltage_sel = regulator_get_voltage_sel_regmap,
 	.set_voltage_time_sel = regulator_set_voltage_time_sel,
@@ -1130,10 +1159,9 @@ static int buck_set_initial_voltage(struct regmap *regmap, struct device *dev,
 	int ret = 0;
 
 	if (data->num_ranges) {
-		int sel, i, val;
+		int sel, val;
 		bool found;
 		u32 initial_uv;
-		struct linear_range *r;
 		int reg = BD96801_INT_VOUT_BASE_REG + data->desc.id;
 
 		/*
@@ -1156,12 +1184,22 @@ static int buck_set_initial_voltage(struct regmap *regmap, struct device *dev,
 			}
 			dev_dbg(dev, "Setting INITIAL voltage %u\n",
 				initial_uv);
+			/*
+			 * The initial uV range is scaled down by 150mV to make
+			 * all tuning values positive. Hence we decrease value
+			 * by 150 mV so that the set voltage will really match
+			 * the one requested via DT.
+			 */
 			ret = linear_range_get_selector_low_array(data->init_ranges,
 								  data->num_ranges,
-								  initial_uv, &sel,
+								  initial_uv - 150000, &sel,
 								  &found);
 			if (ret) {
-				dev_err(dev, "Unsupported initial voltage\n");
+				dev_err(dev, "Unsupported initial voltage %u\n",
+					initial_uv);
+				dev_err(dev, "%u ranges, [%u .. %u]\n", data->num_ranges,
+					data->init_ranges->min,
+					linear_range_get_max_value(&data->init_ranges[data->num_ranges - 1]));
 				return ret;
 			}
 
@@ -1184,13 +1222,8 @@ get_initial:
 						   &initial_uv);
 		if (ret)
 			return ret;
-		data->initial_voltage = initial_uv;
 
-		/* Tune the voltage ranges accrding to INT_voltage */
-		for (i = 0; i < data->desc.n_linear_ranges; i++) {
-			r = (struct linear_range *)&data->desc.linear_ranges[i];
-			r->min += initial_uv;
-		}
+		data->initial_voltage = initial_uv;
 	}
 
 	return 0;
@@ -1294,7 +1327,7 @@ static int bd96801_walk_regulator_dt(struct device *dev, struct regmap *regmap,
 {
 	int i, ret;
 	struct device_node *np;
-	struct device_node *nproot = dev->of_node;
+	struct device_node *nproot = dev->parent->of_node;
 
 	nproot = of_get_child_by_name(nproot, "regulators");
 	if (!nproot) {
@@ -1303,7 +1336,7 @@ static int bd96801_walk_regulator_dt(struct device *dev, struct regmap *regmap,
 	}
 	for_each_child_of_node(nproot, np)
 		for (i = 0; i < num; i++) {
-			if (of_node_name_eq(np, data[i].desc.of_match))
+			if (!of_node_name_eq(np, data[i].desc.of_match))
 				continue;
 			ret = set_initial_voltage(dev, regmap, &data[i], np);
 			if (ret) {
@@ -1344,8 +1377,8 @@ static const struct bd96801_pmic_data bd96801_data = {
 			.id = BD96801_BUCK1,
 			.ops = &bd96801_buck_ops,
 			.type = REGULATOR_VOLTAGE,
-			.linear_ranges = bd96801_buck_volts,
-			.n_linear_ranges = ARRAY_SIZE(bd96801_buck_volts),
+			.linear_ranges = bd96801_tune_volts,
+			.n_linear_ranges = ARRAY_SIZE(bd96801_tune_volts),
 			.n_voltages = BD96801_BUCK_VOLTS,
 			.enable_reg = BD96801_REG_ENABLE,
 			.enable_mask = BD96801_BUCK1_EN_MASK,
@@ -1355,6 +1388,7 @@ static const struct bd96801_pmic_data bd96801_data = {
 			.ramp_reg = BD96801_BUCK1_VSEL_REG,
 			.ramp_mask = BD96801_MASK_RAMP_DELAY,
 			.ramp_delay_table = &buck_ramp_table[0],
+			.n_ramp_values = ARRAY_SIZE(buck_ramp_table),
 			.owner = THIS_MODULE,
 		},
 		.init_ranges = bd96801_buck_init_volts,
@@ -1378,8 +1412,8 @@ static const struct bd96801_pmic_data bd96801_data = {
 			.id = BD96801_BUCK2,
 			.ops = &bd96801_buck_ops,
 			.type = REGULATOR_VOLTAGE,
-			.linear_ranges = bd96801_buck_volts,
-			.n_linear_ranges = ARRAY_SIZE(bd96801_buck_volts),
+			.linear_ranges = bd96801_tune_volts,
+			.n_linear_ranges = ARRAY_SIZE(bd96801_tune_volts),
 			.n_voltages = BD96801_BUCK_VOLTS,
 			.enable_reg = BD96801_REG_ENABLE,
 			.enable_mask = BD96801_BUCK2_EN_MASK,
@@ -1389,6 +1423,7 @@ static const struct bd96801_pmic_data bd96801_data = {
 			.ramp_reg = BD96801_BUCK2_VSEL_REG,
 			.ramp_mask = BD96801_MASK_RAMP_DELAY,
 			.ramp_delay_table = &buck_ramp_table[0],
+			.n_ramp_values = ARRAY_SIZE(buck_ramp_table),
 			.owner = THIS_MODULE,
 		},
 		.irq_desc = {
@@ -1412,8 +1447,8 @@ static const struct bd96801_pmic_data bd96801_data = {
 			.id = BD96801_BUCK3,
 			.ops = &bd96801_buck_ops,
 			.type = REGULATOR_VOLTAGE,
-			.linear_ranges = bd96801_buck_volts,
-			.n_linear_ranges = ARRAY_SIZE(bd96801_buck_volts),
+			.linear_ranges = bd96801_tune_volts,
+			.n_linear_ranges = ARRAY_SIZE(bd96801_tune_volts),
 			.n_voltages = BD96801_BUCK_VOLTS,
 			.enable_reg = BD96801_REG_ENABLE,
 			.enable_mask = BD96801_BUCK3_EN_MASK,
@@ -1423,6 +1458,7 @@ static const struct bd96801_pmic_data bd96801_data = {
 			.ramp_reg = BD96801_BUCK3_VSEL_REG,
 			.ramp_mask = BD96801_MASK_RAMP_DELAY,
 			.ramp_delay_table = &buck_ramp_table[0],
+			.n_ramp_values = ARRAY_SIZE(buck_ramp_table),
 			.owner = THIS_MODULE,
 		},
 		.irq_desc = {
@@ -1446,8 +1482,8 @@ static const struct bd96801_pmic_data bd96801_data = {
 			.id = BD96801_BUCK4,
 			.ops = &bd96801_buck_ops,
 			.type = REGULATOR_VOLTAGE,
-			.linear_ranges = bd96801_buck_volts,
-			.n_linear_ranges = ARRAY_SIZE(bd96801_buck_volts),
+			.linear_ranges = bd96801_tune_volts,
+			.n_linear_ranges = ARRAY_SIZE(bd96801_tune_volts),
 			.n_voltages = BD96801_BUCK_VOLTS,
 			.enable_reg = BD96801_REG_ENABLE,
 			.enable_mask = BD96801_BUCK4_EN_MASK,
@@ -1457,6 +1493,7 @@ static const struct bd96801_pmic_data bd96801_data = {
 			.ramp_reg = BD96801_BUCK4_VSEL_REG,
 			.ramp_mask = BD96801_MASK_RAMP_DELAY,
 			.ramp_delay_table = &buck_ramp_table[0],
+			.n_ramp_values = ARRAY_SIZE(buck_ramp_table),
 			.owner = THIS_MODULE,
 		},
 		.irq_desc = {
@@ -1590,6 +1627,8 @@ static int initialize_pmic_data(struct device *dev,
 		if (!new)
 			return -ENOMEM;
 
+		pdata->regulator_data[r].irq_desc.irqinfo = new;
+
 		for (i = 0; i < num_infos; i++)
 			new[i] = template[i];
 	}
@@ -1604,7 +1643,7 @@ static int bd96801_probe(struct platform_device *pdev)
 	struct device *parent;
 	int i, ret, irq;
 	void *retp;
-	struct regulator_config config;
+	struct regulator_config config = {};
 	struct bd96801_regulator_data *rdesc;
 	struct bd96801_pmic_data *pdata;
 	struct regulator_dev *ldo_errs_rdev_arr[BD96801_NUM_LDOS];
@@ -1628,14 +1667,6 @@ static int bd96801_probe(struct platform_device *pdev)
 
 	rdesc = &pdata->regulator_data[0];
 
-/*
-	t_list = devm_kzalloc(&pdev->dev, sizeof(*t_list), GFP_KERNEL);
-	if (!t_list)
-		return -ENOMEM;
-	INIT_LIST_HEAD(t_list);
-	platform_set_drvdata(pdev, t_list);
-	platform_set_drvdata(pdev, pdata);
-*/
 	config.driver_data = pdata;
 	config.regmap = pdata->regmap;
 	config.dev = parent;
@@ -1689,7 +1720,7 @@ static int bd96801_probe(struct platform_device *pdev)
 
 		for (j = 0; j < idesc->num_irqs; j++) {
 			struct bd96801_irqinfo *iinfo;
-			int err;
+			int err = 0;
 			int err_flags[] = {
 				[BD96801_PROT_OVP] = REGULATOR_ERROR_REGULATION_OUT,
 				[BD96801_PROT_UVP] = REGULATOR_ERROR_UNDER_VOLTAGE,
@@ -1719,7 +1750,6 @@ static int bd96801_probe(struct platform_device *pdev)
 				err = err_flags[iinfo->type];
 			else if (iinfo->wrn_cfg)
 				err = wrn_flags[iinfo->type];
-
 
 			iinfo->irq_desc.data = pdata;
 			irq = platform_get_irq_byname(pdev, iinfo->irq_name);
