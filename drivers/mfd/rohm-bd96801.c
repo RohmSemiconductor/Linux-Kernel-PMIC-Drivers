@@ -79,28 +79,27 @@ static struct mfd_cell bd96801_mfd_cells[] = {
 	},
 };
 
-static const struct regmap_range pmic_status_range[] = {
-	{
-		.range_min = BD96801_REG_PWR_CTRL, /* EN pin status */
-		.range_max = BD96801_REG_PWR_CTRL,
-	}, {
-		.range_min = BD96801_REG_WD_FEED,
-		.range_max = BD96801_REG_WD_FAILCOUNT,
-	}, {
-		.range_min = BD96801_REG_WD_ASK,
-		.range_max = BD96801_REG_WD_ASK,
-	}, {
-		.range_min = BD96801_REG_WD_STATUS,
-		.range_max = BD96801_REG_WD_STATUS,
-	}, {
-		.range_min = BD96801_REG_PMIC_STATE,
-		.range_max = BD96801_REG_INT_LDO7_INTB,
-	},
+static const struct regmap_range bd96801_volatile_ranges[] = {
+	/* Status regs */
+	regmap_reg_range(BD96801_REG_PWR_CTRL, BD96801_REG_PWR_CTRL),
+	regmap_reg_range(BD96801_REG_WD_FEED, BD96801_REG_WD_FAILCOUNT),
+	regmap_reg_range(BD96801_REG_WD_ASK, BD96801_REG_WD_ASK),
+	regmap_reg_range(BD96801_REG_WD_STATUS, BD96801_REG_WD_STATUS),
+	regmap_reg_range(BD96801_REG_PMIC_STATE, BD96801_REG_INT_LDO7_INTB),
+	/* Registers which do not update value unless PMIC is in STBY */
+	regmap_reg_range(BD96801_REG_SSCG_CTRL, BD96801_REG_SHD_INTB),
+	regmap_reg_range(BD96801_REG_BUCK_OVP, BD96801_REG_BOOT_OVERTIME),
+	/*
+	 * LDO control registers have single bit (LDO MODE) which does not
+	 * change when we write it unless PMIC is in STBY. It's safer to not
+	 * cache it.
+	 */
+	regmap_reg_range(BD96801_LDO5_VOL_LVL_REG, BD96801_LDO7_VOL_LVL_REG),
 };
 
 static const struct regmap_access_table volatile_regs = {
-	.yes_ranges = pmic_status_range,
-	.n_yes_ranges = ARRAY_SIZE(pmic_status_range),
+	.yes_ranges = bd96801_volatile_ranges,
+	.n_yes_ranges = ARRAY_SIZE(bd96801_volatile_ranges),
 };
 
 static const struct regmap_irq bd96801_irqs[] = {
