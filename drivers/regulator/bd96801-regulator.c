@@ -2,13 +2,27 @@
 // Copyright (C) 2021 ROHM Semiconductors
 // bd96801-regulator.c ROHM BD96801 regulator driver
 
+/*
+ * TODO: The DS2 sample does not allow controlling much of anything besides
+ * the BUCK voltage tune value unless the PMIC is in STBY. This means that
+ * the usual case where PMIC is controlled using processor which is powered
+ * by the PMIC does not allow much of control. Eg, enable/disable status or
+ * protection limits can't be set. It is however possible that the PMIC is
+ * controlled (at least partially) from some supervisor processor which stays
+ * alive even when PMIC goes to STBY.
+ *
+ * This calls for following actions:
+ *  - add STBY check also to protection setting.
+ *  - consider whether the ERRB IRQ would be worth handling
+ */
+
 #include <linux/delay.h>
 #include <linux/err.h>
 #include <linux/interrupt.h>
 #include <linux/kernel.h>
 #include <linux/linear_range.h>
 #include <linux/mfd/rohm-generic.h>
-//#include <linux/mfd/rohm-bd96801.h>
+#include <linux/mfd/rohm-bd96801.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/platform_device.h>
@@ -55,9 +69,6 @@ enum {
 #define BD96801_LDO5_VSEL_REG 0x25
 #define BD96801_LDO6_VSEL_REG 0x26
 #define BD96801_LDO7_VSEL_REG 0x27
-#define BD96801_LDO5_VOL_LVL_REG 0x2c
-#define BD96801_LDO6_VOL_LVL_REG 0x2d
-#define BD96801_LDO7_VOL_LVL_REG 0x2e
 #define BD96801_BUCK_VSEL_MASK 0x1F
 #define BD96801_LDO_VSEL_MASK 0x7f
 
@@ -72,10 +83,6 @@ enum {
 #define BD96801_BUCK_VOLTS 256
 #define BD96801_LDO_VOLTS 128
 
-#define BD96801_REG_BUCK_OVP		0x30
-#define BD96801_REG_BUCK_OVD		0x35
-#define BD96801_REG_LDO_OVP		0x31
-#define BD96801_REG_LDO_OVD		0x36
 
 #define BD96801_OVP_MASK		0x03
 #define BD96801_MASK_BUCK1_OVP_SHIFT	0x00
@@ -109,7 +116,6 @@ enum {
 #define BD96801_MASK_LDO6_OCP_SHIFT	0x02
 #define BD96801_MASK_LDO7_OCP_SHIFT	0x04
 
-#define BD96801_REG_SHD_INTB		0x20
 #define BD96801_MASK_SHD_INTB		BIT(7)
 #define BD96801_INTB_FATAL		BIT(7)
 
@@ -409,7 +415,7 @@ static int sanity_check_ovd_uvd(struct device *dev, struct bd96801_irqinfo *new,
 
 static int set_ovp_limit(struct regulator_dev *rdev, int lim_uV)
 {
-	int voltage, lim, set_uv, shift;
+	int voltage, lim, set_uv, shift, ret, val;
 	struct bd96801_regulator_data *rdata;
 	struct bd96801_pmic_data *pdata;
 	struct device *dev;
@@ -417,6 +423,13 @@ static int set_ovp_limit(struct regulator_dev *rdev, int lim_uV)
 	dev = rdev_get_dev(rdev);
 	rdata = container_of(rdev->desc, struct bd96801_regulator_data, desc);
 	pdata = rdev_get_drvdata(rdev);
+
+	ret = regmap_read(rdev->regmap, BD96801_REG_PMIC_STATE, &val);
+	if (ret)
+		return ret;
+
+	if (val != BD96801_STATE_STBY)
+		return -EBUSY;
 
 	/*
 	 * OVP can be configured to be 9%, 15% or 20% of the set voltage.
@@ -598,6 +611,16 @@ static int bd96801_set_ovp(struct regulator_dev *rdev, int lim_uV, int severity,
 	return 0;
 }
 
+/* TODO: See what can be configured when PMIC is not in STBY and do
+ *
+	ret = regmap_read(rdev->regmap, BD96801_REG_PMIC_STATE, &val);
+	if (ret)
+		return ret;
+
+	if (val != BD96801_STATE_STBY)
+		return -EBUSY;
+	for the rest
+*/
 static int bd96801_set_uvp(struct regulator_dev *rdev, int lim_uV, int severity,
                           bool enable)
 {
@@ -749,6 +772,9 @@ static int __drop_warns(struct bd96801_regulator_data *rdata,
  * store the HW default at startup and use it - but let's not overdo this. We
  * do punt out a big red error message - hopefully that is read by board R&D
  * folks and they will review limits and fix the offending DT limits...
+ *
+ * TODO: See the impact of fact that the INTB fatality can't be changed
+ * unless PMIC is in STBY...
  */
 static int bd96801_drop_all_warns(struct device *dev,
 				  struct bd96801_pmic_data *pdata)
@@ -830,11 +856,19 @@ static int bd96801_set_ocp(struct regulator_dev *rdev, int lim_uA,
 	struct bd96801_pmic_data *pdata;
 	struct bd96801_regulator_data *rdata;
 	struct device *dev;
-	int reg;
+	int reg, ret, val;
 
 	dev = rdev_get_dev(rdev);
 	rdata = container_of(rdev->desc, struct bd96801_regulator_data, desc);
 	pdata = rdev_get_drvdata(rdev);
+
+	/* Most of the configs can only be done when PMIC is in STBY */
+	ret = regmap_read(rdev->regmap, BD96801_REG_PMIC_STATE, &val);
+	if (ret)
+		return ret;
+
+	if (val != BD96801_STATE_STBY)
+		return -EBUSY;
 
 	if (severity == REGULATOR_SEVERITY_PROT) {
 		if (enable) {
@@ -929,6 +963,12 @@ static int bd96801_ldo_set_tw(struct regulator_dev *rdev, int lim, int severity,
 					"Conflicting protection settings.\n");
 
 			pdata->fatal_ind = 1;
+			/* TODO: Ouch! It is possible we can't change INTB
+			 * fatality. Change is only allowed when PMIC is in
+			 * STBY. Dropping all warnings and still failing to
+			 * enable protections is bad idea. TODO:
+			 * Think how to do this properly
+			 */
 			bd96801_drop_all_warns(dev, pdata);
 		} else {
 			if (pdata->fatal_ind == 1) {
@@ -1109,9 +1149,44 @@ static int bd96801_list_voltage_lr(struct regulator_dev *rdev,
 	return voltage + data->initial_voltage;
 }
 
+/*
+ * BD96801 does not allow controlling the output enable/disable status
+ * unless PMIC is in STBY state. So this may be next to useless - unless
+ * the PMIC is controlled from processor not powered by the PMIC. AFAIK
+ * this really is a potential use-case with the BD96801 - hence these
+ * controls are implemented.
+ */
+static int bd96801_enable_regmap(struct regulator_dev *rdev)
+{
+	int ret, val;
+
+	ret = regmap_read(rdev->regmap, BD96801_REG_PMIC_STATE, &val);
+	if (ret)
+		return ret;
+
+	if (val != BD96801_STATE_STBY)
+		return -EBUSY;
+
+	return regulator_enable_regmap(rdev);
+}
+
+static int bd96801_disable_regmap(struct regulator_dev *rdev)
+{
+	int ret, val;
+
+	ret = regmap_read(rdev->regmap, BD96801_REG_PMIC_STATE, &val);
+	if (ret)
+		return ret;
+
+	if (val != BD96801_STATE_STBY)
+		return -EBUSY;
+
+	return regulator_disable_regmap(rdev);
+}
+
 static const struct regulator_ops bd96801_ldo_table_ops = {
-	.enable = regulator_enable_regmap,
-	.disable = regulator_disable_regmap,
+	.enable = bd96801_enable_regmap,
+	.disable = bd96801_disable_regmap,
 	.is_enabled = regulator_is_enabled_regmap,
 	.list_voltage = regulator_list_voltage_table,
 	/* MVa: TODO: Check! */
@@ -1172,7 +1247,7 @@ static int buck_set_initial_voltage(struct regmap *regmap, struct device *dev,
 		if (ret)
 			return ret;
 
-		if ((val & data->desc.enable_mask) != data->desc.enable_mask) {
+		if ((val & data->desc.enable_mask) == data->desc.enable_mask) {
 			/* Regulator is Disabled */
 			ret = of_property_read_u32(np,
 						   "rohm,initial-voltage-microvolt",
