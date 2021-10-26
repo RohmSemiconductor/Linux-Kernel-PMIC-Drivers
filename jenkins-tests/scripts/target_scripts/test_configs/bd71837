@@ -13,10 +13,22 @@ LDO_START=9
 #Buck 6 and 7 are parents
 BUCK_IS_PARENT=(x 0 0 0 0 0 1 1 0 0 0 0 0 0 0 0)
 
+#
+# AIN measurements seem to be unreliable. It may be this would need some
+# delay, better cabling or capacitor or <add hack here> to work reliably.
+# Truth is this aims to be SW test, not a HW test. Thus I see little value
+# in measuring the actual voltage Vs. "just" checking the raw register
+# value using the I2Ctools and ensuring the framework and driver have added
+# expected configurations. Hence I just drop the AIN test instead of working
+# to make it more reliable.
+#
 #Bucks which are connected to BBB AIN for voltage measurement
-MEASURETEST_BUCKS=(buck1 buck3 buck5 buck8 ldo4)
+#MEASURETEST_BUCKS=(buck1 buck3 buck5 buck8 ldo4)
+MEASURETEST_BUCKS=()
+
 #AIN pins matching BUCKs abowe
-MEASURETEST_AINS=(0 1 2 3 4)
+#MEASURETEST_AINS=(0 1 2 3 4)
+MEASURETEST_AINS=()
 
 #On BD71837 only bucks 1-4 support DVS
 DVS_BUCKS=(buck1 buck2 buck3 buck4)
