@@ -9,7 +9,7 @@
  * by the PMIC does not allow much of control. Eg, enable/disable status or
  * protection limits can't be set. It is however possible that the PMIC is
  * controlled (at least partially) from some supervisor processor which stays
- * alive even when PMIC goes to STBY.
+ * alive even when PMIC goes to STBY. Actually, this is even likely.
  *
  * This calls for following actions:
  *  - add STBY check also to protection setting.
@@ -415,7 +415,7 @@ static int sanity_check_ovd_uvd(struct device *dev, struct bd96801_irqinfo *new,
 
 static int set_ovp_limit(struct regulator_dev *rdev, int lim_uV)
 {
-	int voltage, lim, set_uv, shift, ret, val;
+	int voltage, lim, set_uv, shift;
 	struct bd96801_regulator_data *rdata;
 	struct bd96801_pmic_data *pdata;
 	struct device *dev;
@@ -423,13 +423,6 @@ static int set_ovp_limit(struct regulator_dev *rdev, int lim_uV)
 	dev = rdev_get_dev(rdev);
 	rdata = container_of(rdev->desc, struct bd96801_regulator_data, desc);
 	pdata = rdev_get_drvdata(rdev);
-
-	ret = regmap_read(rdev->regmap, BD96801_REG_PMIC_STATE, &val);
-	if (ret)
-		return ret;
-
-	if (val != BD96801_STATE_STBY)
-		return -EBUSY;
 
 	/*
 	 * OVP can be configured to be 9%, 15% or 20% of the set voltage.
@@ -537,10 +530,24 @@ static int get_xvd_limits(struct regulator_dev *rdev, int *lim_uV, int *reg)
 	return 0;
 }
 
+static inline int bd96801_in_stby(struct regmap *rmap)
+{
+	int ret, val;
+
+	ret = regmap_read(rmap, BD96801_REG_PMIC_STATE, &val);
+	if (ret)
+		return ret;
+
+	if (val != BD96801_STATE_STBY)
+		return 0;
+
+	return 1;
+}
+
 static int bd96801_set_ovp(struct regulator_dev *rdev, int lim_uV, int severity,
                           bool enable)
 {
-	int shift;
+	int shift, stby;
 	struct bd96801_pmic_data *pdata;
 	struct bd96801_regulator_data *rdata;
 	struct bd96801_irq_desc *idesc;
@@ -558,6 +565,12 @@ static int bd96801_set_ovp(struct regulator_dev *rdev, int lim_uV, int severity,
 
 	if (!idesc)
 		return -EOPNOTSUPP;
+
+	stby = bd96801_in_stby(rdev->regmap);
+	if (stby < 0)
+		return stby;
+	if (stby)
+		dev_warn(dev, "Cant set OVP. PMIC not in STBY\n");
 
 	if (severity == REGULATOR_SEVERITY_PROT) {
 		if (!enable) {
@@ -611,20 +624,10 @@ static int bd96801_set_ovp(struct regulator_dev *rdev, int lim_uV, int severity,
 	return 0;
 }
 
-/* TODO: See what can be configured when PMIC is not in STBY and do
- *
-	ret = regmap_read(rdev->regmap, BD96801_REG_PMIC_STATE, &val);
-	if (ret)
-		return ret;
-
-	if (val != BD96801_STATE_STBY)
-		return -EBUSY;
-	for the rest
-*/
 static int bd96801_set_uvp(struct regulator_dev *rdev, int lim_uV, int severity,
                           bool enable)
 {
-	int shift;
+	int shift, stby;
 	struct bd96801_pmic_data *pdata;
 	struct bd96801_regulator_data *rdata;
 	struct bd96801_irq_desc *idesc;
@@ -642,6 +645,12 @@ static int bd96801_set_uvp(struct regulator_dev *rdev, int lim_uV, int severity,
 
 	if (!idesc)
 		return -EOPNOTSUPP;
+
+	stby = bd96801_in_stby(rdev->regmap);
+	if (stby < 0)
+		return stby;
+	if (stby)
+		dev_warn(dev, "Cant set UVP. PMIC not in STBY\n");
 
 	if (severity == REGULATOR_SEVERITY_PROT) {
 		/* There is nothing we can do for UVP protection on BD96801 */
@@ -772,9 +781,6 @@ static int __drop_warns(struct bd96801_regulator_data *rdata,
  * store the HW default at startup and use it - but let's not overdo this. We
  * do punt out a big red error message - hopefully that is read by board R&D
  * folks and they will review limits and fix the offending DT limits...
- *
- * TODO: See the impact of fact that the INTB fatality can't be changed
- * unless PMIC is in STBY...
  */
 static int bd96801_drop_all_warns(struct device *dev,
 				  struct bd96801_pmic_data *pdata)
@@ -856,19 +862,24 @@ static int bd96801_set_ocp(struct regulator_dev *rdev, int lim_uA,
 	struct bd96801_pmic_data *pdata;
 	struct bd96801_regulator_data *rdata;
 	struct device *dev;
-	int reg, ret, val;
+	int reg, stby;
 
 	dev = rdev_get_dev(rdev);
 	rdata = container_of(rdev->desc, struct bd96801_regulator_data, desc);
 	pdata = rdev_get_drvdata(rdev);
 
-	/* Most of the configs can only be done when PMIC is in STBY */
-	ret = regmap_read(rdev->regmap, BD96801_REG_PMIC_STATE, &val);
-	if (ret)
-		return ret;
-
-	if (val != BD96801_STATE_STBY)
-		return -EBUSY;
+	/*
+	 * Most of the configs can only be done when PMIC is in STBY
+	 * And yes. This is racy, we don't know when PMIC state is changed.
+	 * So we can't promise config works as PMIC state may change right
+	 * after this check - but at least we can warn if this attempted
+	 * when PMIC is in STBY.
+	 */
+	stby = bd96801_in_stby(rdev->regmap);
+	if (stby < 0)
+		return stby;
+	if (stby)
+		dev_warn(dev, "Cant set OCP. PMIC not in STBY\n");
 
 	if (severity == REGULATOR_SEVERITY_PROT) {
 		if (enable) {
@@ -931,11 +942,17 @@ static int bd96801_ldo_set_tw(struct regulator_dev *rdev, int lim, int severity,
 	struct bd96801_regulator_data *rdata;
 	struct bd96801_pmic_data *pdata;
 	struct device *dev;
+	int stby;
 
 	dev = rdev_get_dev(rdev);
 	rdata = container_of(rdev->desc, struct bd96801_regulator_data, desc);
 	pdata = rdev_get_drvdata(rdev);
 
+	stby = bd96801_in_stby(rdev->regmap);
+	if (stby < 0)
+		return stby;
+	if (stby)
+		dev_warn(dev, "Cant set TW. PMIC not in STBY\n");
 	/*
 	 * Let's handle the TSD case, After this we can focus on INTB.
 	 * See if given limit is the BD96801 TSD. If so, the enable request for
@@ -963,12 +980,6 @@ static int bd96801_ldo_set_tw(struct regulator_dev *rdev, int lim, int severity,
 					"Conflicting protection settings.\n");
 
 			pdata->fatal_ind = 1;
-			/* TODO: Ouch! It is possible we can't change INTB
-			 * fatality. Change is only allowed when PMIC is in
-			 * STBY. Dropping all warnings and still failing to
-			 * enable protections is bad idea. TODO:
-			 * Think how to do this properly
-			 */
 			bd96801_drop_all_warns(dev, pdata);
 		} else {
 			if (pdata->fatal_ind == 1) {
@@ -1158,13 +1169,12 @@ static int bd96801_list_voltage_lr(struct regulator_dev *rdev,
  */
 static int bd96801_enable_regmap(struct regulator_dev *rdev)
 {
-	int ret, val;
+	int stby;
 
-	ret = regmap_read(rdev->regmap, BD96801_REG_PMIC_STATE, &val);
-	if (ret)
-		return ret;
-
-	if (val != BD96801_STATE_STBY)
+	stby = bd96801_in_stby(rdev->regmap);
+	if (stby < 0)
+		return stby;
+	if (stby)
 		return -EBUSY;
 
 	return regulator_enable_regmap(rdev);
@@ -1172,13 +1182,12 @@ static int bd96801_enable_regmap(struct regulator_dev *rdev)
 
 static int bd96801_disable_regmap(struct regulator_dev *rdev)
 {
-	int ret, val;
+	int stby;
 
-	ret = regmap_read(rdev->regmap, BD96801_REG_PMIC_STATE, &val);
-	if (ret)
-		return ret;
-
-	if (val != BD96801_STATE_STBY)
+	stby = bd96801_in_stby(rdev->regmap);
+	if (stby < 0)
+		return stby;
+	if (stby)
 		return -EBUSY;
 
 	return regulator_disable_regmap(rdev);
@@ -1234,10 +1243,31 @@ static int buck_set_initial_voltage(struct regmap *regmap, struct device *dev,
 	int ret = 0;
 
 	if (data->num_ranges) {
-		int sel, val;
+		int sel, val, stby;
 		bool found;
 		u32 initial_uv;
 		int reg = BD96801_INT_VOUT_BASE_REG + data->desc.id;
+
+
+		/* See if initial value should be configured */
+		ret = of_property_read_u32(np, "rohm,initial-voltage-microvolt",
+					   &initial_uv);
+		if (ret) {
+			if (ret == EINVAL)
+				goto get_initial;
+			return ret;
+		}
+
+		/* We can only change initial voltage when PMIC is in STBY */
+		stby = bd96801_in_stby(regmap);
+		if (stby < 0)
+			return stby;
+
+		if (!stby) {
+			dev_warn(dev,
+				 "Can't set inital voltage, PMIC not in STBY\n");
+			goto get_initial;
+		}
 
 		/*
 		 * Check if regulator is enabled - if not, then we can change
@@ -1247,47 +1277,47 @@ static int buck_set_initial_voltage(struct regmap *regmap, struct device *dev,
 		if (ret)
 			return ret;
 
-		if ((val & data->desc.enable_mask) == data->desc.enable_mask) {
-			/* Regulator is Disabled */
-			ret = of_property_read_u32(np,
-						   "rohm,initial-voltage-microvolt",
-						   &initial_uv);
-			if (ret) {
-				if (ret == EINVAL)
-					goto get_initial;
-				return ret;
-			}
-			dev_dbg(dev, "Setting INITIAL voltage %u\n",
-				initial_uv);
-			/*
-			 * The initial uV range is scaled down by 150mV to make
-			 * all tuning values positive. Hence we decrease value
-			 * by 150 mV so that the set voltage will really match
-			 * the one requested via DT.
-			 */
-			ret = linear_range_get_selector_low_array(data->init_ranges,
-								  data->num_ranges,
-								  initial_uv - 150000, &sel,
-								  &found);
-			if (ret) {
-				dev_err(dev, "Unsupported initial voltage %u\n",
-					initial_uv);
-				dev_err(dev, "%u ranges, [%u .. %u]\n", data->num_ranges,
-					data->init_ranges->min,
-					linear_range_get_max_value(&data->init_ranges[data->num_ranges - 1]));
-				return ret;
-			}
-
-			if (!found)
-				dev_warn(dev,
-					 "Unsupported voltage requested, setting lower\n");
-
-			ret = regmap_update_bits(regmap, reg,
-						 BD96801_BUCK_INT_VOUT_MASK,
-						 sel);
-			if (ret)
-				return ret;
+		if ((val & data->desc.enable_mask) != data->desc.enable_mask) {
+			dev_warn(dev,
+				 "Can't set inital voltage, output enabled\n");
+			goto get_initial;
 		}
+
+		dev_dbg(dev, "%s: Setting INITIAL voltage %u\n",
+			data->desc.name,  initial_uv);
+		/*
+		 * The initial uV range is scaled down by 150mV to make all
+		 * tuning values positive. Hence we decrease value by 150 mV
+		 * so that the set voltage will really match the one requested
+		 * via DT.
+		 */
+		ret = linear_range_get_selector_low_array(data->init_ranges,
+							  data->num_ranges,
+							  initial_uv - 150000, &sel,
+							  &found);
+		if (ret) {
+			const struct linear_range *lr;
+			int max;
+
+			lr = &data->init_ranges[data->num_ranges - 1];
+			max = linear_range_get_max_value(lr);
+
+			dev_err(dev, "Unsupported initial voltage %u\n",
+				initial_uv);
+			dev_err(dev, "%u ranges, [%u .. %u]\n",
+				data->num_ranges, data->init_ranges->min, max);
+			return ret;
+		}
+
+		if (!found)
+			dev_warn(dev,
+				 "Unsupported initial voltage %u requested, setting lower\n", initial_uv);
+
+		ret = regmap_update_bits(regmap, reg,
+					 BD96801_BUCK_INT_VOUT_MASK,
+					 sel);
+		if (ret)
+			return ret;
 get_initial:
 		ret = regmap_read(regmap, reg, &sel);
 		sel &= BD96801_BUCK_INT_VOUT_MASK;
@@ -1299,6 +1329,8 @@ get_initial:
 			return ret;
 
 		data->initial_voltage = initial_uv;
+		dev_dbg(dev, "Tune-scaled initial voltage %u\n",
+			data->initial_voltage);
 	}
 
 	return 0;
