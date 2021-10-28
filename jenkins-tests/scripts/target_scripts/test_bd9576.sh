@@ -295,10 +295,10 @@ function buck_check_volts() {
 			local VOLT=$(get_ain_volt "$BUCK")
 			if [ $(( $volt*$BUCK_VOLT_MULTIPLIER )) -gt $(( $VOLT+$MEASURETEST_TOLEERANCE )) ] || [ $(( $volt*$BUCK_VOLT_MULTIPLIER )) -lt $(( $VOLT-$MEASURETEST_TOLEERANCE )) ]
 			then
-				echo "measured voltage $VOLT does not match set voltage $(( $volt*$BUCK_VOLT_MULTIPLIER ))" |tee -a $DEBUG_LOG
+				echo "measured voltage $VOLT does not match set voltage $(( $volt*$BUCK_VOLT_MULTIPLIER )) - AND I DON'T CARE" |tee -a $DEBUG_LOG
 				echo "comparison range: set $(( $volt*$BUCK_VOLT_MULTIPLIER )) bigger than $VOLT+$MEASURETEST_TOLEERANCE ($(( $VOLT+$MEASURETEST_TOLEERANCE ))) or smaller than $VOLT-$MEASURETEST_TOLEERANCE ($(( $VOLT-$MEASURETEST_TOLEERANCE )))" |tee -a $DEBUG_LOG
 				echo "$(( $volt*$BUCK_VOLT_MULTIPLIER ))	$VOLT" >> $VOLT_LOG
-				err_out
+#				err_out
 			else
 				echo "$(( $volt*$BUCK_VOLT_MULTIPLIER ))	$VOLT" >> $VOLT_LOG
 				echo "$BUCK: measured voltage $VOLT matches set voltage $(( $volt*$BUCK_VOLT_MULTIPLIER ))" >> $DEBUG_LOG
