@@ -1357,20 +1357,23 @@ static int get_vdr_from_dt(struct bd71827_power *pwr,
 			dev_err(pwr->dev,
 				"%s: Bad size. Expected %d parameters",
 				prop[i], num_values);
-			return -EINVAL;
+			ret = -EINVAL;
+			goto out;
 		}
 		ret = fwnode_property_read_u32_array(node, prop[i], tmp_table,
 						     num_values);
 		if (ret) {
 			dev_err(pwr->dev,
 				"Invalid VDR temperatures in device-tree");
-			return ret;
+			goto out;
 		}
 		for (index = 0; index < num_values; index++)
 			tables[i][index] = tmp_table[index];
 	}
+out:
+	kfree(tmp_table);
 
-	return 0;
+	return ret;
 }
 
  /* Set default parameters if no module parameters were given */
