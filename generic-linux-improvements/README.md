@@ -11,10 +11,10 @@ This is an attempt to add some fuel-gauge logic to power-supply core.
 We try to add in-kernel entity performing iterative SOC estimation and coulomb counter correction for devices with a (drifting) coulomb
 counter. This should allow few charger/fuel-gauge drivers to use generic loop instead of implementing their own.
 
-You can check the [unofficial repository for the development](https://github.com/M-Vaittinen/linux/tree/swgauge-dev).
-Please note the branches in this repository can be rebased without a warning.
+You can check the [unofficial repository for the development](https://github.com/M-Vaittinen/linux/tree/simple-gauge-rfc4).
+Please note the branches in this repository can be rebased or even moved/deleted without a warning.
 
-Latest upstream patch series [RFC v2](https://lore.kernel.org/lkml/cover.1607085199.git.matti.vaittinen@fi.rohmeurope.com/)
+Latest upstream patch series [RFC v3](https://lore.kernel.org/lkml/cover.1637061794.git.matti.vaittinen@fi.rohmeurope.com/#t)
 
 
 ## Examples of completed and upstreamed improvements:
