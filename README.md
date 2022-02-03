@@ -44,10 +44,3 @@ This helps us all. Here are some things we have participated and are working
 on - maybe you find something that is helpful to you too.
 
 [Generic Linux improvements](generic-linux-improvements/)
-
-## Linux driver integration to your system
-We know our drivers. We know our HW. We can speed-up your development.
-Interested? Feel free to contact Mr. Koki Okada (koki.okada(at)fi.rohmeurope.com)
-to discuss about co-operation possibilities and project scheduling/prizing/scoping.
-
-
