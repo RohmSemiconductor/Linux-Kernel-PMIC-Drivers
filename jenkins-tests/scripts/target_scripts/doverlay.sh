@@ -1,6 +1,7 @@
 #!/bin/bash
 
 TEST_MODULE="$1-test.ko"
+LOAD_WAIT_SEC=10
 
 DTBO="$1_test.dtbo"
 
@@ -20,7 +21,8 @@ fi
 dd if=/$DTBO of=/sys/kernel/mva_overlay/overlay_add bs=1M count=1
 if [ $? -eq 0 ]
 then
-	sleep 2
+	echo "Waiting $LOAD_WAIT_SEC seconds for modules to load..."
+	sleep $LOAD_WAIT_SEC
 	insmod $TEST_MODULE
 	sleep 1
 fi
