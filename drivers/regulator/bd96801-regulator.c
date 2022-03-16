@@ -1418,23 +1418,70 @@ get_initial:
 
 static int set_initial_voltage(struct device *dev, struct regmap *regmap,
 			struct bd96801_regulator_data *data,
-			struct device_node *np)
+			struct device_node *np, bool allow_stby)
 {
 	/* BUCK */
 	if (data->desc.id <= BD96801_BUCK4)
-		return buck_set_initial_voltage(regmap, dev, data, np);
+		return buck_set_initial_voltage(regmap, dev, data, np,
+						allow_stby);
 
 	/* LDO */
-	return set_ldo_initial_voltage(regmap, dev, data, np);
+	return set_ldo_initial_voltage(regmap, dev, data, np, allow_stby);
 }
 
-static int bd96801_walk_regulator_dt(struct device *dev, struct regmap *regmap,
-				     struct bd96801_regulator_data *data,
-				     int num)
+static int set_enabled_at_stby(struct bd96801_pmic_data *pdata, int id)
 {
-	int i, ret;
-	struct device_node *np;
+	return regmap_write(pdata->regmap, BD96801_REG_ON_AT_STBY, BIT(id));
+}
+
+static int bd96801_walk_regulator_dt(struct device *dev,
+				     struct bd96801_pmic_data *pdata, int num)
+{
+	struct bd96801_regulator_data *data = &pdata->regulator_data[0];
 	struct device_node *nproot = dev->parent->of_node;
+	struct regmap *regmap = pdata->regmap;
+	struct device_node *np;
+	struct gpio_desc *stby_gpio;
+	int i, j, ret;
+
+	pdata->stby = of_property_read_bool(nproot, "rohm,allow-config-stby");
+
+	stby_gpio = devm_gpiod_get_from_of_node(&pdev->dev,
+					      pdev->dev.parent->of_node,
+						 "rohm,config-stby-gpio", 0,
+						 GPIOD_ASIS, "pmic-stby");
+
+	if (!IS_ERR(stby_gpio))
+		pdata->stby = stby_gpio;
+	else if (PTR_ERR(stby_gpio) != -ENOENT)
+		return PTR_ERR(stby_gpio);
+
+	/* Set channels which are meant to be kept ON while PMIC is in STBY */
+	for ( i = 0; ; i++) {
+		struct device_node *np;
+
+		np = of_parse_phandle(nproot, "rohm,stby-keep-on", i);
+		if (np)
+			break;
+
+		for (j = 0; j < num; j++) {
+			if (!of_node_name_eq(np, data[j].desc.of_match)) {
+				ret = set_enabled_at_stby(pdata, j);
+				if (ret) {
+					dev_err(dev,
+						"%s: Failed to enable at STBY\n",
+						data[j].desc.of_match);
+					of_node_put(np);
+					return ret;
+				}
+			}
+		}
+		of_node_put(np);
+	}
+
+	if (pdata->stby) {
+		/* Set PMIC to STBY for the configuration */
+	}
 
 	nproot = of_get_child_by_name(nproot, "regulators");
 	if (!nproot) {
@@ -1445,7 +1492,8 @@ static int bd96801_walk_regulator_dt(struct device *dev, struct regmap *regmap,
 		for (i = 0; i < num; i++) {
 			if (!of_node_name_eq(np, data[i].desc.of_match))
 				continue;
-			ret = set_initial_voltage(dev, regmap, &data[i], np);
+			ret = set_initial_voltage(dev, regmap, &data[i], np,
+						  pdata->use-stby);
 			if (ret) {
 				dev_err(dev,
 					"Initializing voltages for %s failed\n",
@@ -1784,7 +1832,7 @@ static int bd96801_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	ret = bd96801_walk_regulator_dt(&pdev->dev, pdata->regmap, rdesc,
+	ret = bd96801_walk_regulator_dt(&pdev->dev, pdata,
 					BD96801_NUM_REGULATORS);
 	if (ret)
 		return ret;
@@ -1872,6 +1920,22 @@ static int bd96801_probe(struct platform_device *pdev)
 			if (IS_ERR(retp))
 				return PTR_ERR(retp);
 		}
+	}
+
+	if (pdata->stby) {
+		/* Set PMIC to ACTIVE as the configuration has finished */
+		/*
+		 * TODO: this breaks things if devices set regulators enabled
+		 * early after regulator registration. We can't use the standard
+		 * regulator operations :/ If the STBY mode does not reload OTP
+		 * then we can set PMIC to STBY during the individual configs
+		 * and hopefully avoid some problems. Even then we may need to
+		 * add some locking and state && returen -EBUSY for operations
+		 * when PMIC is in STBY and hope consumer drivers handle it
+		 * correctly. This sucks. Other way would be implementing all
+		 * the configuration settings here in the driver and not in the
+		 * core. That does also suck.
+		 */
 	}
 	if (temp_notif_ldos) {
 		int irq;
