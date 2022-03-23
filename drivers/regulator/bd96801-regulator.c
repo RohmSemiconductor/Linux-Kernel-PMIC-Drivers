@@ -3,17 +3,33 @@
 // bd96801-regulator.c ROHM BD96801 regulator driver
 
 /*
- * TODO: The DS2 sample does not allow controlling much of anything besides
- * the BUCK voltage tune value unless the PMIC is in STBY. This means that
- * the usual case where PMIC is controlled using processor which is powered
- * by the PMIC does not allow much of control. Eg, enable/disable status or
- * protection limits can't be set. It is however possible that the PMIC is
- * controlled (at least partially) from some supervisor processor which stays
- * alive even when PMIC goes to STBY. Actually, this is even likely.
+ * The DS2 sample does not allow controlling much of anything besides the BUCK
+ * voltage tune value unless the PMIC is in STBY. This means the usual case
+ * where PMIC is controlled using processor which is powered by the PMIC does
+ * not allow much of control. Eg, enable/disable status or protection limits
+ * can't be set.
+ *
+ * It is however possible that the PMIC is controlled (at least partially) from
+ * some supervisor processor which stays alive even when PMIC goes to STBY.
+ * Actually, this is even likely.
  *
  * This calls for following actions:
  *  - add STBY check also to protection setting.
  *  - consider whether the ERRB IRQ would be worth handling
+ *
+ * Right. The demand for keeping processor alive when PMIC is configured has
+ * emerged. The DS3 solves problem by allowing SW to specify power-rails which
+ * are kept powered when the PMIC goes to STBY. Eg, SW can /at least in theory)
+ *
+ * - Configure critical power-rails to be enabled at STBY
+ * - Switch PMIC to STBY mode
+ * - Perform the configuration
+ * - Turn the PMIC back to the active mode.
+ *
+ * Toggling the STBY mode from a regulator driver does definitely not sound like
+ * "the right thing to do(TM)". That should probably be initiated by early boot
+ * - or if it is required at later stage, then by a consumer driver / user-space
+ * application.
  */
 
 #include <linux/delay.h>
@@ -873,7 +889,7 @@ static int bd96801_set_ocp(struct regulator_dev *rdev, int lim_uA,
 	 * And yes. This is racy, we don't know when PMIC state is changed.
 	 * So we can't promise config works as PMIC state may change right
 	 * after this check - but at least we can warn if this attempted
-	 * when PMIC is in STBY.
+	 * when PMIC isn't in STBY.
 	 */
 	stby = bd96801_in_stby(rdev->regmap);
 	if (stby < 0)
@@ -1063,7 +1079,7 @@ static int bd96801_buck_set_tw(struct regulator_dev *rdev, int lim, int severity
 	 * Let's handle the TSD case, After this we can focus on INTB.
 	 * See if given limit is the BD96801 TSD. If so, the enable request for
 	 * protection is valid (TSD is always enabled and does always forcibly
-	 * shut-down the PMIC. All other configurations for this temperature
+	 * shut-down the PMIC). All other configurations for this temperature
 	 * are unsupported.
 	 */
 	if (lim == BD96801_TSD_KELVIN) {
@@ -1198,7 +1214,6 @@ static const struct regulator_ops bd96801_ldo_table_ops = {
 	.disable = bd96801_disable_regmap,
 	.is_enabled = regulator_is_enabled_regmap,
 	.list_voltage = regulator_list_voltage_table,
-	/* MVa: TODO: Check! */
 	.set_voltage_sel = rohm_regulator_set_voltage_sel_restricted,
 	.get_voltage_sel = regulator_get_voltage_sel_regmap,
 	.set_over_voltage_protection = bd96801_set_ovp,
@@ -1227,7 +1242,6 @@ static const struct regulator_ops bd96801_ldo_ops = {
 	.disable = regulator_disable_regmap,
 	.is_enabled = regulator_is_enabled_regmap,
 	.list_voltage = regulator_list_voltage_linear_range,
-	/* MVa: TODO: Check! */
 	.set_voltage_sel = rohm_regulator_set_voltage_sel_restricted,
 	.get_voltage_sel = regulator_get_voltage_sel_regmap,
 	.set_over_voltage_protection = bd96801_set_ovp,
@@ -1247,7 +1261,6 @@ static int buck_set_initial_voltage(struct regmap *regmap, struct device *dev,
 		bool found;
 		u32 initial_uv;
 		int reg = BD96801_INT_VOUT_BASE_REG + data->desc.id;
-
 
 		/* See if initial value should be configured */
 		ret = of_property_read_u32(np, "rohm,initial-voltage-microvolt",
