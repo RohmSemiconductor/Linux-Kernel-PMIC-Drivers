@@ -192,15 +192,16 @@ struct bd96801_irqinfo {
 };
 
 #define BD96801_IRQINFO(_type, _name, _irqoff_ms, _irqname)	\
-{							\
-	.type = (_type),				\
-	.err_cfg = -1,					\
-	.wrn_cfg = -1,					\
-	.irq_name = (_irqname),				\
-	.irq_desc = {					\
+{								\
+	.type = (_type),					\
+	.err_cfg = -1,						\
+	.wrn_cfg = -1,						\
+	.irq_name = (_irqname),					\
+	.irq_desc = {						\
 		.name = (_name),				\
-		.irq_off_ms = (_irqoff_ms),		\
-	},						\
+		.irq_off_ms = (_irqoff_ms),			\
+		.map_event = regulator_irq_map_event_simple,	\
+	},							\
 }
 
 static const struct bd96801_irqinfo buck1_irqinfo[] = {
@@ -585,8 +586,8 @@ static int bd96801_set_ovp(struct regulator_dev *rdev, int lim_uV, int severity,
 	stby = bd96801_in_stby(rdev->regmap);
 	if (stby < 0)
 		return stby;
-	if (stby)
-		dev_warn(dev, "Cant set OVP. PMIC not in STBY\n");
+	if (!stby)
+		dev_warn(dev, "Can't set OVP. PMIC not in STBY\n");
 
 	if (severity == REGULATOR_SEVERITY_PROT) {
 		if (!enable) {
@@ -602,9 +603,10 @@ static int bd96801_set_ovp(struct regulator_dev *rdev, int lim_uV, int severity,
 	/* See the comment at bd96801_set_uvp() below */
 	if (enable && pdata->fatal_ind == 1) {
 		dev_err(dev,
-			"All errors are fatal. Can't provide notifications\n");
+			"All errors are fatal. Can't provide OV-notifications\n");
 		if (severity == REGULATOR_SEVERITY_WARN)
-			return -EINVAL;
+			return 0;
+//			return -EINVAL;
 	}
 
 	if (lim_uV) {
@@ -665,8 +667,8 @@ static int bd96801_set_uvp(struct regulator_dev *rdev, int lim_uV, int severity,
 	stby = bd96801_in_stby(rdev->regmap);
 	if (stby < 0)
 		return stby;
-	if (stby)
-		dev_warn(dev, "Cant set UVP. PMIC not in STBY\n");
+	if (!stby)
+		dev_warn(dev, "Can't set UVP. PMIC not in STBY\n");
 
 	if (severity == REGULATOR_SEVERITY_PROT) {
 		/* There is nothing we can do for UVP protection on BD96801 */
@@ -692,9 +694,10 @@ static int bd96801_set_uvp(struct regulator_dev *rdev, int lim_uV, int severity,
 	 */
 	if (enable && pdata->fatal_ind == 1) {
 		dev_err(dev,
-			"All errors are fatal. Can't provide notifications\n");
+			"All errors are fatal. Can't provide UV-notifications\n");
 		if (severity == REGULATOR_SEVERITY_WARN)
-			return -EINVAL;
+			return 0;
+//			return -EINVAL;
 	}
 
 	if (lim_uV) {
@@ -894,8 +897,8 @@ static int bd96801_set_ocp(struct regulator_dev *rdev, int lim_uA,
 	stby = bd96801_in_stby(rdev->regmap);
 	if (stby < 0)
 		return stby;
-	if (stby)
-		dev_warn(dev, "Cant set OCP. PMIC not in STBY\n");
+	if (!stby)
+		dev_warn(dev, "Can't set OCP. PMIC not in STBY\n");
 
 	if (severity == REGULATOR_SEVERITY_PROT) {
 		if (enable) {
@@ -967,8 +970,8 @@ static int bd96801_ldo_set_tw(struct regulator_dev *rdev, int lim, int severity,
 	stby = bd96801_in_stby(rdev->regmap);
 	if (stby < 0)
 		return stby;
-	if (stby)
-		dev_warn(dev, "Cant set TW. PMIC not in STBY\n");
+	if (!stby)
+		dev_warn(dev, "Can't set TW. PMIC not in STBY\n");
 	/*
 	 * Let's handle the TSD case, After this we can focus on INTB.
 	 * See if given limit is the BD96801 TSD. If so, the enable request for
@@ -1130,9 +1133,9 @@ static int bd96801_buck_set_tw(struct regulator_dev *rdev, int lim, int severity
 		return 0;
 	}
 
-	if (pdata->fatal_ind == 1) {
+	if (pdata->fatal_ind == 1 && severity == REGULATOR_SEVERITY_WARN) {
 		dev_warn(dev, "INTB set fatal. Notifications not supported\n");
-		return -EINVAL;
+		return 0;
 	}
 
 	if (severity == REGULATOR_SEVERITY_ERR)
@@ -1190,7 +1193,7 @@ static int bd96801_enable_regmap(struct regulator_dev *rdev)
 	stby = bd96801_in_stby(rdev->regmap);
 	if (stby < 0)
 		return stby;
-	if (stby)
+	if (!stby)
 		return -EBUSY;
 
 	return regulator_enable_regmap(rdev);
@@ -1203,7 +1206,7 @@ static int bd96801_disable_regmap(struct regulator_dev *rdev)
 	stby = bd96801_in_stby(rdev->regmap);
 	if (stby < 0)
 		return stby;
-	if (stby)
+	if (!stby)
 		return -EBUSY;
 
 	return regulator_disable_regmap(rdev);
@@ -1882,8 +1885,10 @@ static int bd96801_probe(struct platform_device *pdev)
 							 &iinfo->irq_desc, irq,
 							 0, err, NULL, rdev_arr,
 							 1);
-			if (IS_ERR(retp))
+			if (IS_ERR(retp)) {
+				dev_err(&pdev->dev, "Failed to register IRQ helper\n");
 				return PTR_ERR(retp);
+			}
 		}
 	}
 	if (temp_notif_ldos) {
