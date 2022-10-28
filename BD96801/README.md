@@ -1,6 +1,6 @@
 # ROHM Power Management IC BD96801 Linux device drivers.
 
-The ROHM BD96801 "Scalable PMIC" is an automotive grade PMIC which can scale to different applications by allowing chaining of PMICs. BS96801 provides 4 BUCK regulators and 3 LDOs with configurable start-up sequences, voltages, and safety limits. A watchdog is also included.
+The ROHM BD96801 "Scalable PMIC" is an automotive grade PMIC which can scale to different applications by allowing chaining of PMICs. BD96801 provides 4 BUCK regulators and 3 LDOs with configurable start-up sequences, voltages, and safety limits. A watchdog is also included.
 
 ## Linux:
 
