@@ -14,6 +14,11 @@
 #include <linux/regmap.h>
 #include <linux/watchdog.h>
 
+static bool nowayout;
+module_param(nowayout, bool, 0);
+MODULE_PARM_DESC(nowayout,
+		"Watchdog cannot be stopped once started (default=\"false\")");
+
 #define BD96801_WD_TMO_SHORT_MASK	0x70
 #define BD96801_WD_RATIO_MASK		0x3
 #define BD96801_WD_TYPE_MASK		0x4
@@ -330,6 +335,7 @@ static int bd96801_wdt_probe(struct platform_device *pdev)
 	}
 
 	watchdog_init_timeout(&w->wdt, 0, pdev->dev.parent);
+	watchdog_set_nowayout(&w->wdt, nowayout);
 
 	return devm_watchdog_register_device(&pdev->dev, &w->wdt);
 }
