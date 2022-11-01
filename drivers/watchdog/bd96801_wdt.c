@@ -54,6 +54,7 @@ MODULE_PARM_DESC(nowayout,
 struct wdtbd96801 {
 	struct device		*dev;
 	struct regmap		*regmap;
+	bool			always_running;
 	struct watchdog_device	wdt;
 };
 
@@ -80,8 +81,12 @@ static int bd96801_wdt_stop(struct watchdog_device *wdt)
 {
 	struct wdtbd96801 *w = watchdog_get_drvdata(wdt);
 
-	return regmap_update_bits(w->regmap, BD96801_REG_WD_CONF,
+	if (!w->always_running)
+		return regmap_update_bits(w->regmap, BD96801_REG_WD_CONF,
 				 BD96801_WD_EN_MASK, BD96801_WD_DISABLE);
+	set_bit(WDOG_HW_RUNNING, &wdt->status);
+
+	return 0;
 }
 
 static const struct watchdog_info bd96801_wdt_info = {
@@ -308,6 +313,9 @@ static int bd96801_wdt_probe(struct platform_device *pdev)
 	w->wdt.timeout = DEFAULT_TIMEOUT;
 	watchdog_set_drvdata(&w->wdt, w);
 
+	w->always_running = device_property_read_bool(pdev->dev.parent,
+						      "always-running");
+
 	ret = regmap_read(w->regmap, BD96801_REG_WD_CONF, &val);
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to get the watchdog state\n");
@@ -336,6 +344,9 @@ static int bd96801_wdt_probe(struct platform_device *pdev)
 
 	watchdog_init_timeout(&w->wdt, 0, pdev->dev.parent);
 	watchdog_set_nowayout(&w->wdt, nowayout);
+
+	if (w->always_running)
+		bd96801_wdt_start(&w->wdt);
 
 	return devm_watchdog_register_device(&pdev->dev, &w->wdt);
 }
