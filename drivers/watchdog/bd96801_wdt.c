@@ -343,6 +343,7 @@ static int bd96801_wdt_probe(struct platform_device *pdev)
 
 	watchdog_init_timeout(&w->wdt, 0, pdev->dev.parent);
 	watchdog_set_nowayout(&w->wdt, nowayout);
+	watchdog_stop_on_reboot(&w->wdt);
 
 	if (w->always_running)
 		bd96801_wdt_start(&w->wdt);
