@@ -208,6 +208,39 @@ static int bd96801_set_wdt_mode(struct wdtbd96801 *w, int hw_margin,
 	return ret;
 }
 
+static int bd96801_set_heartbeat_from_hw(struct wdtbd96801 *w,
+					 unsigned int conf_reg)
+{
+	int ret;
+	unsigned int val, sel, fast;
+
+	/*
+	 * The BD96801 supports a somewhat peculiar QA-mode, which we do not
+	 * support in this driver. If the QA-mode is enabled then we just
+	 * warn and bail-out.
+	 */
+	if ((conf_reg & BD96801_WD_EN_MASK) != BD96801_WD_IF_EN) {
+		dev_warn(w->dev, "watchdog set to Q&A mode - exiting\n");
+		return -EINVAL;
+	}
+
+	ret = regmap_read(w->regmap, BD96801_REG_WD_TMO, &val);
+	if (ret)
+		return ret;
+
+	sel = val & BD96801_WD_TMO_SHORT_MASK;
+	sel >>= ffs(BD96801_WD_TMO_SHORT_MASK) - 1;
+	fast = FASTNG_MIN << sel;
+
+	sel = (val & BD96801_WD_RATIO_MASK) + 1;
+	w->wdt.max_hw_heartbeat_ms = (fast << sel) / USEC_PER_MSEC;
+
+	if ((conf_reg & BD96801_WD_TYPE_MASK) == BD96801_WD_TYPE_WIN)
+		w->wdt.min_hw_heartbeat_ms = fast / USEC_PER_MSEC;
+
+	return 0;
+}
+
 
 static int init_wdg_hw(struct wdtbd96801 *w)
 {
@@ -276,13 +309,19 @@ static int bd96801_wdt_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Failed to get the watchdog state\n");
 		return ret;
 	}
+
+	/*
+	 * If the WDG is already enabled we assume it is configured by boot.
+	 * In this case we just update the hw-timeout based on values set to
+	 * the timeout / mode registers and leave the hardware configs
+	 * untouched.
+	 */
 	if ((reg & BD96801_WD_EN_MASK) != BD96801_WD_DISABLE) {
-		if ((reg & BD96801_WD_EN_MASK) != BD96801_WD_IF_EN) {
-			dev_err(&pdev->dev,
-				"watchdog set to Q&A mode - exiting\n");
-			return -EINVAL;
-		}
 		dev_dbg(&pdev->dev, "watchdog was running during probe\n");
+		ret = bd96801_set_heartbeat_from_hw(w, reg);
+		if (ret)
+			return ret;
+
 		set_bit(WDOG_HW_RUNNING, &w->wdt.status);
 	} else {
 		/* If WDG is not running so we will initializate it */
