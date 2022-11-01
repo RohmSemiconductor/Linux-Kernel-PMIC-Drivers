@@ -5,7 +5,6 @@
  * ROHM BD96801 watchdog driver
  */
 
-#include <linux/bcd.h>
 #include <linux/kernel.h>
 #include <linux/mfd/rohm-bd96801.h>
 #include <linux/mfd/rohm-generic.h>
@@ -48,16 +47,14 @@
  */
 
 struct wdtbd96801 {
-	struct device *dev;
-	struct regmap *regmap;
-	struct watchdog_device wdt;
+	struct device		*dev;
+	struct regmap		*regmap;
+	struct watchdog_device	wdt;
 };
 
 static int bd96801_wdt_ping(struct watchdog_device *wdt)
 {
 	struct wdtbd96801 *w = watchdog_get_drvdata(wdt);
-
-	dev_dbg(w->dev, "WDT ping...\n");
 
 	return regmap_update_bits(w->regmap, BD96801_REG_WD_FEED,
 				 BD96801_WD_FEED_MASK, BD96801_WD_FEED);
@@ -70,7 +67,7 @@ static int bd96801_wdt_start(struct watchdog_device *wdt)
 
 	ret = regmap_update_bits(w->regmap, BD96801_REG_WD_CONF,
 				 BD96801_WD_EN_MASK, BD96801_WD_IF_EN);
-	dev_dbg(w->dev, "WDT started\n");
+
 	return ret;
 }
 
@@ -78,14 +75,14 @@ static int bd96801_wdt_stop(struct watchdog_device *wdt)
 {
 	struct wdtbd96801 *w = watchdog_get_drvdata(wdt);
 
-	dev_dbg(w->dev, "WDT stopping\n");
 	return regmap_update_bits(w->regmap, BD96801_REG_WD_CONF,
 				 BD96801_WD_EN_MASK, BD96801_WD_DISABLE);
 }
 
 static const struct watchdog_info bd96801_wdt_info = {
-	.identity = "bd96801-wdt",
-	.options = WDIOF_SETTIMEOUT | WDIOF_KEEPALIVEPING | WDIOF_MAGICCLOSE,
+	.options	= WDIOF_MAGICCLOSE | WDIOF_KEEPALIVEPING |
+			  WDIOF_SETTIMEOUT,
+	.identity	= "bd96801-wdt",
 };
 
 static const struct watchdog_ops bd96801_wdt_ops = {
@@ -109,7 +106,6 @@ static int find_closest_fast(int target, int *sel, int *val)
 		return -EINVAL;
 
 	return 0;
-
 }
 
 static int find_closest_slow_by_fast(int fast_val, int *target, int *slowsel)
@@ -292,7 +288,7 @@ static int bd96801_wdt_probe(struct platform_device *pdev)
 {
 	struct wdtbd96801 *w;
 	int ret;
-	unsigned int reg;
+	unsigned int val;
 
 	w = devm_kzalloc(&pdev->dev, sizeof(*w), GFP_KERNEL);
 	if (!w)
@@ -307,7 +303,7 @@ static int bd96801_wdt_probe(struct platform_device *pdev)
 	w->wdt.timeout = DEFAULT_TIMEOUT;
 	watchdog_set_drvdata(&w->wdt, w);
 
-	ret = regmap_read(w->regmap, BD96801_REG_WD_CONF, &reg);
+	ret = regmap_read(w->regmap, BD96801_REG_WD_CONF, &val);
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to get the watchdog state\n");
 		return ret;
@@ -319,9 +315,9 @@ static int bd96801_wdt_probe(struct platform_device *pdev)
 	 * the timeout / mode registers and leave the hardware configs
 	 * untouched.
 	 */
-	if ((reg & BD96801_WD_EN_MASK) != BD96801_WD_DISABLE) {
+	if ((val & BD96801_WD_EN_MASK) != BD96801_WD_DISABLE) {
 		dev_dbg(&pdev->dev, "watchdog was running during probe\n");
-		ret = bd96801_set_heartbeat_from_hw(w, reg);
+		ret = bd96801_set_heartbeat_from_hw(w, val);
 		if (ret)
 			return ret;
 
@@ -335,11 +331,7 @@ static int bd96801_wdt_probe(struct platform_device *pdev)
 
 	watchdog_init_timeout(&w->wdt, 0, pdev->dev.parent);
 
-	ret = devm_watchdog_register_device(&pdev->dev, &w->wdt);
-	if (ret < 0)
-		dev_err(&pdev->dev, "watchdog registration failed: %d\n", ret);
-
-	return ret;
+	return devm_watchdog_register_device(&pdev->dev, &w->wdt);
 }
 
 static struct platform_driver bd96801_wdt = {
@@ -348,7 +340,6 @@ static struct platform_driver bd96801_wdt = {
 	},
 	.probe = bd96801_wdt_probe,
 };
-
 module_platform_driver(bd96801_wdt);
 
 MODULE_AUTHOR("Matti Vaittinen <matti.vaittinen@fi.rohmeurope.com>");
