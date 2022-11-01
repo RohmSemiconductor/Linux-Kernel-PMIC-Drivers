@@ -1,35 +1,43 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright (C) 2021 ROHM Semiconductors
+// Copyright (C) 2022 ROHM Semiconductors
 // bd96801-regulator.c ROHM BD96801 regulator driver
 
 /*
  * The DS2 sample does not allow controlling much of anything besides the BUCK
- * voltage tune value unless the PMIC is in STBY. This means the usual case
+ * voltage tune value unless the PMIC is in STANDBY. This means the usual case
  * where PMIC is controlled using processor which is powered by the PMIC does
  * not allow much of control. Eg, enable/disable status or protection limits
  * can't be set.
  *
  * It is however possible that the PMIC is controlled (at least partially) from
- * some supervisor processor which stays alive even when PMIC goes to STBY.
- * Actually, this is even likely.
+ * some supervisor processor which stays alive even when PMIC goes to STANDBY.
  *
  * This calls for following actions:
- *  - add STBY check also to protection setting.
+ *  - add STANDBY check also to protection setting.
  *  - consider whether the ERRB IRQ would be worth handling
  *
  * Right. The demand for keeping processor alive when PMIC is configured has
  * emerged. The DS3 solves problem by allowing SW to specify power-rails which
- * are kept powered when the PMIC goes to STBY. Eg, SW can /at least in theory)
+ * are kept powered when the PMIC goes to STANDBY. Eg, SW can (at least in
+ * theory)
  *
- * - Configure critical power-rails to be enabled at STBY
- * - Switch PMIC to STBY mode
+ * - Configure critical power-rails to be enabled at STANDBY
+ * - Switch PMIC to STANDBY mode
  * - Perform the configuration
- * - Turn the PMIC back to the active mode.
+ * - Turn the PMIC back to the ACTIVE mode.
  *
- * Toggling the STBY mode from a regulator driver does definitely not sound like
+ * Toggling the STANDBY mode from a regulator driver does definitely not sound like
  * "the right thing to do(TM)". That should probably be initiated by early boot
- * - or if it is required at later stage, then by a consumer driver / user-space
- * application.
+ * - or if it is required at later stage, then maybe by a consumer driver /
+ *   user-space application.
+ *
+ * Still, if STANDBY-only configuratins are needed then someone should ensure
+ * the STBY request line stays asserted untill all the necessary configurations
+ * are done. Using an evaluation board this can be done toggling a swicth
+ * manually - but for any real use-case we would need a SW control for this.
+ * This driver does not in any way ensure the PMIC stays in STANDBY. It only
+ * checks if PMIC is in STANDBY when some configuration is started - and warns
+ * if the state is not correct.
  */
 
 #include <linux/delay.h>
@@ -584,7 +592,7 @@ static int bd96801_set_ovp(struct regulator_dev *rdev, int lim_uV, int severity,
 	if (stby < 0)
 		return stby;
 	if (!stby)
-		dev_warn(dev, "Cant set OVP. PMIC not in STBY\n");
+		dev_warn(dev, "Cant set OVP. PMIC not in STANDBY\n");
 
 	if (severity == REGULATOR_SEVERITY_PROT) {
 		if (!enable) {
@@ -664,7 +672,7 @@ static int bd96801_set_uvp(struct regulator_dev *rdev, int lim_uV, int severity,
 	if (stby < 0)
 		return stby;
 	if (!stby)
-		dev_warn(dev, "Cant set UVP. PMIC not in STBY\n");
+		dev_warn(dev, "Cant set UVP. PMIC not in STANDBY\n");
 
 	if (severity == REGULATOR_SEVERITY_PROT) {
 		/* There is nothing we can do for UVP protection on BD96801 */
@@ -883,17 +891,17 @@ static int bd96801_set_ocp(struct regulator_dev *rdev, int lim_uA,
 	pdata = rdev_get_drvdata(rdev);
 
 	/*
-	 * Most of the configs can only be done when PMIC is in STBY
+	 * Most of the configs can only be done when PMIC is in STANDBY
 	 * And yes. This is racy, we don't know when PMIC state is changed.
 	 * So we can't promise config works as PMIC state may change right
 	 * after this check - but at least we can warn if this attempted
-	 * when PMIC isn't in STBY.
+	 * when PMIC isn't in STANDBY.
 	 */
 	stby = bd96801_in_stby(rdev->regmap);
 	if (stby < 0)
 		return stby;
 	if (!stby)
-		dev_warn(dev, "Cant set OCP. PMIC not in STBY\n");
+		dev_warn(dev, "Cant set OCP. PMIC not in STANDBY\n");
 
 	if (severity == REGULATOR_SEVERITY_PROT) {
 		if (enable) {
@@ -1075,7 +1083,7 @@ static int ldo_map_notif(int irq, struct regulator_irq_data *rid,
  * exceed this?)
  */
 static int bd96801_buck_set_tw(struct regulator_dev *rdev, int lim, int severity,
-			  bool enable)
+			       bool enable)
 {
 	struct bd96801_regulator_data *rdata;
 	struct bd96801_pmic_data *pdata;
@@ -1179,7 +1187,7 @@ static int bd96801_list_voltage_lr(struct regulator_dev *rdev,
 
 /*
  * BD96801 does not allow controlling the output enable/disable status
- * unless PMIC is in STBY state. So this may be next to useless - unless
+ * unless PMIC is in STANDBY state. So this may be next to useless - unless
  * the PMIC is controlled from processor not powered by the PMIC. AFAIK
  * this really is a potential use-case with the BD96801 - hence these
  * controls are implemented.
@@ -1211,7 +1219,7 @@ static int bd96801_disable_regmap(struct regulator_dev *rdev)
 }
 
 /*
- * Latest data-sheet says LDO voltages can only be changed in STBY(?)
+ * Latest data-sheet says LDO voltages can only be changed in STANDBY(?)
  * I think the original limitation was that the LDO must not be enabled
  * when voltage is changed..
  */
@@ -1289,14 +1297,14 @@ static int buck_set_initial_voltage(struct regmap *regmap, struct device *dev,
 			return ret;
 		}
 
-		/* We can only change initial voltage when PMIC is in STBY */
+		/* We can only change initial voltage when PMIC is in STANDBY */
 		stby = bd96801_in_stby(regmap);
 		if (stby < 0)
 			goto get_initial;
 
 		if (!stby) {
 			dev_warn(dev,
-				 "Can't set inital voltage, PMIC not in STBY\n");
+				 "Can't set inital voltage, PMIC not in STANDBY\n");
 			goto get_initial;
 		}
 
@@ -1343,7 +1351,8 @@ static int buck_set_initial_voltage(struct regmap *regmap, struct device *dev,
 
 		if (!found)
 			dev_warn(dev,
-				 "Unsupported initial voltage %u requested, setting lower\n", initial_uv);
+				 "Unsupported initial voltage %u requested, setting lower\n",
+				 initial_uv);
 
 		ret = regmap_update_bits(regmap, reg,
 					 BD96801_BUCK_INT_VOUT_MASK,
@@ -1386,13 +1395,13 @@ static int set_ldo_initial_voltage(struct regmap *regmap,
 		return ret;
 	}
 
-	/* We can only change initial voltage when PMIC is in STBY */
+	/* We can only change initial voltage when PMIC is in STANDBY */
 	stby = bd96801_in_stby(regmap);
 	if (stby < 0)
 		return stby;
 
 	if (!stby) {
-		dev_warn(dev, "Can't set inital voltage, PMIC not in STBY\n");
+		dev_warn(dev, "Can't set inital voltage, PMIC not in STANDBY\n");
 		goto get_initial;
 	}
 
@@ -1411,7 +1420,8 @@ static int set_ldo_initial_voltage(struct regmap *regmap,
 	dev_dbg(dev, "%s: Setting INITIAL voltage %u\n", data->desc.name,
 		initial_uv);
 
-	/* Should this be two properties - one for mode (SD/DDR) and
+	/*
+	 * Should this be two properties - one for mode (SD/DDR) and
 	 * one for voltage (3.3, 1.8, 0.5, 0.3?)
 	 */
 	switch (initial_uv) {
@@ -1566,8 +1576,8 @@ static const struct bd96801_pmic_data bd96801_data = {
 		.init_ranges = bd96801_buck_init_volts,
 		.num_ranges = ARRAY_SIZE(bd96801_buck_init_volts),
 		.irq_desc = {
-				.irqinfo = (struct bd96801_irqinfo *)&buck1_irqinfo[0],
-				.num_irqs = ARRAY_SIZE(buck1_irqinfo),
+			.irqinfo = (struct bd96801_irqinfo *)&buck1_irqinfo[0],
+			.num_irqs = ARRAY_SIZE(buck1_irqinfo),
 		},
 		.prot_reg_shift = BD96801_MASK_BUCK1_OVP_SHIFT,
 		.ovp_reg = BD96801_REG_BUCK_OVP,
@@ -1599,8 +1609,8 @@ static const struct bd96801_pmic_data bd96801_data = {
 			.owner = THIS_MODULE,
 		},
 		.irq_desc = {
-				.irqinfo = (struct bd96801_irqinfo *)&buck2_irqinfo[0],
-				.num_irqs = ARRAY_SIZE(buck2_irqinfo),
+			.irqinfo = (struct bd96801_irqinfo *)&buck2_irqinfo[0],
+			.num_irqs = ARRAY_SIZE(buck2_irqinfo),
 		},
 		.init_ranges = bd96801_buck_init_volts,
 		.num_ranges = ARRAY_SIZE(bd96801_buck_init_volts),
@@ -1634,8 +1644,8 @@ static const struct bd96801_pmic_data bd96801_data = {
 			.owner = THIS_MODULE,
 		},
 		.irq_desc = {
-				.irqinfo = (struct bd96801_irqinfo *)&buck3_irqinfo[0],
-				.num_irqs = ARRAY_SIZE(buck3_irqinfo),
+			.irqinfo = (struct bd96801_irqinfo *)&buck3_irqinfo[0],
+			.num_irqs = ARRAY_SIZE(buck3_irqinfo),
 		},
 		.init_ranges = bd96801_buck_init_volts,
 		.num_ranges = ARRAY_SIZE(bd96801_buck_init_volts),
@@ -1669,8 +1679,8 @@ static const struct bd96801_pmic_data bd96801_data = {
 			.owner = THIS_MODULE,
 		},
 		.irq_desc = {
-				.irqinfo = (struct bd96801_irqinfo *)&buck4_irqinfo[0],
-				.num_irqs = ARRAY_SIZE(buck4_irqinfo),
+			.irqinfo = (struct bd96801_irqinfo *)&buck4_irqinfo[0],
+			.num_irqs = ARRAY_SIZE(buck4_irqinfo),
 		},
 		.init_ranges = bd96801_buck_init_volts,
 		.num_ranges = ARRAY_SIZE(bd96801_buck_init_volts),
@@ -1700,8 +1710,8 @@ static const struct bd96801_pmic_data bd96801_data = {
 			.owner = THIS_MODULE,
 		},
 		.irq_desc = {
-				.irqinfo = (struct bd96801_irqinfo *)&ldo5_irqinfo[0],
-				.num_irqs = ARRAY_SIZE(ldo5_irqinfo),
+			.irqinfo = (struct bd96801_irqinfo *)&ldo5_irqinfo[0],
+			.num_irqs = ARRAY_SIZE(ldo5_irqinfo),
 		},
 		.ldo_vol_lvl = BD96801_LDO5_VOL_LVL_REG,
 		.prot_reg_shift = BD96801_MASK_LDO5_OVP_SHIFT,
@@ -1730,8 +1740,8 @@ static const struct bd96801_pmic_data bd96801_data = {
 			.owner = THIS_MODULE,
 		},
 		.irq_desc = {
-				.irqinfo = (struct bd96801_irqinfo *)&ldo6_irqinfo[0],
-				.num_irqs = ARRAY_SIZE(ldo6_irqinfo),
+			.irqinfo = (struct bd96801_irqinfo *)&ldo6_irqinfo[0],
+			.num_irqs = ARRAY_SIZE(ldo6_irqinfo),
 		},
 		.ldo_vol_lvl = BD96801_LDO6_VOL_LVL_REG,
 		.prot_reg_shift = BD96801_MASK_LDO6_OVP_SHIFT,
@@ -1760,8 +1770,8 @@ static const struct bd96801_pmic_data bd96801_data = {
 			.owner = THIS_MODULE,
 		},
 		.irq_desc = {
-				.irqinfo = (struct bd96801_irqinfo *)&ldo7_irqinfo[0],
-				.num_irqs = ARRAY_SIZE(ldo7_irqinfo),
+			.irqinfo = (struct bd96801_irqinfo *)&ldo7_irqinfo[0],
+			.num_irqs = ARRAY_SIZE(ldo7_irqinfo),
 		},
 		.ldo_vol_lvl = BD96801_LDO7_VOL_LVL_REG,
 		.prot_reg_shift = BD96801_MASK_LDO7_OVP_SHIFT,
@@ -1972,7 +1982,7 @@ static int bd96801_probe(struct platform_device *pdev)
 
 			if (!stby)
 				dev_warn(&pdev->dev,
-					 "PMIC not in STBY. Can't change INTB fatality\n");
+					 "PMIC not in STANDBY. Can't change INTB fatality\n");
 
 			/*
 			 * This means we may set the INTB fatality many times
