@@ -92,7 +92,7 @@ static int bd96801_wdt_stop(struct watchdog_device *wdt)
 static const struct watchdog_info bd96801_wdt_info = {
 	.options	= WDIOF_MAGICCLOSE | WDIOF_KEEPALIVEPING |
 			  WDIOF_SETTIMEOUT,
-	.identity	= "bd96801-wdt",
+	.identity	= "BD96801 Watchdog",
 };
 
 static const struct watchdog_ops bd96801_wdt_ops = {
@@ -249,7 +249,6 @@ static int bd96801_set_heartbeat_from_hw(struct wdtbd96801 *w,
 
 	return 0;
 }
-
 
 static int init_wdg_hw(struct wdtbd96801 *w)
 {
