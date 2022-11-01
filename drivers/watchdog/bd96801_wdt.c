@@ -252,38 +252,49 @@ static int bd96801_set_heartbeat_from_hw(struct wdtbd96801 *w,
 
 static int init_wdg_hw(struct wdtbd96801 *w)
 {
-	int ret;
-	struct device_node *np = w->dev->parent->of_node;
 	u32 hw_margin[2];
+	int count, ret;
 	u32 hw_margin_max = BD96801_WDT_DEFAULT_MARGIN, hw_margin_min = 0;
 
-	ret = of_property_read_variable_u32_array(np, "rohm,hw-timeout-ms",
-						  &hw_margin[0], 1, 2);
-	if (ret < 0 && ret != -EINVAL)
-		return ret;
+	count = device_property_count_u32(w->dev->parent, "rohm,hw-timeout-ms");
+	if (count < 0 && count != -EINVAL)
+		return count;
 
-	if (ret == 1)
-		hw_margin_max = hw_margin[0];
+	if (count > 0) {
+		if (count > ARRAY_SIZE(hw_margin))
+			return -EINVAL;
 
-	if (ret == 2) {
-		hw_margin_max = hw_margin[1];
-		hw_margin_min = hw_margin[0];
+		ret = device_property_read_u32_array(w->dev->parent,
+						     "rohm,hw-timeout-ms",
+						     &hw_margin[0], count);
+		if (ret < 0)
+			return ret;
+
+		if (count == 1)
+			hw_margin_max = hw_margin[0];
+
+		if (count == 2) {
+			hw_margin_max = hw_margin[1];
+			hw_margin_min = hw_margin[0];
+		}
 	}
 
 	ret = bd96801_set_wdt_mode(w, hw_margin_max, hw_margin_min);
 	if (ret)
 		return ret;
 
-	ret = of_property_match_string(np, "rohm,wdg-action", "prstb");
-	if (ret > 0) {
+	ret = device_property_match_string(w->dev->parent, "rohm,wdg-action",
+					   "prstb");
+	if (ret >= 0) {
 		ret = regmap_update_bits(w->regmap, BD96801_REG_WD_CONF,
 				 BD96801_WD_ASSERT_MASK,
 				 BD96801_WD_ASSERT_RST);
 		return ret;
 	}
 
-	ret = of_property_match_string(np, "rohm,wdg-action", "intb-only");
-	if (ret > 0) {
+	ret = device_property_match_string(w->dev->parent, "rohm,wdg-action",
+					   "intb-only");
+	if (ret >= 0) {
 		ret = regmap_update_bits(w->regmap, BD96801_REG_WD_CONF,
 				 BD96801_WD_ASSERT_MASK,
 				 BD96801_WD_ASSERT_IRQ);
