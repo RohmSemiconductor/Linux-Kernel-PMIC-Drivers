@@ -327,10 +327,9 @@ static int bd96801_wdt_probe(struct platform_device *pdev)
 						      "always-running");
 
 	ret = regmap_read(w->regmap, BD96801_REG_WD_CONF, &val);
-	if (ret) {
-		dev_err(&pdev->dev, "Failed to get the watchdog state\n");
-		return ret;
-	}
+	if (ret)
+		return dev_err_probe(&pdev->dev, ret,
+				     "Failed to get the watchdog state\n");
 
 	/*
 	 * If the WDG is already enabled we assume it is configured by boot.
