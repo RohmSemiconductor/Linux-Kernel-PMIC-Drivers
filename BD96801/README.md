@@ -4,8 +4,6 @@ The ROHM BD96801 "Scalable PMIC" is an automotive grade PMIC which can scale to 
 
 ## Linux:
 
-A Linux driver for the ROHM BD96801 Power Management IC is under development.
-
 Currently there are two initial reference design releases. Please note that these drivers are intended to be used as a reference design only. No warranty is given and feasibility for target setup must be verified. Drivers are also not fully tested and bugs may be hiding. Evaluate at your own risk.
 
 ### Simple driver:
