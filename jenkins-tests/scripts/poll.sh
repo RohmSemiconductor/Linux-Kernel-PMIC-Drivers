@@ -6,7 +6,7 @@ source $DIR/configs/jenkins-server-configs || exit -1
 
 function end()
 {
-	rm -rf .mva_jenkins_polling
+	rm -rf $RUNCFG_JENKINS_SCRIPT_PATH/.mva_jenkins_polling
 	echo "$*"
 }
 
@@ -18,17 +18,38 @@ function end()
 # silently agree 80% is enough ^^;
 #
 cd $RUNCFG_JENKINS_SCRIPT_PATH
-if [[ -f .mva_jenkins_polling ]]
+if [[ -f $RUNCFG_JENKINS_SCRIPT_PATH/.mva_jenkins_polling ]]
 then
 	echo "Polling already ongoing"
-	cat .mva_jenkins_polling
+	cat $RUNCFG_JENKINS_SCRIPT_PATH/.mva_jenkins_polling
 	exit -1
 fi
 
-date > .mva_jenkins_polling
+date > $RUNCFG_JENKINS_SCRIPT_PATH/.mva_jenkins_polling
 
 git fetch $CFG_ROHM_PMIC_GIT
 
-git rev-parse $CFG_ROHM_PMIC_GIT/$CFG_ROHM_PMIC_GIT_JENKINS_BRANCH
+COMMIT=`git rev-parse $CFG_ROHM_PMIC_GIT/$CFG_ROHM_PMIC_GIT_JENKINS_BRANCH` || end "git rev-parse failed"
 
+echo $COMMIT
+
+if [ -f $RUNCFG_JENKINS_SCRIPT_PATH/.prev_commit ]
+then
+	PREV_COMMIT=`cat $RUNCFG_JENKINS_SCRIPT_PATH/.prev_commit`
+fi
+
+echo "Comparing commit '$COMMIT' to prev '$PREV_COMMIT'"
+
+if [ "$PREV_COMMIT" == "$COMMIT" ]
+then
+	echo "no changes"
+	RET=0
+else
+	echo "yes changes"
+	RET=1
+fi
+
+echo "$COMMIT" > $RUNCFG_JENKINS_SCRIPT_PATH/.prev_commit
 rm -rf .mva_jenkins_polling
+
+exit $RET
