@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 //
-// Copyright (C) 2022 ROHM Semiconductors
+// Copyright (C) 2023 ROHM Semiconductors
 //
 // ROHM BD96801 PMIC driver
 
@@ -14,7 +14,19 @@
 #include <linux/regmap.h>
 #include <linux/types.h>
 
-static const struct resource regulator_errb_irqs[] = {
+struct bd968xx_chip_data {
+	const struct resource *errb_irqs;
+	const struct resource *intb_irqs;
+	int num_errb_irqs;
+	int num_intb_irqs;
+	const struct regmap_irq_chip *errb_irq_chip;
+	const struct regmap_irq_chip *intb_irq_chip;
+	const struct regmap_config *regmap_config;
+	struct mfd_cell *mfd_cells;
+	int num_mfd_cells;
+};
+
+static const struct resource bd96801_reg_errb_irqs[] = {
 	DEFINE_RES_IRQ_NAMED(BD96801_OTP_ERR_STAT, "bd96801-otp-err"),
 	DEFINE_RES_IRQ_NAMED(BD96801_DBIST_ERR_STAT, "bd96801-dbist-err"),
 	DEFINE_RES_IRQ_NAMED(BD96801_EEP_ERR_STAT, "bd96801-eep-err"),
@@ -69,7 +81,7 @@ static const struct resource regulator_errb_irqs[] = {
 	DEFINE_RES_IRQ_NAMED(BD96801_LDO7_SHDN_ERR_STAT, "bd96801-ldo7-shdn-err"),
 };
 
-static const struct resource regulator_intb_irqs[] = {
+static const struct resource bd96801_reg_intb_irqs[] = {
 	DEFINE_RES_IRQ_NAMED(BD96801_TW_STAT, "bd96801-core-thermal"),
 
 	DEFINE_RES_IRQ_NAMED(BD96801_BUCK1_OCPH_STAT, "bd96801-buck1-overcurr-h"),
@@ -276,7 +288,7 @@ static const struct regmap_irq bd96801_intb_irqs[] = {
 	REGMAP_IRQ_REG(BD96801_LDO7_UVD_STAT, 7, BD96801_LDO_UVD_STAT_MASK),
 };
 
-static struct regmap_irq_chip bd96801_irq_chip_errb = {
+static const struct regmap_irq_chip bd96801_irq_chip_errb = {
 	.name = "bd96801-irq-errb",
 	.main_status = BD96801_REG_INT_MAIN,
 	.num_main_regs = 1,
@@ -291,7 +303,7 @@ static struct regmap_irq_chip bd96801_irq_chip_errb = {
 	.sub_reg_offsets = &errb_sub_irq_offsets[0],
 };
 
-static struct regmap_irq_chip bd96801_irq_chip_intb = {
+static const struct regmap_irq_chip bd96801_irq_chip_intb = {
 	.name = "bd96801-irq-intb",
 	.main_status = BD96801_REG_INT_MAIN,
 	.num_main_regs = 1,
@@ -312,14 +324,32 @@ static const struct regmap_config bd96801_regmap_config = {
 	.cache_type = REGCACHE_RBTREE,
 };
 
+static const struct bd968xx_chip_data bd96801_chip_data = {
+	.errb_irqs = bd96801_reg_errb_irqs,
+	.intb_irqs = bd96801_reg_intb_irqs,
+	.num_errb_irqs = ARRAY_SIZE(bd96801_reg_errb_irqs),
+	.num_intb_irqs = ARRAY_SIZE(bd96801_reg_intb_irqs),
+	.errb_irq_chip = &bd96801_irq_chip_errb,
+	.intb_irq_chip = &bd96801_irq_chip_intb,
+	.regmap_config = &bd96801_regmap_config,
+	.mfd_cells = bd96801_mfd_cells,
+	.num_mfd_cells = ARRAY_SIZE(bd96801_mfd_cells),
+};
+
 static int bd96801_i2c_probe(struct i2c_client *i2c)
 {
-	int i, ret, intb_irq, errb_irq, num_regu_irqs, num_intb, num_errb = 0;
+	int i, ret, intb_irq, errb_irq, num_regu_irqs, num_errb = 0;
 	struct regmap_irq_chip_data *intb_irq_data, *errb_irq_data;
 	struct irq_domain *intb_domain, *errb_domain;
 	const struct fwnode_handle *fwnode;
 	struct resource *regulator_res;
 	struct regmap *regmap;
+	static const struct bd968xx_chip_data *cd;
+
+
+	cd = device_get_match_data(&i2c->dev);
+	if (!cd)
+		return -ENODEV;
 
 	fwnode = dev_fwnode(&i2c->dev);
 	if (!fwnode) {
@@ -341,31 +371,29 @@ static int bd96801_i2c_probe(struct i2c_client *i2c)
 		return -EINVAL;
 	}
 
-	num_intb =  ARRAY_SIZE(regulator_intb_irqs);
-
 	/* ERRB may be omitted if processor is powered by the PMIC */
 	errb_irq = fwnode_irq_get_byname(fwnode, "errb");
-	if (errb_irq < 0)
-		errb_irq = 0;
+	if (errb_irq == -EPROBE_DEFER)
+		return errb_irq;
 
-	if (errb_irq)
-		num_errb = ARRAY_SIZE(regulator_errb_irqs);
+	if (errb_irq > 0)
+		num_errb = cd->num_errb_irqs;
 
-	num_regu_irqs = num_intb + num_errb;
+	num_regu_irqs = cd->num_intb_irqs + num_errb;
 
 	regulator_res = kcalloc(num_regu_irqs, sizeof(*regulator_res),
 				GFP_KERNEL);
 	if (!regulator_res)
 		return -ENOMEM;
 
-	regmap = devm_regmap_init_i2c(i2c, &bd96801_regmap_config);
+	regmap = devm_regmap_init_i2c(i2c, cd->regmap_config);
 	if (IS_ERR(regmap)) {
 		ret = dev_err_probe(&i2c->dev, PTR_ERR(regmap),
 				    "regmap initialization failed\n");
 		goto free_out;
 	}
 	ret = devm_regmap_add_irq_chip(&i2c->dev, regmap, intb_irq,
-				       IRQF_ONESHOT, 0, &bd96801_irq_chip_intb,
+				       IRQF_ONESHOT, 0, cd->intb_irq_chip,
 				       &intb_irq_data);
 	if (ret) {
 		dev_err_probe(&i2c->dev, ret, "Failed to add INTB irq_chip\n");
@@ -384,10 +412,10 @@ static int bd96801_i2c_probe(struct i2c_client *i2c)
 	 */
 	irq_domain_update_bus_token(intb_domain, DOMAIN_BUS_WIRED);
 
-	for (i = 0; i < num_intb; i++) {
+	for (i = 0; i < cd->num_intb_irqs; i++) {
 		struct resource *res = &regulator_res[i];
 
-		*res = regulator_intb_irqs[i];
+		*res = cd->intb_irqs[i];
 		res->start = res->end = irq_create_mapping(intb_domain,
 							    res->start);
 	}
@@ -395,7 +423,7 @@ static int bd96801_i2c_probe(struct i2c_client *i2c)
 	if (num_errb) {
 		ret = devm_regmap_add_irq_chip(&i2c->dev, regmap, errb_irq,
 					       IRQF_ONESHOT, 0,
-					       &bd96801_irq_chip_errb,
+					       cd->intb_irq_chip,
 					       &errb_irq_data);
 		if (ret) {
 			dev_err_probe(&i2c->dev, ret,
@@ -406,19 +434,18 @@ static int bd96801_i2c_probe(struct i2c_client *i2c)
 		errb_domain = regmap_irq_get_domain(errb_irq_data);
 
 		for (i = 0; i < num_errb; i++) {
-			struct resource *res = &regulator_res[num_intb + i];
+			struct resource *res = &regulator_res[cd->num_intb_irqs + i];
 
-			*res = regulator_errb_irqs[i];
+			*res = cd->errb_irqs[i];
 			res->start = res->end = irq_create_mapping(errb_domain,
 								   res->start);
 		}
 	}
 
-	bd96801_mfd_cells[REGULATOR_CELL].resources = regulator_res;
-	bd96801_mfd_cells[REGULATOR_CELL].num_resources = num_regu_irqs;
+	cd->mfd_cells[REGULATOR_CELL].resources = regulator_res;
+	cd->mfd_cells[REGULATOR_CELL].num_resources = num_regu_irqs;
 	ret = devm_mfd_add_devices(&i2c->dev, PLATFORM_DEVID_AUTO,
-				   bd96801_mfd_cells,
-				   ARRAY_SIZE(bd96801_mfd_cells), NULL, 0, NULL);
+				   cd->mfd_cells, cd->num_mfd_cells, NULL, 0, NULL);
 	if (ret)
 		dev_err_probe(&i2c->dev, ret, "Failed to create subdevices\n");
 
@@ -431,6 +458,7 @@ free_out:
 static const struct of_device_id bd96801_of_match[] = {
 	{
 		.compatible = "rohm,bd96801",
+		.data = &bd96801_chip_data,
 	},
 	{ }
 };
