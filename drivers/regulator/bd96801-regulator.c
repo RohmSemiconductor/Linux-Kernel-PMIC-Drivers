@@ -325,6 +325,7 @@ struct bd96801_pmic_data {
 	struct bd96801_regulator_data regulator_data[BD96801_NUM_REGULATORS];
 	struct regmap *regmap;
 	int fatal_ind;
+	int num_regulators;
 };
 
 /*
@@ -497,47 +498,31 @@ static int set_ovp_limit(struct regulator_dev *rdev, int lim_uV)
 				  lim << shift);
 }
 
-/*
- * Supported detection limits for BUCKs are absolute values, 9mV, 15mV and
- * 20mV. The limits for LDOs depend on initial voltage register value. Scale
- * limit to what is supported by HW.
- */
-static int get_xvd_limits(struct regulator_dev *rdev, int *lim_uV, int *reg)
+static int get_ldo_xvd_limits(struct device *dev, struct bd96801_pmic_data *pdata,
+			      struct bd96801_regulator_data *rdata,
+			      int *lim_uV, int *reg)
 {
-	int ret, regu_xvd_limits[3] = { 9000, 15000, 20000 };
-	struct bd96801_regulator_data *rdata;
-	struct bd96801_pmic_data *pdata;
-	struct device *dev;
+	int ret, regu_xvd_limits[3];
+	int val;
 
-	dev = rdev_get_dev(rdev);
-	rdata = container_of(rdev->desc, struct bd96801_regulator_data, desc);
-	pdata = rdev_get_drvdata(rdev);
+	ret = regmap_read(pdata->regmap, rdata->ldo_vol_lvl, &val);
+	if (ret)
+		return ret;
 
-	dev_dbg(dev, "OVD limit %u requested\n", *lim_uV);
-
-	if (rdata->ldo_vol_lvl) {
-		int val;
-
-		ret = regmap_read(pdata->regmap, rdata->ldo_vol_lvl, &val);
-		if (ret)
-			return ret;
-
-		if (val > 15) {
-			if (val < 38) {
-				regu_xvd_limits[0] = 16000;
-				regu_xvd_limits[1] = 30000;
-				regu_xvd_limits[2] = 40000;
-			} else {
-				regu_xvd_limits[0] = 36000;
-				regu_xvd_limits[1] = 60000;
-				regu_xvd_limits[2] = 80000;
-			}
+	if (val > 15) {
+		if (val < 38) {
+			regu_xvd_limits[0] = 16000;
+			regu_xvd_limits[1] = 30000;
+			regu_xvd_limits[2] = 40000;
+		} else {
+			regu_xvd_limits[0] = 36000;
+			regu_xvd_limits[1] = 60000;
+			regu_xvd_limits[2] = 80000;
 		}
 	}
-	/*  LDO's have different limits */
+
 	if (*lim_uV < regu_xvd_limits[0]) {
-		dev_warn(dev, "Unsupported UVD limit %d\n",
-			       *lim_uV);
+		dev_warn(dev, "Unsupported LDO UVD limit %d\n", *lim_uV);
 		*lim_uV = regu_xvd_limits[0];
 		*reg = BD96801_PROT_LIMIT_LOW;
 	} else if (*lim_uV < regu_xvd_limits[1]) {
@@ -550,7 +535,47 @@ static int get_xvd_limits(struct regulator_dev *rdev, int *lim_uV, int *reg)
 		*lim_uV = regu_xvd_limits[1];
 		*reg = BD96801_PROT_LIMIT_HI;
 	}
-	dev_info(dev, "Using UVD limit %u\n", *lim_uV);
+	dev_info(dev, "LDO using xVD limit %u\n", *lim_uV);
+
+	return 0;
+}
+
+/*
+ * Supported detection limits for BUCKs are absolute values, (9mV not supported
+ * after DS2), 15mV and 20mV. The limits for LDOs depend on initial voltage
+ * register value. Scale limit to what is supported by HW.
+ */
+static int get_xvd_limits(struct regulator_dev *rdev, int *lim_uV, int *reg)
+{
+	struct bd96801_regulator_data *rdata;
+	struct bd96801_pmic_data *pdata;
+	struct device *dev;
+
+	dev = rdev_get_dev(rdev);
+	pdata = rdev_get_drvdata(rdev);
+	rdata = container_of(rdev->desc, struct bd96801_regulator_data, desc);
+
+	dev_dbg(dev, "xVD limit %u requested\n", *lim_uV);
+
+	if (rdata->ldo_vol_lvl)
+		return get_ldo_xvd_limits(dev, pdata, rdata, lim_uV, reg);
+
+	/*
+	 * After the DS2 IC spec version setting 9 mV limit for bucks has been
+	 * marked as 'forbidden'
+	 */
+	if (*lim_uV < 15000)
+		dev_warn(dev, "Unsupported BUCK xVD limit %d\n", *lim_uV);
+
+	if (*lim_uV < 20000) {
+		*lim_uV = 15000;
+		*reg = BD96801_PROT_LIMIT_MID;
+	} else {
+		*lim_uV = 20000;
+		*reg = BD96801_PROT_LIMIT_HI;
+	}
+
+	dev_dbg(dev, "Using xVD limit %u\n", *lim_uV);
 
 	return 0;
 }
@@ -744,6 +769,9 @@ static int bd96801_set_uvp(struct regulator_dev *rdev, int lim_uV, int severity,
 
 /* 1.5 A ... 3 A step 0.5 A*/
 static const int bd96801_buck12_ocp[] = { 1500000, 2000000, 2500000, 3000000 };
+
+/* The extension PMIC supports protections from 3.5 A to 10 A */
+static const int bd96802_buck12_ocp[] = { 3500000, 6000000, 7500000, 10000000 };
 
 /* 3 A ... 6 A *step 1 A */
 static const int bd96801_buck34_ocp[] = { 3000000, 4000000, 5000000, 6000000 };
@@ -1126,7 +1154,7 @@ static int bd96801_buck_set_tw(struct regulator_dev *rdev, int lim, int severity
 	 */
 	if (lim && (lim < BD96801_TW_MIN_KELVIN ||
 		      lim > BD96801_TW_MAX_KELVIN)) {
-		dev_err(dev, "Unsupported thermal protection limit\n");
+		dev_err(dev, "Unsupported thermal protection limit %u\n", lim);
 		return -EINVAL;
 	}
 
@@ -1548,6 +1576,83 @@ static int bd96801_walk_regulator_dt(struct device *dev, struct regmap *regmap,
  * case later. What we can easly do for preparing is to not use static global
  * data for regulators though.
  */
+static const struct bd96801_pmic_data bd96802_data = {
+	.regulator_data = {
+	{
+		.desc = {
+			.name = "buck1",
+			.of_match = of_match_ptr("BUCK1"),
+			.regulators_node = of_match_ptr("regulators"),
+			.id = BD96801_BUCK1,
+			.ops = &bd96801_buck_ops,
+			.type = REGULATOR_VOLTAGE,
+			.linear_ranges = bd96801_tune_volts,
+			.n_linear_ranges = ARRAY_SIZE(bd96801_tune_volts),
+			.n_voltages = BD96801_BUCK_VOLTS,
+			.enable_reg = BD96801_REG_ENABLE,
+			.enable_mask = BD96801_BUCK1_EN_MASK,
+			.enable_is_inverted = true,
+			.vsel_reg = BD96801_BUCK1_VSEL_REG,
+			.vsel_mask = BD96801_BUCK_VSEL_MASK,
+			.ramp_reg = BD96801_BUCK1_VSEL_REG,
+			.ramp_mask = BD96801_MASK_RAMP_DELAY,
+			.ramp_delay_table = &buck_ramp_table[0],
+			.n_ramp_values = ARRAY_SIZE(buck_ramp_table),
+			.owner = THIS_MODULE,
+		},
+		.init_ranges = bd96801_buck_init_volts,
+		.num_ranges = ARRAY_SIZE(bd96801_buck_init_volts),
+		.irq_desc = {
+			.irqinfo = (struct bd96801_irqinfo *)&buck1_irqinfo[0],
+			.num_irqs = ARRAY_SIZE(buck1_irqinfo),
+		},
+		.prot_reg_shift = BD96801_MASK_BUCK1_OVP_SHIFT,
+		.ovp_reg = BD96801_REG_BUCK_OVP,
+		.ovd_reg = BD96801_REG_BUCK_OVD,
+		.ocp_table = bd96802_buck12_ocp,
+		.ocp_reg = BD96801_REG_BUCK1_OCP,
+		.ocp_shift = BD96801_MASK_BUCK1_OCP_SHIFT,
+	},
+	{
+		.desc = {
+			.name = "buck2",
+			.of_match = of_match_ptr("BUCK2"),
+			.regulators_node = of_match_ptr("regulators"),
+			.id = BD96801_BUCK2,
+			.ops = &bd96801_buck_ops,
+			.type = REGULATOR_VOLTAGE,
+			.linear_ranges = bd96801_tune_volts,
+			.n_linear_ranges = ARRAY_SIZE(bd96801_tune_volts),
+			.n_voltages = BD96801_BUCK_VOLTS,
+			.enable_reg = BD96801_REG_ENABLE,
+			.enable_mask = BD96801_BUCK2_EN_MASK,
+			.enable_is_inverted = true,
+			.vsel_reg = BD96801_BUCK2_VSEL_REG,
+			.vsel_mask = BD96801_BUCK_VSEL_MASK,
+			.ramp_reg = BD96801_BUCK2_VSEL_REG,
+			.ramp_mask = BD96801_MASK_RAMP_DELAY,
+			.ramp_delay_table = &buck_ramp_table[0],
+			.n_ramp_values = ARRAY_SIZE(buck_ramp_table),
+			.owner = THIS_MODULE,
+		},
+		.irq_desc = {
+			.irqinfo = (struct bd96801_irqinfo *)&buck2_irqinfo[0],
+			.num_irqs = ARRAY_SIZE(buck2_irqinfo),
+		},
+		.init_ranges = bd96801_buck_init_volts,
+		.num_ranges = ARRAY_SIZE(bd96801_buck_init_volts),
+		.prot_reg_shift = BD96801_MASK_BUCK2_OVP_SHIFT,
+		.ovp_reg = BD96801_REG_BUCK_OVP,
+		.ovd_reg = BD96801_REG_BUCK_OVD,
+		.ocp_table = bd96802_buck12_ocp,
+		.ocp_reg = BD96801_REG_BUCK2_OCP,
+		.ocp_shift = BD96801_MASK_BUCK2_OCP_SHIFT,
+	},
+	},
+	.fatal_ind = -1,
+	.num_regulators = 2,
+};
+
 static const struct bd96801_pmic_data bd96801_data = {
 	.regulator_data = {
 	{
@@ -1782,21 +1887,28 @@ static const struct bd96801_pmic_data bd96801_data = {
 	},
 	},
 	.fatal_ind = -1,
+	.num_regulators = 7,
 };
 
-static int initialize_pmic_data(struct device *dev,
+static int initialize_pmic_data(struct platform_device *pdev,
 				struct bd96801_pmic_data *pdata)
 {
+	struct bd96801_pmic_data *pdata_template;
+	struct device *dev = &pdev->dev;
 	int r, i;
 
-	*pdata = bd96801_data;
+	pdata_template = (struct bd96801_pmic_data *)platform_get_device_id(pdev)->driver_data;
+	if (!pdata_template)
+		return -ENODEV;
+
+	*pdata = *pdata_template;
 
 	/*
 	 * Allocate and initialize IRQ data for all of the regulators. We
 	 * wish to modify IRQ information independently for each driver
 	 * instance.
 	 */
-	for (r = 0; r < BD96801_NUM_REGULATORS; r++) {
+	for (r = 0; r < pdata->num_regulators; r++) {
 		const struct bd96801_irqinfo *template;
 		struct bd96801_irqinfo *new;
 		int num_infos;
@@ -1922,7 +2034,7 @@ static int bd96801_probe(struct platform_device *pdev)
 	if (!pdata)
 		return -ENOMEM;
 
-	if (initialize_pmic_data(&pdev->dev, pdata))
+	if (initialize_pmic_data(pdev, pdata))
 		return -ENOMEM;
 
 	pdata->regmap = dev_get_regmap(parent, NULL);
@@ -1952,11 +2064,11 @@ static int bd96801_probe(struct platform_device *pdev)
 	}
 
 	ret = bd96801_walk_regulator_dt(&pdev->dev, pdata->regmap, rdesc,
-					BD96801_NUM_REGULATORS);
+					pdata->num_regulators);
 	if (ret)
 		return ret;
 
-	for (i = 0; i < ARRAY_SIZE(pdata->regulator_data); i++) {
+	for (i = 0; i < pdata->num_regulators; i++) {
 		struct regulator_dev *rdev;
 		struct regulator_dev *rdev_arr[1];
 		struct bd96801_irq_desc *idesc = &rdesc[i].irq_desc;
@@ -1970,6 +2082,7 @@ static int bd96801_probe(struct platform_device *pdev)
 				rdesc[i].desc.name);
 			return PTR_ERR(rdev);
 		}
+
 		all_rdevs[i] = rdev;
 		if (pdata->fatal_ind) {
 			stby = bd96801_in_stby(pdata->regmap);
@@ -2086,16 +2199,24 @@ static int bd96801_probe(struct platform_device *pdev)
 
 	if (use_errb)
 		return bd96801_global_errb_irqs(pdev, all_rdevs,
-						ARRAY_SIZE(all_rdevs));
+						pdata->num_regulators);
 
 	return 0;
 }
 
+static const struct platform_device_id bd96801_pmic_id[] = {
+	{ "bd96801-pmic", (kernel_ulong_t)&bd96801_data },
+	{ "bd96802-pmic", (kernel_ulong_t)&bd96802_data },
+	{ },
+};
+MODULE_DEVICE_TABLE(platform, bd96801_pmic_id);
+
 static struct platform_driver bd96801_regulator = {
 	.driver = {
-		.name = "bd96801-pmic"
+		.name = "bd96801-regulator"
 	},
 	.probe = bd96801_probe,
+	.id_table = bd96801_pmic_id,
 };
 
 module_platform_driver(bd96801_regulator);
