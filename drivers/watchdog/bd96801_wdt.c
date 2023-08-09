@@ -399,6 +399,7 @@ static int bd96801_wdt_probe(struct platform_device *pdev)
 
 static const struct platform_device_id bd96801_wdt_id[] = {
 	{ "bd96801-wdt", },
+	{ "bd96802-wdt", },
 	{ }
 };
 MODULE_DEVICE_TABLE(platform, bd96801_wdt_id);
@@ -413,5 +414,5 @@ static struct platform_driver bd96801_wdt = {
 module_platform_driver(bd96801_wdt);
 
 MODULE_AUTHOR("Matti Vaittinen <matti.vaittinen@fi.rohmeurope.com>");
-MODULE_DESCRIPTION("BD96801 watchdog driver");
+MODULE_DESCRIPTION("ROHM BD96801/BD96802 watchdog driver");
 MODULE_LICENSE("GPL");
