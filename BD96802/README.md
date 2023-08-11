@@ -4,17 +4,8 @@ The ROHM BD96802 "Scalable PMIC" is an automotive grade PMIC which can scale to 
 
 ## Linux:
 
-Currently there is a initial reference driver for Linux available. Please note that the driver is intended to be used as a reference design only. No warranty is given and feasibility for target setup must be verified. Driver is also not fully tested and bugs may be hiding. Evaluate at your own risk.
-
-### Simple driver:
-
-This patch series brings initial and hopefully easy to understand support for configuring BUCK voltages and feeding the watchdog. All configurations which require the PMIC to be in STANDBY mode are unsupported. This includes the safety-limits. The INTB interrupts from the pre-programmed limits are to be handled though. ERRB interrupts are ignored by the driver because thet are likely to lead the SoC reset. Also the watchdog driver is included.
-
-The alpha version is tagged in our Linux git tree as tag [scalable-bd96802-unstable-alpha-v0.01](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/releases/tag/scalable-bd96802-unstable-alpha-v0.01).
-
-This driver has support for
-* Regulators
-* Watchdog
+Currently there is a initial reference driver for Linux available tagged in our Linux git tree as tag [scalable-bd96802-unstable-alpha-v0.01](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/releases/tag/scalable-bd96802-unstable-alpha-v0.01).
+Please note that the driver is intended to be used as a reference design only. No warranty is given and feasibility for target setup must be verified. Driver is also not fully tested and bugs may be hiding. Evaluate at your own risk.
 
 The driver implements same features as the experimental version of BD96801 driver. Below is a summary copied from the BD96801 notes:
 
@@ -57,5 +48,9 @@ with OCP and thermal protection.
 
 Thermal limits can't be configured. TSD is fixed to 175 Celsius, and
 thermal warning is fixed close to 140 Celsius.
+
+This driver has support for
+* Regulators
+* Watchdog
 
 Bugs from this version can be reported in GitHub issue tracker or to matti.vaittinen@fi.rohmeurope.com
