@@ -53,4 +53,4 @@ This driver has support for
 * Regulators
 * Watchdog
 
-Bugs from this version can be reported in GitHub issue tracker or to matti.vaittinen@fi.rohmeurope.com
+Bugs from this version can be reported in GitHub [issue tracker](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/issues) or to matti.vaittinen@fi.rohmeurope.com
