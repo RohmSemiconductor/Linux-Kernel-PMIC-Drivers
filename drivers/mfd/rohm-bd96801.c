@@ -9,6 +9,7 @@
 #include <linux/mfd/core.h>
 #include <linux/mfd/rohm-bd96801.h>
 #include <linux/mfd/rohm-bd96802.h>
+#include <linux/mfd/rohm-bd96811.h>
 #include <linux/mfd/rohm-generic.h>
 #include <linux/module.h>
 #include <linux/property.h>
@@ -179,6 +180,7 @@ static const struct resource bd96802_reg_intb_irqs[] = {
 enum {
 	WDG_CELL = 0,
 	REGULATOR_CELL,
+	GPIO_CELL,
 };
 
 static struct mfd_cell bd96801_mfd_cells[] = {
@@ -189,6 +191,12 @@ static struct mfd_cell bd96801_mfd_cells[] = {
 static struct mfd_cell bd96802_mfd_cells[] = {
 	[WDG_CELL] = { .name = "bd96802-wdt", },
 	[REGULATOR_CELL] = { .name = "bd96802-pmic", },
+};
+
+static struct mfd_cell bd96811_mfd_cells[] = {
+	[WDG_CELL] = { .name = "bd96811-wdt", },
+	[REGULATOR_CELL] = { .name = "bd96811-pmic", },
+	[GPIO_CELL] = { .name = "bd96811-gpio", },
 };
 
 static const struct regmap_range bd96801_volatile_ranges[] = {
@@ -220,6 +228,16 @@ static const struct regmap_range bd96802_volatile_ranges[] = {
 	regmap_reg_range(BD96801_REG_BUCK_OVP, BD96801_REG_BOOT_OVERTIME),
 };
 
+static const struct regmap_range bd96811_volatile_ranges[] = {
+	/* Status regs */
+	regmap_reg_range(BD96811_REG_DIN_STAT, BD96811_REG_PMIC_STATE),
+	regmap_reg_range(BD96811_REG_WD_FEED, BD96811_REG_WD_FAILCOUNT),
+	regmap_reg_range(BD96811_REG_WD_ASK, BD96811_REG_WD_ASK),
+	regmap_reg_range(BD96811_REG_WD_STATUS, BD96811_REG_WD_STATUS),
+	regmap_reg_range(BD96811_REG_ERR_CNT, BD96811_REG_LDO5_STAT),
+	regmap_reg_range(BD96811_REG_ADC1_VAL, BD96811_REG_ADC0_VAL),
+};
+
 static const struct regmap_access_table bd96801_volatile_regs = {
 	.yes_ranges = bd96801_volatile_ranges,
 	.n_yes_ranges = ARRAY_SIZE(bd96801_volatile_ranges),
@@ -228,6 +246,11 @@ static const struct regmap_access_table bd96801_volatile_regs = {
 static const struct regmap_access_table bd96802_volatile_regs = {
 	.yes_ranges = bd96802_volatile_ranges,
 	.n_yes_ranges = ARRAY_SIZE(bd96802_volatile_ranges),
+};
+
+static const struct regmap_access_table bd96811_volatile_regs = {
+	.yes_ranges = bd96811_volatile_ranges,
+	.n_yes_ranges = ARRAY_SIZE(bd96811_volatile_ranges),
 };
 
 /*
@@ -535,6 +558,13 @@ static const struct regmap_config bd96802_regmap_config = {
 	.cache_type = REGCACHE_RBTREE,
 };
 
+static const struct regmap_config bd96811_regmap_config = {
+	.reg_bits = 8,
+	.val_bits = 8,
+	.volatile_table = &bd96811_volatile_regs,
+	.cache_type = REGCACHE_RBTREE,
+};
+
 static const struct bd968xx_chip_data bd96801_chip_data = {
 	.errb_irqs = bd96801_reg_errb_irqs,
 	.intb_irqs = bd96801_reg_intb_irqs,
@@ -563,6 +593,14 @@ static struct bd968xx_chip_data bd96802_chip_data = {
 	.unlock_val = BD96801_UNLOCK,
 };
 
+static struct bd968xx_chip_data bd96811_chip_data = {
+	.regmap_config = &bd96811_regmap_config,
+	.mfd_cells = bd96811_mfd_cells,
+	.num_mfd_cells = ARRAY_SIZE(bd96811_mfd_cells),
+	.unlock_reg = BD96811_LOCK_REG,
+	.unlock_val = BD96811_UNLOCK,
+};
+
 static int bd96801_i2c_probe(struct i2c_client *i2c)
 {
 	int i, ret, intb_irq, errb_irq, num_regu_irqs, num_errb = 0;
@@ -585,105 +623,106 @@ static int bd96801_i2c_probe(struct i2c_client *i2c)
 		return -EINVAL;
 	}
 
-	intb_irq = fwnode_irq_get_byname(fwnode, "intb");
-	if (intb_irq < 0)
-		return dev_err_probe(&i2c->dev, intb_irq,
-				     "No INTB IRQ configured\n");
-
-	/*
-	 * TODO: drop this when fwnode_irq_get_byname() return-value is fixed
-	 * https://lore.kernel.org/all/cover.1666710197.git.mazziesaccount@gmail.com/
-	 */
-	if (!intb_irq) {
-		dev_err(&i2c->dev, "No INTB IRQ configured\n");
-		return -EINVAL;
-	}
-
-	/* ERRB may be omitted if processor is powered by the PMIC */
-	errb_irq = fwnode_irq_get_byname(fwnode, "errb");
-	if (errb_irq == -EPROBE_DEFER)
-		return errb_irq;
-
-	if (errb_irq > 0)
-		num_errb = cd->num_errb_irqs;
-
-	num_regu_irqs = cd->num_intb_irqs + num_errb;
-
-	regulator_res = kcalloc(num_regu_irqs, sizeof(*regulator_res),
-				GFP_KERNEL);
-	if (!regulator_res)
-		return -ENOMEM;
-
 	regmap = devm_regmap_init_i2c(i2c, cd->regmap_config);
-	if (IS_ERR(regmap)) {
-		ret = dev_err_probe(&i2c->dev, PTR_ERR(regmap),
-				    "regmap initialization failed\n");
-		goto free_out;
-	}
+	if (IS_ERR(regmap))
+		return dev_err_probe(&i2c->dev, PTR_ERR(regmap),
+				     "regmap initialization failed\n");
 
 	ret = regmap_write(regmap, cd->unlock_reg, cd->unlock_val);
 	if (ret)
 		return dev_err_probe(&i2c->dev, ret, "Can't unlock PMIC\n");
 
-	ret = devm_regmap_add_irq_chip(&i2c->dev, regmap, intb_irq,
-				       IRQF_ONESHOT, 0, cd->intb_irq_chip,
-				       &intb_irq_data);
-	if (ret) {
-		dev_err_probe(&i2c->dev, ret, "Failed to add INTB irq_chip\n");
-		goto free_out;
-	}
+	if (cd->num_intb_irqs) {
+		intb_irq = fwnode_irq_get_byname(fwnode, "intb");
+		if (intb_irq < 0)
+			return dev_err_probe(&i2c->dev, intb_irq,
+				     "No INTB IRQ configured\n");
 
-	/*
-	 * MFD core code is built to handle only one IRQ domain. BD96801
-	 * has two domains so we do IRQ mapping here and provide the
-	 * already mapped IRQ numbers to sub-devices.
-	 */
-	intb_domain = regmap_irq_get_domain(intb_irq_data);
-	/*
-	 * Dirty hack(?) to avoid naming conflict in the debugfs.
-	 * TODO: Is there a proper fix?
-	 */
-	irq_domain_update_bus_token(intb_domain, DOMAIN_BUS_WIRED);
+		/*
+		 * TODO: drop this when fwnode_irq_get_byname() return-value is fixed
+		 * https://lore.kernel.org/all/cover.1666710197.git.mazziesaccount@gmail.com/
+		 */
+		if (!intb_irq) {
+			dev_err(&i2c->dev, "No INTB IRQ configured\n");
+			return -EINVAL;
+		}
 
-	for (i = 0; i < cd->num_intb_irqs; i++) {
-		struct resource *res = &regulator_res[i];
+		/* ERRB may be omitted if processor is powered by the PMIC */
+		errb_irq = fwnode_irq_get_byname(fwnode, "errb");
+		if (errb_irq == -EPROBE_DEFER)
+			return errb_irq;
 
-		*res = cd->intb_irqs[i];
-		res->start = res->end = irq_create_mapping(intb_domain,
-							    res->start);
-	}
+		if (errb_irq > 0)
+			num_errb = cd->num_errb_irqs;
 
-	if (num_errb) {
-		ret = devm_regmap_add_irq_chip(&i2c->dev, regmap, errb_irq,
-					       IRQF_ONESHOT, 0,
-					       cd->intb_irq_chip,
-					       &errb_irq_data);
+		num_regu_irqs = cd->num_intb_irqs + num_errb;
+
+		regulator_res = kcalloc(num_regu_irqs, sizeof(*regulator_res),
+				GFP_KERNEL);
+		if (!regulator_res)
+			return -ENOMEM;
+
+		ret = devm_regmap_add_irq_chip(&i2c->dev, regmap, intb_irq,
+					       IRQF_ONESHOT, 0, cd->intb_irq_chip,
+					       &intb_irq_data);
 		if (ret) {
-			dev_err_probe(&i2c->dev, ret,
-				      "Failed to add ERRB (%d) irq_chip\n",
-				      errb_irq);
+			dev_err_probe(&i2c->dev, ret, "Failed to add INTB irq_chip\n");
 			goto free_out;
 		}
-		errb_domain = regmap_irq_get_domain(errb_irq_data);
 
-		for (i = 0; i < num_errb; i++) {
-			struct resource *res = &regulator_res[cd->num_intb_irqs + i];
+		/*
+		 * MFD core code is built to handle only one IRQ domain. BD96801
+		 * has two domains so we do IRQ mapping here and provide the
+		 * already mapped IRQ numbers to sub-devices.
+		 */
+		intb_domain = regmap_irq_get_domain(intb_irq_data);
+		/*
+		 * Dirty hack(?) to avoid naming conflict in the debugfs.
+		 * TODO: Is there a proper fix?
+		 */
+		irq_domain_update_bus_token(intb_domain, DOMAIN_BUS_WIRED);
 
-			*res = cd->errb_irqs[i];
-			res->start = res->end = irq_create_mapping(errb_domain,
-								   res->start);
+		for (i = 0; i < cd->num_intb_irqs; i++) {
+			struct resource *res = &regulator_res[i];
+
+			*res = cd->intb_irqs[i];
+			res->start = res->end = irq_create_mapping(intb_domain,
+								    res->start);
 		}
-	}
 
-	cd->mfd_cells[REGULATOR_CELL].resources = regulator_res;
-	cd->mfd_cells[REGULATOR_CELL].num_resources = num_regu_irqs;
+		if (num_errb) {
+			ret = devm_regmap_add_irq_chip(&i2c->dev, regmap, errb_irq,
+						       IRQF_ONESHOT, 0,
+						       cd->intb_irq_chip,
+						       &errb_irq_data);
+			if (ret) {
+				dev_err_probe(&i2c->dev, ret,
+					      "Failed to add ERRB (%d) irq_chip\n",
+					      errb_irq);
+				goto free_out;
+			}
+			errb_domain = regmap_irq_get_domain(errb_irq_data);
+
+			for (i = 0; i < num_errb; i++) {
+				struct resource *res = &regulator_res[cd->num_intb_irqs + i];
+
+				*res = cd->errb_irqs[i];
+				res->start = res->end = irq_create_mapping(errb_domain,
+									   res->start);
+			}
+		}
+
+		cd->mfd_cells[REGULATOR_CELL].resources = regulator_res;
+		cd->mfd_cells[REGULATOR_CELL].num_resources = num_regu_irqs;
+	}
 	ret = devm_mfd_add_devices(&i2c->dev, PLATFORM_DEVID_AUTO,
 				   cd->mfd_cells, cd->num_mfd_cells, NULL, 0, NULL);
 	if (ret)
 		dev_err_probe(&i2c->dev, ret, "Failed to create subdevices\n");
 
 free_out:
-	kfree(regulator_res);
+	if (cd->num_intb_irqs)
+		kfree(regulator_res);
 
 	return ret;
 }
@@ -696,6 +735,10 @@ static const struct of_device_id bd96801_of_match[] = {
 	{
 		.compatible = "rohm,bd96802",
 		.data = &bd96802_chip_data,
+	},
+	{
+		.compatible = "rohm,bd96811",
+		.data = &bd96811_chip_data,
 	},
 	{ }
 };
