@@ -69,3 +69,6 @@ This driver has support for
 * Regulators
 * Watchdog
 
+### Known issues
+
+See the bug-tracker for bd96801 related [known issues](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/issues?q=is%3Aissue+repo%3ALinux-Kernel-PMIC-Drivers+BD96801+in%3Atitle). If you encounter a bug which is not known - feel free to report it - thanks!
