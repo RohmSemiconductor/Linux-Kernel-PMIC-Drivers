@@ -204,6 +204,11 @@ static int bd96801_i2c_probe(struct i2c_client *i2c)
 		dev_err(&i2c->dev, "regmap initialization failed\n");
 		return PTR_ERR(regmap);
 	}
+
+	ret = regmap_write(regmap, BD96801_LOCK_REG, BD96801_UNLOCK);
+	if (ret)
+		return dev_err_probe(&i2c->dev, ret, "Can't unlock PMIC\n");
+
 	ret = devm_regmap_add_irq_chip(&i2c->dev, regmap, intb_irq,
 				       IRQF_ONESHOT, 0, &bd96801_irq_chip_intb,
 				       &intb_irq_data);
