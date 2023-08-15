@@ -25,6 +25,10 @@
 
 #define BD96801_STATE_STBY		0x09
 
+#define BD96801_LOCK_REG		0x04
+#define BD96801_UNLOCK			0x9d
+#define BD96801_LOCK			0x00
+
 /* IRQ register area */
 #define BD96801_REG_INT_MAIN		0x51
 
