@@ -19,6 +19,16 @@ module_param(nowayout, bool, 0);
 MODULE_PARM_DESC(nowayout,
 		"Watchdog cannot be stopped once started (default=\"false\")");
 
+#define BD96801_REG_WDG_BASE 0x40
+#define BD96802_REG_WDG_BASE 0x40
+
+#define BD968XX_REG_WD_TMO_OFFSET	0x0
+#define BD968XX_REG_WD_CONF_OFFSET	0x1
+#define BD968XX_REG_WD_FEED_OFFSET	0x2
+#define BD968XX_REG_WD_FAILCOUNT_OFFSET	0x3
+#define BD968XX_REG_WD_ASK_OFFSET	0x6
+#define BD968XX_REG_WD_STATUS_OFFSET	0xa
+
 #define BD96801_WD_TMO_SHORT_MASK	0x70
 #define BD96801_WD_RATIO_MASK		0x3
 #define BD96801_WD_TYPE_MASK		0x4
@@ -54,6 +64,7 @@ MODULE_PARM_DESC(nowayout,
 struct wdtbd96801 {
 	struct device		*dev;
 	struct regmap		*regmap;
+	int			reg_base;
 	bool			always_running;
 	struct watchdog_device	wdt;
 };
@@ -62,8 +73,8 @@ static int bd96801_wdt_ping(struct watchdog_device *wdt)
 {
 	struct wdtbd96801 *w = watchdog_get_drvdata(wdt);
 
-	return regmap_update_bits(w->regmap, BD96801_REG_WD_FEED,
-				 BD96801_WD_FEED_MASK, BD96801_WD_FEED);
+	return regmap_update_bits(w->regmap, w->reg_base + BD968XX_REG_WD_FEED_OFFSET,
+				  BD96801_WD_FEED_MASK, BD96801_WD_FEED);
 }
 
 static int bd96801_wdt_start(struct watchdog_device *wdt)
@@ -71,7 +82,7 @@ static int bd96801_wdt_start(struct watchdog_device *wdt)
 	struct wdtbd96801 *w = watchdog_get_drvdata(wdt);
 	int ret;
 
-	ret = regmap_update_bits(w->regmap, BD96801_REG_WD_CONF,
+	ret = regmap_update_bits(w->regmap, w->reg_base + BD968XX_REG_WD_CONF_OFFSET,
 				 BD96801_WD_EN_MASK, BD96801_WD_IF_EN);
 
 	return ret;
@@ -82,7 +93,7 @@ static int bd96801_wdt_stop(struct watchdog_device *wdt)
 	struct wdtbd96801 *w = watchdog_get_drvdata(wdt);
 
 	if (!w->always_running)
-		return regmap_update_bits(w->regmap, BD96801_REG_WD_CONF,
+		return regmap_update_bits(w->regmap, w->reg_base + BD968XX_REG_WD_CONF_OFFSET,
 				 BD96801_WD_EN_MASK, BD96801_WD_DISABLE);
 	set_bit(WDOG_HW_RUNNING, &wdt->status);
 
@@ -206,12 +217,12 @@ static int bd96801_set_wdt_mode(struct wdtbd96801 *w, int hw_margin,
 
 	reg = slowng | fastng;
 	mask = BD96801_WD_RATIO_MASK | BD96801_WD_TMO_SHORT_MASK;
-	ret = regmap_update_bits(w->regmap, BD96801_REG_WD_TMO,
+	ret = regmap_update_bits(w->regmap, w->reg_base + BD968XX_REG_WD_TMO_OFFSET,
 				 mask, reg);
 	if (ret)
 		return ret;
 
-	ret = regmap_update_bits(w->regmap, BD96801_REG_WD_CONF,
+	ret = regmap_update_bits(w->regmap, w->reg_base + BD968XX_REG_WD_CONF_OFFSET,
 				 BD96801_WD_TYPE_MASK, type);
 
 	return ret;
@@ -233,7 +244,7 @@ static int bd96801_set_heartbeat_from_hw(struct wdtbd96801 *w,
 		return -EINVAL;
 	}
 
-	ret = regmap_read(w->regmap, BD96801_REG_WD_TMO, &val);
+	ret = regmap_read(w->regmap, w->reg_base + BD968XX_REG_WD_TMO_OFFSET, &val);
 	if (ret)
 		return ret;
 
@@ -286,7 +297,7 @@ static int init_wdg_hw(struct wdtbd96801 *w)
 	ret = device_property_match_string(w->dev->parent, "rohm,wdg-action",
 					   "prstb");
 	if (ret >= 0) {
-		ret = regmap_update_bits(w->regmap, BD96801_REG_WD_CONF,
+		ret = regmap_update_bits(w->regmap, w->reg_base + BD968XX_REG_WD_CONF_OFFSET,
 				 BD96801_WD_ASSERT_MASK,
 				 BD96801_WD_ASSERT_RST);
 		return ret;
@@ -295,7 +306,7 @@ static int init_wdg_hw(struct wdtbd96801 *w)
 	ret = device_property_match_string(w->dev->parent, "rohm,wdg-action",
 					   "intb-only");
 	if (ret >= 0) {
-		ret = regmap_update_bits(w->regmap, BD96801_REG_WD_CONF,
+		ret = regmap_update_bits(w->regmap, w->reg_base + BD968XX_REG_WD_CONF_OFFSET,
 				 BD96801_WD_ASSERT_MASK,
 				 BD96801_WD_ASSERT_IRQ);
 		return ret;
@@ -317,6 +328,7 @@ static int bd96801_wdt_probe(struct platform_device *pdev)
 	w->regmap = dev_get_regmap(pdev->dev.parent, NULL);
 	w->dev = &pdev->dev;
 
+	w->reg_base = platform_get_device_id(pdev)->driver_data;
 	w->wdt.info = &bd96801_wdt_info;
 	w->wdt.ops =  &bd96801_wdt_ops;
 	w->wdt.parent = pdev->dev.parent;
@@ -326,7 +338,7 @@ static int bd96801_wdt_probe(struct platform_device *pdev)
 	w->always_running = device_property_read_bool(pdev->dev.parent,
 						      "always-running");
 
-	ret = regmap_read(w->regmap, BD96801_REG_WD_CONF, &val);
+	ret = regmap_read(w->regmap, w->reg_base + BD968XX_REG_WD_CONF_OFFSET, &val);
 	if (ret)
 		return dev_err_probe(&pdev->dev, ret,
 				     "Failed to get the watchdog state\n");
@@ -362,8 +374,8 @@ static int bd96801_wdt_probe(struct platform_device *pdev)
 }
 
 static const struct platform_device_id bd96801_id[] = {
-	{ "bd96801-wdt", },
-	{ "bd96802-wdt", },
+	{ "bd96801-wdt", BD96801_REG_WDG_BASE },
+	{ "bd96802-wdt", BD96802_REG_WDG_BASE },
 	{ },
 };
 MODULE_DEVICE_TABLE(platform, bd96801_id);
