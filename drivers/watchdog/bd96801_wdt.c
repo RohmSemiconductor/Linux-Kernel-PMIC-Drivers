@@ -21,6 +21,7 @@ MODULE_PARM_DESC(nowayout,
 
 #define BD96801_REG_WDG_BASE 0x40
 #define BD96802_REG_WDG_BASE 0x40
+#define BD96811_REG_WDG_BASE 0x20
 
 #define BD968XX_REG_WD_TMO_OFFSET	0x0
 #define BD968XX_REG_WD_CONF_OFFSET	0x1
@@ -376,6 +377,7 @@ static int bd96801_wdt_probe(struct platform_device *pdev)
 static const struct platform_device_id bd96801_id[] = {
 	{ "bd96801-wdt", BD96801_REG_WDG_BASE },
 	{ "bd96802-wdt", BD96802_REG_WDG_BASE },
+	{ "bd96811-wdt", BD96811_REG_WDG_BASE },
 	{ },
 };
 MODULE_DEVICE_TABLE(platform, bd96801_id);
