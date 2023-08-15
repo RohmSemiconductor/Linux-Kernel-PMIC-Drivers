@@ -89,10 +89,6 @@ enum {
 #define BD96801_BUCK_VSEL_MASK		0x1F
 #define BD96801_LDO_VSEL_MASK		0xff
 
-#define BD96801_LOCK_REG		0x04
-#define BD96801_UNLOCK			0x9d
-#define BD96801_LOCK			0x00
-
 #define BD96801_MASK_RAMP_DELAY		0xc0
 #define BD96801_INT_VOUT_BASE_REG	0x21
 #define BD96801_BUCK_INT_VOUT_MASK	0xff
@@ -774,12 +770,6 @@ static int bd96801_probe(struct platform_device *pdev)
 	config.driver_data = pdata;
 	config.regmap = pdata->regmap;
 	config.dev = parent;
-
-	ret = regmap_write(pdata->regmap, BD96801_LOCK_REG, BD96801_UNLOCK);
-	if (ret) {
-		dev_err(&pdev->dev, "Can't unlock PMIC\n");
-		return ret;
-	}
 
 	ret = bd96801_walk_regulator_dt(&pdev->dev, pdata->regmap, rdesc,
 					BD96801_NUM_REGULATORS);
