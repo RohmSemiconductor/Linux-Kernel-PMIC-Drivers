@@ -1,0 +1,92 @@
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-2-Clause
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/mfd/rohm,bd96811-pmic.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: ROHM BD96811 Scalable Power Management Integrated Circuit
+
+maintainers:
+  - Matti Vaittinen <matti.vaittinen@fi.rohmeurope.com>
+
+description: |
+  BD96811 is an automotive grade configurable Power Management Integrated
+  Circuit supporting Functional Safety features for application
+  processors, SoCs and FPGAs
+
+properties:
+  compatible:
+    const: rohm,bd96811
+
+  reg:
+    description:
+      I2C slave address.
+    maxItems: 1
+
+  rohm,protect-enable:
+    type: boolean
+    description:
+      Hardware shuts off the regulator outputs if under/over voltage, over
+      current or thermal warning limits are exceeded.
+
+  interrupts:
+    description:
+      The PMIC may have one of the DOUT pins configured to operate as an
+      IRQ line by OTP configuration.
+    maxItems: 1
+
+  regulators:
+    $ref: ../regulator/rohm,bd96811-regulator.yaml
+    description:
+      List of child nodes that specify the regulators.
+
+required:
+  - compatible
+  - reg
+  - regulators
+
+additionalProperties: false
+
+examples:
+  - |
+    #include <dt-bindings/interrupt-controller/irq.h>
+    #include <dt-bindings/leds/common.h>
+    i2c {
+        #address-cells = <1>;
+        #size-cells = <0>;
+        pmic: pmic@60 {
+            reg = <0x60>;
+            compatible = "rohm,bd96811";
+            interrupt-parent = <&gpio1>;
+            interrupts = <29 IRQ_TYPE_LEVEL_LOW>;
+            rohm,protect-enable;
+
+            regulators {
+                vout1: vout1 {
+                    regulator-name = "vout1";
+                    regulator-ramp-delay = <4500>;
+                    rohm,regulator-type = <1>;
+                };
+                vout2: vout2 {
+                    regulator-name = "vout2";
+                    regulator-ramp-delay = <4500>;
+                    rohm,regulator-type = <1>;
+                };
+                vout3: vout3 {
+                    regulator-name = "vout3";
+                    regulator-ramp-delay = <4500>;
+                    rohm,regulator-type = <1>;
+                };
+                vout4: vout4 {
+                    regulator-name = "vout4";
+                    regulator-ramp-delay = <4500>;
+                    rohm,regulator-type = <1>;
+                };
+                vout5: vout5 {
+                    regulator-name = "vout5";
+                    regulator-ramp-delay = <4500>;
+                    rohm,regulator-type = <3>;
+                };
+            };
+        };
+    };
