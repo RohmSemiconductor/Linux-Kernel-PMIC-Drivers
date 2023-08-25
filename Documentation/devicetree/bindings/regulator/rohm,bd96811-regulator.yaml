@@ -1,0 +1,136 @@
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-2-Clause
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/regulator/rohm,bd96811-regulator.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: ROHM BD96811 Power Management Integrated Circuit regulators
+
+maintainers:
+  - Matti Vaittinen <matti.vaittinen@fi.rohmeurope.com>
+
+description: |
+  This module is part of the ROHM BD96811 MFD device. For more details
+  see Documentation/devicetree/bindings/mfd/rohm,bd96811-pmic.yaml.
+
+  The regulator controller is represented as a sub-node of the PMIC node
+  on the device tree.
+
+  The valid names for BD96811 regulator nodes are
+  vout1, vout2, ..., vout5.
+
+properties:
+  vout1:
+    type: object
+    description:
+      properties for vout1 regulator
+    $ref: regulator.yaml#
+    unevaluatedProperties: false
+
+    properties:
+      regulator-name:
+        const: vout1
+
+      rohm,regulator-type:
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        description:
+          The BD96811 may have dfifferent types of regulator regulators
+          depending on OTP option. Indicate type of regulator by assigning
+          the type to 1 (BUCK), 2 (BOOST) or 3 (LDO) to match your PMIC.
+        #VOUT1 is always BUCK.
+        const: 1
+
+  vout2:
+    type: object
+    description:
+      properties for vout2 regulator
+    $ref: regulator.yaml#
+    unevaluatedProperties: false
+
+    properties:
+      regulator-name:
+        const: vout2
+
+      rohm,regulator-type:
+        description:
+          The BD96811 may have dfifferent types of regulator regulators
+          depending on OTP option. Indicate type of regulator by assigning
+          the type to 1 (BUCK), 2 (BOOST) or 3 (LDO) to match your PMIC.
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        #VOUT1 is BUCK or BOOST.
+        minimum: 1
+        maximum: 2
+
+  vout3:
+    type: object
+    description:
+      properties for vout3 regulator
+    $ref: regulator.yaml#
+    unevaluatedProperties: false
+
+    properties:
+      regulator-name:
+        const: vout3
+
+      rohm,regulator-type:
+        description:
+          The BD96811 may have dfifferent types of regulator regulators
+          depending on OTP option. Indicate type of regulator by assigning
+          the type to 1 (BUCK), 2 (BOOST) or 3 (LDO) to match your PMIC.
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        #VOUT3 is BUCK or LDO.
+        items:
+          - const: 1
+          - const: 3
+        maxItems: 1
+
+  vout4:
+    type: object
+    description:
+      properties for vout4 regulator
+    $ref: regulator.yaml#
+    unevaluatedProperties: false
+
+    properties:
+      regulator-name:
+        const: vout4
+
+      rohm,regulator-type:
+        description:
+          The BD96811 may have dfifferent types of regulator regulators
+          depending on OTP option. Indicate type of regulator by assigning
+          the type to 1 (BUCK), 2 (BOOST) or 3 (LDO) to match your PMIC.
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        #VOUT4 is BUCK or LDO.
+        items:
+          - const: 1
+          - const: 3
+        maxItems: 1
+
+  vout5:
+    type: object
+    description:
+      properties for vout2 regulator
+    $ref: regulator.yaml#
+    unevaluatedProperties: false
+
+    properties:
+      regulator-name:
+        const: vout5
+
+      rohm,regulator-type:
+        description:
+          The BD96811 may have dfifferent types of regulator regulators
+          depending on OTP option. Indicate type of regulator by assigning
+          the type to 1 (BUCK), 2 (BOOST) or 3 (LDO) to match your PMIC.
+        $ref: "/schemas/types.yaml#/definitions/uint32"
+        #VOUT5 is LDO.
+        const: 3
+
+    required:
+      - regulator-name
+      - rohm,regulator-type
+
+    unevaluatedProperties: false
+
+additionalProperties: false
