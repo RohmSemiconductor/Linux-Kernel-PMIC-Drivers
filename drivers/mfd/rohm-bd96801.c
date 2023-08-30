@@ -25,6 +25,8 @@ struct bd968xx_chip_data {
 	const struct regmap_config *regmap_config;
 	struct mfd_cell *mfd_cells;
 	int num_mfd_cells;
+	int unlock_reg;
+	int unlock_val;
 };
 
 static const struct resource bd96801_reg_errb_irqs[] = {
@@ -543,6 +545,8 @@ static const struct bd968xx_chip_data bd96801_chip_data = {
 	.regmap_config = &bd96801_regmap_config,
 	.mfd_cells = bd96801_mfd_cells,
 	.num_mfd_cells = ARRAY_SIZE(bd96801_mfd_cells),
+	.unlock_reg = BD96801_LOCK_REG,
+	.unlock_val = BD96801_UNLOCK,
 };
 
 static struct bd968xx_chip_data bd96802_chip_data = {
@@ -555,6 +559,8 @@ static struct bd968xx_chip_data bd96802_chip_data = {
 	.regmap_config = &bd96802_regmap_config,
 	.mfd_cells = bd96802_mfd_cells,
 	.num_mfd_cells = ARRAY_SIZE(bd96802_mfd_cells),
+	.unlock_reg = BD96801_LOCK_REG,
+	.unlock_val = BD96801_UNLOCK,
 };
 
 static int bd96801_i2c_probe(struct i2c_client *i2c)
@@ -615,7 +621,7 @@ static int bd96801_i2c_probe(struct i2c_client *i2c)
 		goto free_out;
 	}
 
-	ret = regmap_write(regmap, BD96801_LOCK_REG, BD96801_UNLOCK);
+	ret = regmap_write(regmap, cd->unlock_reg, cd->unlock_val);
 	if (ret)
 		return dev_err_probe(&i2c->dev, ret, "Can't unlock PMIC\n");
 
