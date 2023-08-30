@@ -39,6 +39,16 @@ properties:
           the type to 1 (BUCK), 2 (BOOST) or 3 (LDO) to match your PMIC.
         #VOUT1 is always BUCK.
         const: 1
+      rohm,uvd-base-microvolt:
+        description:
+          The BD96811 has a default limit for the under-voltage detection
+          configured by OTP. Provide limit matching OTP on the IC as
+          offset from the target output voltage.
+      rohm,ovd-base-microvolt:
+        description:
+          The BD96811 has a default limit for the over-voltage detection
+          configured by OTP. Provide limit matching OTP on the IC as
+          offset from the target output voltage.
 
   vout2:
     type: object
