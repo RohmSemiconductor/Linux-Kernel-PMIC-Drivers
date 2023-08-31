@@ -35,6 +35,9 @@ properties:
       IRQ line by OTP configuration.
     maxItems: 1
 
+  interrupt-names:
+    const: intb
+
   regulators:
     $ref: ../regulator/rohm,bd96811-regulator.yaml
     description:
