@@ -85,7 +85,7 @@ static unsigned int vout_ramp_table[] = {900, 4500, 9000};
  */
 static const struct linear_range bd96801_buck_ldo_init_volts[] = {
 	REGULATOR_LINEAR_RANGE(500000, 0x01, 0xd8, 10000),
-	REGULATOR_LINEAR_RANGE(26750000, 0xd9, 0xff, 25000),
+	REGULATOR_LINEAR_RANGE(2675000, 0xd9, 0xff, 25000),
 	REGULATOR_LINEAR_RANGE(3300000, 0xed, 0xff, 0),
 };
 
