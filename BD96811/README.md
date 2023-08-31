@@ -4,7 +4,7 @@ The ROHM BD96811 is another of ROHM's "Scalable PMICs". It is an automotive grad
 
 ## Linux:
 
-Currently there is a initial reference driver for Linux available tagged in our Linux git tree as tag [scalable-bd96811-unstable-alpha-v0.01](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/releases/tag/scalable-bd96811-unstable-alpha-v0.01).
+Currently there is a initial reference driver for Linux available tagged in our Linux git tree as tag [scalable-bd96811-unstable-alpha-v0.02](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/releases/tag/scalable-bd96811-unstable-alpha-v0.02).
 Please note that the driver is intended to be used as a reference design only. No warranty is given and feasibility for target setup must be verified. Driver is also not fully tested and bugs may be hiding. Evaluate at your own risk.
 
 The driver implements following features:
