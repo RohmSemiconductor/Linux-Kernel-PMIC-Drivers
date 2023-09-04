@@ -127,6 +127,17 @@ config PINCTRL_AXP209
 	  selected.
 	  Say Y to enable pinctrl and GPIO support for the AXP209 PMIC.
 
+config PINCTRL_BD96811
+	tristate "ROHM BD96811 PMIC pinctrl"
+	depends on OF && (MFD_ROHM_BD96801 || COMPILE_TEST)
+	select PINMUX
+	select GENERIC_PINCONF
+	help
+	  ROHM BD96811 PMIC provides a few DOUT pins with multiple functions.
+	  Most of the functions are selected depending on OTP but some can be
+	  configured at runtime. This driver provides mux control for such
+	  functions.
+
 config PINCTRL_BM1880
 	bool "Bitmain BM1880 Pinctrl driver"
 	depends on OF && (ARCH_BITMAIN || COMPILE_TEST)
