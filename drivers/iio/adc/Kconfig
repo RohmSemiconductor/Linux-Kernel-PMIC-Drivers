@@ -922,6 +922,15 @@ config RN5T618_ADC
 	  This driver can also be built as a module. If so, the module
 	  will be called rn5t618-adc.
 
+config ROHM_BD96811_ADC
+	tristate "ROHM BD96811 PMIC ADC driver"
+	depends on MFD_ROHM_BD96801 || COMPILE_TEST
+	help
+	  ROHM BD96811 PMIC has ADCs mainly intended to be used for safety
+	  features monitoring voltages if additional discrete components are
+	  used. ADC1 and ADC2 are always available, the ADC0 needs to be
+	  enabled by OTP.
+
 config ROCKCHIP_SARADC
 	tristate "Rockchip SARADC driver"
 	depends on ARCH_ROCKCHIP || COMPILE_TEST
