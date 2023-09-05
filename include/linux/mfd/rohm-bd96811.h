@@ -20,6 +20,9 @@
 #define BD96811_LOCK_REG		0x03
 #define BD96811_UNLOCK			0x9d
 
+#define BD96811_REG_AD1_TH 0x53
+#define BD96811_REG_AD2_TH 0x54
+
 /* IRQ register area */
 #define BD96811_REG_INT_MAIN		0x30
 #define BD96811_REG_INT_LDO5_DET	0x3d
