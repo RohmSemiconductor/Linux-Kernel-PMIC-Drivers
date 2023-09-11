@@ -269,6 +269,8 @@ static const struct resource bd96811_reg_irqs[] = {
 enum {
 	WDG_CELL = 0,
 	REGULATOR_CELL,
+	ADC_CELL,
+	PINCTRL_CELL,
 	GPIO_CELL,
 };
 
@@ -283,9 +285,11 @@ static struct mfd_cell bd96802_mfd_cells[] = {
 };
 
 static struct mfd_cell bd96811_mfd_cells[] = {
-	[WDG_CELL] = { .name = "bd96811-wdt", },
-	[REGULATOR_CELL] = { .name = "bd96811-pmic", },
-	[GPIO_CELL] = { .name = "bd96811-gpio", },
+	[WDG_CELL] = {.name = "bd96811-wdt",},
+	[REGULATOR_CELL] = {.name = "bd96811-pmic",},
+	[GPIO_CELL] = {.name = "bd96811-gpio",},
+	[ADC_CELL] = {.name = "bd96811-adc"},
+	[PINCTRL_CELL] = {.name = "bd96811-pinctrl"},
 };
 
 static const struct regmap_range bd96801_volatile_ranges[] = {
