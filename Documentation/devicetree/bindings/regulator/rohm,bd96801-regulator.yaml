@@ -12,10 +12,8 @@ maintainers:
 description: |
   This module is part of the ROHM BD96801 MFD device. For more details
   see Documentation/devicetree/bindings/mfd/rohm,bd96801-pmic.yaml.
-
   The regulator controller is represented as a sub-node of the PMIC node
   on the device tree.
-
   Regulator nodes should be named to BUCK_<number> and LDO_<number>.
   The valid names for BD96801 regulator nodes are
   BUCK1, BUCK2, BUCK3, BUCK4, LDO5, LDO6, LDO7
@@ -23,10 +21,11 @@ description: |
 patternProperties:
   "^LDO[5-7]$":
     type: object
-    allOf:
-      - $ref: regulator.yaml#
     description:
       Properties for single LDO regulator.
+    allOf:
+      - $ref: regulator.yaml#
+    #$ref: regulator.yaml#
 
     properties:
       regulator-name:
@@ -42,13 +41,13 @@ patternProperties:
         maximum: 3300000
       # Please note: The safety limits for BD96801 can be changed only when
       # the PMIC is in STBY state.
-      regulator-ov-error-microvolt:
-      regulator-ov-warn-microvolt:
-      regulator-uv-error-microvolt:
-      regulator-uv-warn-microvolt:
-      regulator-temp-protection-kelvin:
-      regulator-temp-error-kelvin:
-      regulator-temp-warn-kelvin:
+      #regulator-ov-error-microvolt:
+      #regulator-ov-warn-microvolt:
+      #regulator-uv-error-microvolt:
+      #regulator-uv-warn-microvolt:
+      #regulator-temp-protection-kelvin:
+      #regulator-temp-error-kelvin:
+      #regulator-temp-warn-kelvin:
 
   "^BUCK[1-4]$":
     type: object
@@ -76,5 +75,5 @@ patternProperties:
 
     required:
       - regulator-name
-  additionalProperties: false
+  #additionalProperties: false
 additionalProperties: false
