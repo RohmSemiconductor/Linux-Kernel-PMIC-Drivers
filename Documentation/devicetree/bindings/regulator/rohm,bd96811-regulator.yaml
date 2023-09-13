@@ -12,10 +12,8 @@ maintainers:
 description: |
   This module is part of the ROHM BD96811 MFD device. For more details
   see Documentation/devicetree/bindings/mfd/rohm,bd96811-pmic.yaml.
-
   The regulator controller is represented as a sub-node of the PMIC node
   on the device tree.
-
   The valid names for BD96811 regulator nodes are
   vout1, vout2, ..., vout5.
 
@@ -25,7 +23,6 @@ properties:
     description:
       properties for vout1 regulator
     $ref: regulator.yaml#
-    unevaluatedProperties: false
 
     properties:
       regulator-name:
@@ -55,7 +52,6 @@ properties:
     description:
       properties for vout2 regulator
     $ref: regulator.yaml#
-    unevaluatedProperties: false
 
     properties:
       regulator-name:
@@ -68,15 +64,24 @@ properties:
           the type to 1 (BUCK), 2 (BOOST) or 3 (LDO) to match your PMIC.
         $ref: "/schemas/types.yaml#/definitions/uint32"
         #VOUT1 is BUCK or BOOST.
-        minimum: 1
-        maximum: 2
+        enum: [1, 2]
+
+      rohm,uvd-base-microvolt:
+        description:
+          The BD96811 has a default limit for the under-voltage detection
+          configured by OTP. Provide limit matching OTP on the IC as
+          offset from the target output voltage.
+      rohm,ovd-base-microvolt:
+        description:
+          The BD96811 has a default limit for the over-voltage detection
+          configured by OTP. Provide limit matching OTP on the IC as
+          offset from the target output voltage.
 
   vout3:
     type: object
     description:
       properties for vout3 regulator
     $ref: regulator.yaml#
-    unevaluatedProperties: false
 
     properties:
       regulator-name:
@@ -89,17 +94,24 @@ properties:
           the type to 1 (BUCK), 2 (BOOST) or 3 (LDO) to match your PMIC.
         $ref: "/schemas/types.yaml#/definitions/uint32"
         #VOUT3 is BUCK or LDO.
-        items:
-          - const: 1
-          - const: 3
-        maxItems: 1
+        enum: [1, 3]
+
+      rohm,uvd-base-microvolt:
+        description:
+          The BD96811 has a default limit for the under-voltage detection
+          configured by OTP. Provide limit matching OTP on the IC as
+          offset from the target output voltage.
+      rohm,ovd-base-microvolt:
+        description:
+          The BD96811 has a default limit for the over-voltage detection
+          configured by OTP. Provide limit matching OTP on the IC as
+          offset from the target output voltage.
 
   vout4:
     type: object
     description:
       properties for vout4 regulator
     $ref: regulator.yaml#
-    unevaluatedProperties: false
 
     properties:
       regulator-name:
@@ -112,17 +124,24 @@ properties:
           the type to 1 (BUCK), 2 (BOOST) or 3 (LDO) to match your PMIC.
         $ref: "/schemas/types.yaml#/definitions/uint32"
         #VOUT4 is BUCK or LDO.
-        items:
-          - const: 1
-          - const: 3
-        maxItems: 1
+        enum: [1, 3]
+
+      rohm,uvd-base-microvolt:
+        description:
+          The BD96811 has a default limit for the under-voltage detection
+          configured by OTP. Provide limit matching OTP on the IC as
+          offset from the target output voltage.
+      rohm,ovd-base-microvolt:
+        description:
+          The BD96811 has a default limit for the over-voltage detection
+          configured by OTP. Provide limit matching OTP on the IC as
+          offset from the target output voltage.
 
   vout5:
     type: object
     description:
-      properties for vout2 regulator
+      properties for vout5 regulator
     $ref: regulator.yaml#
-    unevaluatedProperties: false
 
     properties:
       regulator-name:
@@ -136,11 +155,19 @@ properties:
         $ref: "/schemas/types.yaml#/definitions/uint32"
         #VOUT5 is LDO.
         const: 3
+      rohm,uvd-base-microvolt:
+        description:
+          The BD96811 has a default limit for the under-voltage detection
+          configured by OTP. Provide limit matching OTP on the IC as
+          offset from the target output voltage.
+      rohm,ovd-base-microvolt:
+        description:
+          The BD96811 has a default limit for the over-voltage detection
+          configured by OTP. Provide limit matching OTP on the IC as
+          offset from the target output voltage.
 
     required:
       - regulator-name
       - rohm,regulator-type
-
-    unevaluatedProperties: false
 
 additionalProperties: false
