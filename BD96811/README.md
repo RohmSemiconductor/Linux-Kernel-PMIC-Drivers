@@ -4,25 +4,30 @@ The ROHM BD96811 is another of ROHM's "Scalable PMICs". It is an automotive grad
 
 ## Linux:
 
-Currently there is a initial reference driver for Linux available tagged in our Linux git tree as tag [scalable-bd96811-unstable-alpha-v0.02](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/releases/tag/scalable-bd96811-unstable-alpha-v0.02).
+Currently there is a initial reference driver for Linux available tagged in our Linux git tree as tag [scalable-bd96811-unstable-alpha-v0.03](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/releases/tag/scalable-bd96811-unstable-alpha-v0.03).
 Please note that the driver is intended to be used as a reference design only. No warranty is given and feasibility for target setup must be verified. Driver is also not fully tested and bugs may be hiding. Evaluate at your own risk.
 
-The driver implements following features:
-
-Initial and experimental support for configuring voltages and safety limits on Linux system. Also a driver for watchdog feeding is included.
-
-The most notable limitation of this version of linux driver is the lack of IRQ support.
+The most notable limitation of this version of linux driver is the lack of proper IRQ support.
 
 A special care must be taken when writing the device-tree for BD96811 due to the
 high OTP configurability. The driver requires information about the OTP used
 on chip. This information must be correctly provided via device-tree. Please pay
 careful attention to the DT bindings.
 
-The driver supports the basic control of regulators and configuring
-Over/Under-voltage protections via device-tree. Following constrains are worth
-noting:
+The driver implements following features:
+
+- IIO ADC support for ADC0, ADC1 and ADC2. Please note the OTP
+  requirements.
+- ADC1/DOUT4 and ADC2/DIN4 pinmux support using pincontrol framework.
+- Watchdog support.
+- Regulator support.
+
+The regulator driver supports the basic control of regulators and
+configuring Over/Under-voltage protections via device-tree. Following
+constrains are worth noting:
 
 Limitations of this SW version:
+
 - Regulator error Notifications or flags are not provided.
 - IRQs are not supported.
 - OCP and TW limit setting is not implemented.
@@ -40,5 +45,7 @@ Limitations coming from HW design:
 This driver has support for
 * Regulators
 * Watchdog
+* Pincontrol
+* IIO ADC
 
 Bugs from this version can be reported in GitHub [issue tracker](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/issues) or to matti.vaittinen@fi.rohmeurope.com
