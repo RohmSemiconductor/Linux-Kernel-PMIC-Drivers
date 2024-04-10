@@ -40,6 +40,22 @@ properties:
       - enum: [intb, errb]
       - const: errb
 
+  rohm,hw-timeout-ms:
+    description:
+      Watchdog timeout value(s). First walue is timeout limit. Second value is
+      optional value for 'too early' watchdog ping if window timeout mode is
+      to be used.
+    minItems: 1
+    maxItems: 2
+
+  rohm,wdg-action:
+    description:
+      Whether the watchdog failure must turn off the regulator power outputs or
+      just toggle the INTB line.
+    enum:
+      - prstb
+      - intb-only
+
   regulators:
     $ref: ../regulator/rohm,bd96801-regulator.yaml
     description:
