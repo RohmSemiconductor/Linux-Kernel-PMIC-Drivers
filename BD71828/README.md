@@ -4,7 +4,7 @@
 
 ### Community drivers:
 
-Device driver for BD71828/BD71878 has been included in the Linux community kernel v5.6.
+Device driver for BD71828/BD71878/BD71879 has been included in the Linux community kernel v5.6.
 
 Linux kernel can be obtained from:
 
