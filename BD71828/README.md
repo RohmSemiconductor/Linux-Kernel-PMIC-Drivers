@@ -1,4 +1,4 @@
-# ROHM Power Management IC BD71828 / BD71878 device driver.
+# ROHM Power Management IC BD71828 / BD71878 / BD71879 device driver.
 
 ## Linux:
 
