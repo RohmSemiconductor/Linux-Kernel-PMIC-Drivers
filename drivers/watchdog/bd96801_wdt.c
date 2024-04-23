@@ -35,7 +35,7 @@
 
 /* units in uS */
 #define FASTNG_MIN			1100
-#define BD96801_WDT_DEFAULT_MARGIN	6905120
+#define BD96801_WDT_DEFAULT_MARGIN_MS	1843
 /* Unit is seconds */
 #define DEFAULT_TIMEOUT 30
 
@@ -94,10 +94,10 @@ static const struct watchdog_ops bd96801_wdt_ops = {
 	.ping		= bd96801_wdt_ping,
 };
 
-static int find_closest_fast(int target, int *sel, int *val)
+static int find_closest_fast(unsigned int target, int *sel, unsigned int *val)
 {
+	unsigned int window = FASTNG_MIN;
 	int i;
-	int window = FASTNG_MIN;
 
 	for (i = 0; i < 8 && window < target; i++)
 		window <<= 1;
@@ -112,7 +112,7 @@ static int find_closest_fast(int target, int *sel, int *val)
 
 }
 
-static int find_closest_slow_by_fast(int fast_val, int *target, int *slowsel)
+static int find_closest_slow_by_fast(unsigned int fast_val, unsigned int *target, int *slowsel)
 {
 	int sel;
 	static const int multipliers[] = {2, 4, 8, 16};
@@ -130,16 +130,16 @@ static int find_closest_slow_by_fast(int fast_val, int *target, int *slowsel)
 	return 0;
 }
 
-static int find_closest_slow(int *target, int *slow_sel, int *fast_sel)
+static int find_closest_slow(unsigned int *target, int *slow_sel, int *fast_sel)
 {
 	static const int multipliers[] = {2, 4, 8, 16};
+	unsigned int window = FASTNG_MIN;
+	unsigned int val = 0;
 	int i, j;
-	int val = 0;
-	int window = FASTNG_MIN;
 
 	for (i = 0; i < 8; i++) {
 		for (j = 0; j < ARRAY_SIZE(multipliers); j++) {
-			int slow;
+			unsigned int slow;
 
 			slow = window * multipliers[j];
 			if (slow >= *target && (!val || slow < val)) {
@@ -158,17 +158,21 @@ static int find_closest_slow(int *target, int *slow_sel, int *fast_sel)
 	return 0;
 }
 
-static int bd96801_set_wdt_mode(struct wdtbd96801 *w, int hw_margin,
-			       int hw_margin_min)
+static int bd96801_set_wdt_mode(struct wdtbd96801 *w, unsigned int hw_margin,
+			       unsigned int hw_margin_min)
 {
 	int ret, fastng, slowng, type, reg, mask;
 	struct device *dev = w->dev;
 
-	/* convert to uS */
-	hw_margin *= 1000;
-	hw_margin_min *= 1000;
+	/*
+	 * Convert to 100uS to guarantee reasonable timeouts fit in
+	 * 32bit maintaining also a decent accuracy.
+	 */
+	hw_margin *= 10;
+	hw_margin_min *= 10;
+
 	if (hw_margin_min) {
-		int min;
+		unsigned int min;
 
 		type = BD96801_WD_TYPE_WIN;
 		dev_dbg(dev, "Setting type WINDOW 0x%x\n", type);
@@ -183,7 +187,7 @@ static int bd96801_set_wdt_mode(struct wdtbd96801 *w, int hw_margin,
 			dev_err(dev, "bad WDT window\n");
 			return ret;
 		}
-		w->wdt.min_hw_heartbeat_ms = min / 1000;
+		w->wdt.min_hw_heartbeat_ms = min / 10;
 	} else {
 		type = BD96801_WD_TYPE_SLOW;
 		dev_dbg(dev, "Setting type SLOW 0x%x\n", type);
@@ -194,7 +198,7 @@ static int bd96801_set_wdt_mode(struct wdtbd96801 *w, int hw_margin,
 		}
 	}
 
-	w->wdt.max_hw_heartbeat_ms = hw_margin / 1000;
+	w->wdt.max_hw_heartbeat_ms = hw_margin / 10;
 
 	fastng <<= ffs(BD96801_WD_TMO_SHORT_MASK) - 1;
 
@@ -250,7 +254,7 @@ static int init_wdg_hw(struct wdtbd96801 *w)
 	int ret;
 	struct device_node *np = w->dev->parent->of_node;
 	u32 hw_margin[2];
-	u32 hw_margin_max = BD96801_WDT_DEFAULT_MARGIN, hw_margin_min = 0;
+	u32 hw_margin_max = BD96801_WDT_DEFAULT_MARGIN_MS, hw_margin_min = 0;
 
 	ret = of_property_read_variable_u32_array(np, "rohm,hw-timeout-ms",
 						  &hw_margin[0], 1, 2);
