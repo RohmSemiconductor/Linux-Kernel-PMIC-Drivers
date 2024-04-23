@@ -34,7 +34,7 @@
 #define BD96801_WD_FEED			0x1
 
 /* units in uS */
-#define FASTNG_MIN			3370
+#define FASTNG_MIN			1100
 #define BD96801_WDT_DEFAULT_MARGIN	6905120
 /* Unit is seconds */
 #define DEFAULT_TIMEOUT 30
