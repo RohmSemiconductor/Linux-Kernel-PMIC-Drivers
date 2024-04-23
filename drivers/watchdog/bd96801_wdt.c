@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0
-// Copyright (C) 2020 ROHM Semiconductors
-// ROHM BD96801 watchdog driver
+/*
+ * Copyright (C) 2024 ROHM Semiconductors
+ *
+ * ROHM BD96801 watchdog driver
+ */
 
 #include <linux/bcd.h>
 #include <linux/kernel.h>
