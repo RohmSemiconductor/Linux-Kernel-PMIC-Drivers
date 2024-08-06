@@ -7,7 +7,9 @@ For companion PMIC used together with BD96801 see [BD96802](../BD96802)
 
 ### Upstream:
 
-An [RFC Series](https://lore.kernel.org/all/cover.1712920132.git.mazziesaccount@gmail.com/) has been sent to the upstream Linux kernel community and is being further reworked based on feedback from the community. The goal is to include the support for the BD96801 in the community Linux kernel during the first half of the 2024.
+Limited version of the BD96801 Linux driver has been merged to the [Linuxv6.11-rc1](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/?h=v6.11-rc1). This version does not support handling of ERRB IRQs or doing the configuration which requires the PMIC to be in STBY state. Upstreaming support for the ERRB IRQ handling is still in progress.
+
+An early [RFC Series](https://lore.kernel.org/all/cover.1712920132.git.mazziesaccount@gmail.com/) which was sent to the upstream Linux kernel community did implement the STBY configurations and ERRB IRQs. The RFC solution has some severe limitations which must be handled by anyone intending to use the code. (For example, ensuring the PMIC stays in STBY when STBY-only configurations are applied to the PMIC). The RFC series can be used as a basis for a custom driver if STBY-configuration is to be needed.
 
 ### Downstream drivers:
 
