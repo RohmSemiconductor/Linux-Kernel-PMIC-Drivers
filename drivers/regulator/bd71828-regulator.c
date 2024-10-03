@@ -734,20 +734,32 @@ static const struct bd71828_regulator_data bd71828_rdata[] = {
 
 static int bd71828_probe(struct platform_device *pdev)
 {
-	int i, j, ret;
+	int i, j, ret, num_regulators;
 	struct regulator_config config = {
 		.dev = pdev->dev.parent,
 	};
+	enum rohm_chip_type chip = platform_get_device_id(pdev)->driver_data;
+	const struct bd71828_regulator_data *rdata;
 
 	config.regmap = dev_get_regmap(pdev->dev.parent, NULL);
 	if (!config.regmap)
 		return -ENODEV;
 
-	for (i = 0; i < ARRAY_SIZE(bd71828_rdata); i++) {
+ 	switch (chip) {
+	case ROHM_CHIP_TYPE_BD71828:
+		rdata = &bd71828_rdata[0];
+		num_regulators = ARRAY_SIZE(bd71828_rdata);
+		break;
+	default:
+		return dev_err_probe(&pdev->dev, -EINVAL,
+				     "Unsupported device\n");
+	}
+
+	for (i = 0; i < num_regulators; i++) {
 		struct regulator_dev *rdev;
 		const struct bd71828_regulator_data *rd;
 
-		rd = &bd71828_rdata[i];
+		rd = &rdata[i];
 		rdev = devm_regulator_register(&pdev->dev,
 					       &rd->desc, &config);
 		if (IS_ERR(rdev))
