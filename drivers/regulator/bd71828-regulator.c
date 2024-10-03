@@ -9,6 +9,7 @@
 #include <linux/kernel.h>
 #include <linux/mfd/rohm-bd71828.h>
 #include <linux/module.h>
+#include <linux/mod_devicetable.h>
 #include <linux/of.h>
 #include <linux/platform_device.h>
 #include <linux/regmap.h>
@@ -768,12 +769,19 @@ static int bd71828_probe(struct platform_device *pdev)
 	return 0;
 }
 
+static const struct platform_device_id bd71828_pmic_id[] = {
+	{ "bd71828-pmic", ROHM_CHIP_TYPE_BD71828 },
+	{ },
+};
+MODULE_DEVICE_TABLE(platform, bd71828_pmic_id);
+
 static struct platform_driver bd71828_regulator = {
 	.driver = {
 		.name = "bd71828-pmic",
 		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
 	},
 	.probe = bd71828_probe,
+	.id_table = bd71828_pmic_id,
 };
 
 module_platform_driver(bd71828_regulator);
@@ -781,4 +789,3 @@ module_platform_driver(bd71828_regulator);
 MODULE_AUTHOR("Matti Vaittinen <matti.vaittinen@fi.rohmeurope.com>");
 MODULE_DESCRIPTION("BD71828 voltage regulator driver");
 MODULE_LICENSE("GPL");
-MODULE_ALIAS("platform:bd71828-pmic");
