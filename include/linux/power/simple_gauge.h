@@ -16,7 +16,7 @@
 #define SW_GAUGE_CLAMP_SOC BIT(3)
 
 /* Power supply properties handled by simple_gauge */
-static const enum power_supply_property SIMPLE_GAUGE_PROPS[] = {
+const enum power_supply_property SIMPLE_GAUGE_PROPS[] = {
 	POWER_SUPPLY_PROP_CAPACITY,
 	POWER_SUPPLY_PROP_CYCLE_COUNT,
 	POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN,
