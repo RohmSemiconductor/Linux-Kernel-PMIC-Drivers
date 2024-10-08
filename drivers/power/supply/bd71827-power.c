@@ -19,6 +19,7 @@
 #include <linux/mfd/rohm-bd71815.h>
 #include <linux/mfd/rohm-bd71827.h>
 #include <linux/mfd/rohm-bd71828.h>
+#include <linux/mfd/rohm-bd72720.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/platform_device.h>
@@ -108,6 +109,7 @@ static const struct linear_range dcin_collapse = {
 
 struct pwr_regs {
 	int used_init_regs;
+	u8 vdcin_himask;
 	u8 vbat_init;
 	u8 vbat_init2;
 	u8 vbat_init3;
@@ -119,9 +121,9 @@ struct pwr_regs {
 	u8 btemp_vth;
 	u8 chg_state;
 	u8 coulomb3;
-	u8 coulomb2;
+/*	u8 coulomb2;
 	u8 coulomb1;
-	u8 coulomb0;
+	u8 coulomb0; */
 	u8 coulomb_ctrl;
 	u8 vbat_rex_avg;
 	u8 coulomb_full3;
@@ -172,9 +174,9 @@ static struct pwr_regs pwr_regs_bd71827 = {
 	.btemp_vth = BD71827_REG_VM_BTMP,
 	.chg_state = BD71827_REG_CHG_STATE,
 	.coulomb3 = BD71827_REG_CC_CCNTD_3,
-	.coulomb2 = BD71827_REG_CC_CCNTD_2,
+/*	.coulomb2 = BD71827_REG_CC_CCNTD_2,
 	.coulomb1 = BD71827_REG_CC_CCNTD_1,
-	.coulomb0 = BD71827_REG_CC_CCNTD_0,
+	.coulomb0 = BD71827_REG_CC_CCNTD_0, */
 	.coulomb_ctrl = BD71827_REG_CC_CTRL,
 	.coulomb_full3 = BD71827_REG_FULL_CCNTD_3,
 	.cc_full_clr = BD71827_REG_FULL_CTRL,
@@ -188,6 +190,7 @@ static struct pwr_regs pwr_regs_bd71827 = {
 	.batcap_mon_limit_u = BD71827_REG_CC_BATCAP1_TH_U,
 	.conf = BD71827_REG_CONF,
 	.vdcin = BD71827_REG_VM_DCIN_U,
+	.vdcin_himask = BD7182x_MASK_VDCIN_U,
 #ifdef PWRCTRL_HACK
 	.pwrctrl = BD71827_REG_PWRCTRL,
 	.hibernate_mask = 0x1,
@@ -207,9 +210,9 @@ static struct pwr_regs pwr_regs_bd71828 = {
 	.btemp_vth = BD71828_REG_VM_BTMP_U,
 	.chg_state = BD71828_REG_CHG_STATE,
 	.coulomb3 = BD71828_REG_CC_CNT3,
-	.coulomb2 = BD71828_REG_CC_CNT2,
+/*	.coulomb2 = BD71828_REG_CC_CNT2,
 	.coulomb1 = BD71828_REG_CC_CNT1,
-	.coulomb0 = BD71828_REG_CC_CNT0,
+	.coulomb0 = BD71828_REG_CC_CNT0, */
 	.coulomb_ctrl = BD71828_REG_COULOMB_CTRL,
 	.vbat_rex_avg = BD71828_REG_VBAT_REX_AVG_U,
 	.coulomb_full3 = BD71828_REG_CC_CNT_FULL3,
@@ -224,6 +227,7 @@ static struct pwr_regs pwr_regs_bd71828 = {
 	.batcap_mon_limit_u = BD71828_REG_BATCAP_MON_LIMIT_U,
 	.conf = BD71828_REG_CONF,
 	.vdcin = BD71828_REG_VDCIN_U,
+	.vdcin_himask = BD7182x_MASK_VDCIN_U,
 #ifdef PWRCTRL_HACK
 	.pwrctrl = BD71828_REG_PS_CTRL_1,
 	.hibernate_mask = 0x2,
@@ -244,9 +248,9 @@ static struct pwr_regs pwr_regs_bd71815 = {
 	.btemp_vth = BD71815_REG_VM_BTMP,
 	.chg_state = BD71815_REG_CHG_STATE,
 	.coulomb3 = BD71815_REG_CC_CCNTD_3,
-	.coulomb2 = BD71815_REG_CC_CCNTD_2,
+/*	.coulomb2 = BD71815_REG_CC_CCNTD_2,
 	.coulomb1 = BD71815_REG_CC_CCNTD_1,
-	.coulomb0 = BD71815_REG_CC_CCNTD_0,
+	.coulomb0 = BD71815_REG_CC_CCNTD_0, */
 	.coulomb_ctrl = BD71815_REG_CC_CTRL,
 	.vbat_rex_avg = BD71815_REG_REX_SA_VBAT_U,
 	.coulomb_full3 = BD71815_REG_FULL_CCNTD_3,
@@ -262,10 +266,64 @@ static struct pwr_regs pwr_regs_bd71815 = {
 	.conf = BD71815_REG_CONF,
 
 	.vdcin = BD71815_REG_VM_DCIN_U,
+	.vdcin_himask = BD7182x_MASK_VDCIN_U,
 #ifdef PWRCTRL_HACK
 	#error "Not implemented for BD71815"
 #endif
 };
+
+static struct pwr_regs pwr_regs_bd72720 = {
+	.vbat_init = BD72720_REG_VM_OCV_PRE_U,		/* Ok */
+	.vbat_init2 = BD72720_REG_VM_OCV_PST_U,		/* Ok */
+	.vbat_init3 = BD72720_REG_VM_OCV_PWRON_U,	/* Ok */
+	.used_init_regs = 3,				/* Ok */
+	.vbat_avg = BD72720_REG_VM_SA_VBAT_U,		/* Ok */
+	.ibat = BD72720_REG_CC_CURCD_U,			/* Ok */
+	.ibat_avg = BD72720_REG_CC_SA_CURCD_U,		/* Ok */
+	.meas_clear = BD72720_REG_VM_VSYS_SA_MINMAX_CTRL, /* Ok */
+	.vsys_min_avg = BD72720_REG_VM_SA_VSYS_MIN_U,	/* Ok */
+	.btemp_vth = BD72720_REG_VM_BTMP_U,
+	/*
+	 * Ok. Note, state 0x40 IMP_CHK. not documented
+	 * on other variants but was still handled in
+	 * in existing code. No memory traces as to why.
+	 */
+	.chg_state = BD72720_REG_CHG_STATE,
+	.coulomb3 = BD72720_REG_CC_CCNTD_3,		/* Ok */
+	.coulomb_ctrl = BD72720_REG_CC_CTRL,		/* Ok */
+	.vbat_rex_avg = BD72720_REG_REX_SA_VBAT_U,	/* Ok */
+	.coulomb_full3 = BD72720_REG_FULL_CCNTD_3,	/* Ok */
+	.cc_full_clr = BD72720_REG_CC_CCNTD_CTRL,	/* Ok */
+	.coulomb_chg3 = BD72720_REG_CCNTD_CHG_3,	/* Ok */
+	.bat_temp = BD72720_REG_CHG_BAT_TEMP_STAT,	/* Ok */
+	/* Not all features present on BD72720. */
+	.dcin_stat = BD72720_REG_INT_VBUS_SRC,
+	.dcin_collapse_limit = -1, /* Automatic. Setting not supported */
+	.chg_set1 = BD72720_REG_CHG_SET_1,		/* Ok */
+	.chg_en = BD72720_REG_CHG_EN,			/* Ok */
+	.vbat_alm_limit_u = BD72720_REG_ALM_VBAT_TH_U,	/* Ok 15mV note in data-sheet */
+	.batcap_mon_limit_u = BD72720_REG_CC_BATCAP1_TH_U, /* Ok */
+	.conf = BD72720_REG_CONF, /* Ok, no XSTB, only PON. Seprate slave addr */
+	.vdcin = BD72720_REG_VM_VBUS_U, /* 10 bits not 11 as with other ICs */
+	.vdcin_himask = BD72720_MASK_VDCIN_U,
+#ifdef PWRCTRL_HACK
+	/*
+	 * I'm not sure this belongs to the charger driver...
+	 * Could cause problems (as toggling PMIC to 'hibernate'
+	 * may cause suspend for the rest of the system to fail.
+	 * Hence, this should be called from some very late stage
+	 * - but still having the I2C alive...
+	 *
+	 * Anyways, with the BD72720, the princess in another castle,
+	 * I mean, the PS_CTRL_1 is in the another regmap so common
+	 * code won't cut it.
+	 * .pwrctrl = BD72720_REG_PS_CTRL_1,
+	 * .hibernate_mask = 0x2,
+	 */
+#endif
+};
+
+
 
 /*
  * unit 0.1%
@@ -340,9 +398,21 @@ struct bd71827_power {
 	int low_thr_voltage;
 	int (*get_temp)(struct bd71827_power *pwr, int *temp);
 	int (*bat_inserted)(struct bd71827_power *pwr);
+	int (*get_chg_online)(struct bd71827_power *pwr, int *chg_online);
 	int battery_cap;
 	struct power_supply_battery_info *batinfo;
 };
+
+/*
+ * BD72720 needs some special data (like secondary regmap) so it wraps the
+ * common power struct
+ */
+struct bd72720_power {
+	struct bd71827_power pwr;
+	struct regmap *genregmap;
+};
+
+#define BD72720_PWR(p) (container_of(p, struct bd72720_power, pwr))
 
 #define __CC_to_UAH(pwr, cc)				\
 ({							\
@@ -439,6 +509,12 @@ static int bd71827_get_init_voltage(struct bd71827_power *pwr,
 	return ret;
 }
 
+/*
+ * The BD71828 (and probably BD71815, BD71817 and BD71827) do averaging for 64
+ * samples of ADC data. The BD72720 allows configuring the amount of samples to
+ * be averaged - and defaults to 128. See the VM_SA_ACCUMULATE in data-sheet if
+ * the default does not suit you.
+ */
 static int bd71827_get_vbat(struct bd71827_power *pwr, int *vcell)
 {
 	uint16_t tmp_vcell;
@@ -802,7 +878,7 @@ static int bd71827_get_vsys_min(struct simple_gauge *sw, int *uv)
 			"Failed to read system min average voltage\n");
 		return ret;
 	}
-	ret = regmap_update_bits(pwr->regmap, pwr->regs->meas_clear,
+	ret = regmap_write_bits(pwr->regmap, pwr->regs->meas_clear,
 				 BD718XX_MASK_VSYS_MIN_AVG_CLR,
 				 BD718XX_MASK_VSYS_MIN_AVG_CLR);
 	if (ret)
@@ -1023,7 +1099,7 @@ static int bd71828_zero_correct(struct simple_gauge *sw, int *effective_cap,
 			ocv_table[i] = power_supply_batinfo_dcap2ocv(pwr->batinfo,
 								     soc_table[i], temp);
 		/*
-		 * Update amount of OCV values id we didn't have the fixed size
+		 * Update amount of OCV values if we didn't have the fixed size
 		 * module param table
 		 */
 		params = g_num_vdr_params;
@@ -1148,6 +1224,21 @@ static int bd71828_zero_correct(struct simple_gauge *sw, int *effective_cap,
 	return 0;
 }
 
+static int bd72720_get_chg_online(struct bd71827_power *pwr, int *chg_online)
+{
+	struct bd72720_power *p = BD72720_PWR(pwr);
+	int r, ret;
+
+	ret = regmap_read(p->genregmap, pwr->regs->dcin_stat, &r);
+	if (ret) {
+		dev_err(pwr->dev, "Failed to read DCIN status\n");
+		return ret;
+	}
+	*chg_online = ((r & BD72720_MASK_DCIN_DET) != 0);
+
+	return 0;
+}
+
 static int get_chg_online(struct bd71827_power *pwr, int *chg_online)
 {
 	int r, ret;
@@ -1177,22 +1268,34 @@ static int get_bat_online(struct bd71827_power *pwr, int *bat_online)
 	return 0;
 }
 
-static int bd71828_bat_inserted(struct bd71827_power *pwr)
+static int __conf_bat_inserted(struct device *dev, struct regmap *regmap, int conf_reg)
 {
 	int ret, val;
 
-	ret = regmap_read(pwr->regmap, pwr->regs->conf, &val);
+	ret = regmap_read(regmap, conf_reg, &val);
 	if (ret) {
-		dev_err(pwr->dev, "Failed to read CONF register\n");
+		dev_err(dev, "Failed to read CONF register\n");
 		return 0;
 	}
 	ret = val & BD7182x_MASK_CONF_PON;
 
 	if (ret)
-		regmap_update_bits(pwr->regmap, pwr->regs->conf,
-				   BD7182x_MASK_CONF_PON, 0);
+		if (regmap_update_bits(regmap, conf_reg, BD7182x_MASK_CONF_PON, 0))
+			dev_err(dev, "Failed to write CONF register\n");
 
 	return ret;
+}
+
+static int bd72720_bat_inserted(struct bd71827_power *pwr)
+{
+	struct bd72720_power *p = BD72720_PWR(pwr);
+
+	return __conf_bat_inserted(pwr->dev, p->genregmap, pwr->regs->conf);
+}
+
+static int bd71828_bat_inserted(struct bd71827_power *pwr)
+{
+	return __conf_bat_inserted(pwr->dev, pwr->regmap, pwr->regs->conf);
 }
 
 static int bd71815_bat_inserted(struct bd71827_power *pwr)
@@ -1218,13 +1321,15 @@ static int bd71827_init_hardware(struct bd71827_power *pwr)
 	int ret;
 
 	/* TODO: Collapse limit should come from device-tree ? */
-	ret = regmap_write(pwr->regmap, pwr->regs->dcin_collapse_limit,
-			   BD7182x_DCIN_COLLAPSE_DEFAULT);
-	if (ret) {
-		dev_err(pwr->dev, "Failed to write DCIN collapse limit\n");
-		return ret;
+	if (pwr->regs->dcin_collapse_limit != -1) {
+		ret = regmap_write(pwr->regmap, pwr->regs->dcin_collapse_limit,
+				   BD7182x_DCIN_COLLAPSE_DEFAULT);
+		if (ret) {
+			dev_err(pwr->dev,
+				"Failed to write DCIN collapse limit\n");
+			return ret;
+		}
 	}
-
 	ret = pwr->bat_inserted(pwr);
 	if (ret < 0)
 		return ret;
@@ -1499,13 +1604,13 @@ static int bd71827_charger_get_property(struct power_supply *psy,
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_ONLINE:
-		ret = get_chg_online(pwr, &online);
+		ret = pwr->get_chg_online(pwr, &online);
 		if (!ret)
 			val->intval = online;
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
 		ret = bd7182x_read16_himask(pwr, pwr->regs->vdcin,
-					    BD7182x_MASK_VDCIN_U, &tmp);
+					    pwr->regs->vdcin_himask, &tmp);
 		if (ret)
 			return ret;
 
@@ -1628,11 +1733,11 @@ static ssize_t charging_store(struct device *dev,
 	}
 
 	if (val)
-		ret = regmap_update_bits(pwr->regmap, pwr->regs->chg_en,
+		ret = regmap_write_bits(pwr->regmap, pwr->regs->chg_en,
 					 BD7182x_MASK_CHG_EN,
 					 BD7182x_MASK_CHG_EN);
 	else
-		ret = regmap_update_bits(pwr->regmap, pwr->regs->chg_en,
+		ret = regmap_write_bits(pwr->regmap, pwr->regs->chg_en,
 					 BD7182x_MASK_CHG_EN,
 					 0);
 	if (ret)
@@ -1652,7 +1757,7 @@ static ssize_t charging_show(struct device *dev,
 	if (ret)
 		return ret;
 
-	ret = get_chg_online(pwr, &chg_online);
+	ret = pwr->get_chg_online(pwr, &chg_online);
 	if (ret)
 		return ret;
 
@@ -2296,6 +2401,13 @@ static void fgauge_initial_values(struct bd71827_power *pwr)
 		if (use_vdr)
 			o->zero_cap_adjust = bd71828_zero_correct;
 		break;
+	case ROHM_CHIP_TYPE_BD72720:
+		o->get_temp = bd71828_get_temp;
+		o->is_relaxed = bd71828_is_relaxed;
+		if (use_vdr)
+			o->zero_cap_adjust = bd71828_zero_correct;
+		break;
+		
 	/*
 	 * No need to handle default here as this is done already in probe.
 	 * But this keeps gcc shut-up.
@@ -2331,22 +2443,61 @@ static int bd71827_power_probe(struct platform_device *pdev)
 
 	switch (pwr->chip_type) {
 	case ROHM_CHIP_TYPE_BD71828:
+		pwr->get_chg_online = get_chg_online;
 		pwr->bat_inserted = bd71828_bat_inserted;
 		pwr->regs = &pwr_regs_bd71828;
 		dev_dbg(pwr->dev, "Found ROHM BD71828\n");
 		psycfg.psy_name	= "bd71828-charger";
 		break;
 	case ROHM_CHIP_TYPE_BD71827:
+		pwr->get_chg_online = get_chg_online;
 		pwr->bat_inserted = bd71828_bat_inserted;
 		pwr->regs = &pwr_regs_bd71827;
 		dev_dbg(pwr->dev, "Found ROHM BD71817\n");
 		psycfg.psy_name	= "bd71827-charger";
 		break;
 	case ROHM_CHIP_TYPE_BD71815:
+		pwr->get_chg_online = get_chg_online;
 		pwr->bat_inserted = bd71815_bat_inserted;
 		pwr->regs = &pwr_regs_bd71815;
 		psycfg.psy_name	= "bd71815-charger";
 		dev_dbg(pwr->dev, "Found ROHM BD71815\n");
+	case ROHM_CHIP_TYPE_BD72720:
+	{
+		struct bd72720_power *bd72720_pwr;
+
+		/*
+		 * The BD72720 has (most of?) the charger related registers
+		 * behind a secondary I2C slave address instead of paging. Most
+		 * of the other BD72720 sub-devices need only access to
+		 * registers behind the other slave addres. Thus the BD72720
+		 * core driver registers the first regmap for the real MFD I2C
+		 * device - and this is what we get here when using the
+		 * dev_get_regmap(parent...). For the charger we however
+		 * (mostly) need the other regmap. The MFD hands it to us via
+		 * platform-data and here we aquire it and use it as main
+		 * regmap for the BD72720 power-supply.
+		 */
+		bd72720_pwr = devm_kzalloc(&pdev->dev, sizeof(*bd72720_pwr), GFP_KERNEL);
+		if (!bd72720_pwr)
+			return -ENOMEM;
+
+		bd72720_pwr->pwr = *pwr;
+		devm_kfree(&pdev->dev, pwr);
+		pwr = &bd72720_pwr->pwr;
+		bd72720_pwr->genregmap = pwr->regmap;
+		pwr->regmap = dev_get_platdata(&pdev->dev);
+		if (!pwr->regmap)
+			return dev_err_probe(&pdev->dev, -EINVAL, "No charger regmap\n");
+
+		psycfg.psy_name	= "bd72720-charger";
+		pwr->bat_inserted = bd72720_bat_inserted;
+		pwr->regs = &pwr_regs_bd72720;
+		pwr->get_chg_online = bd72720_get_chg_online;
+		dev_dbg(pwr->dev, "Found ROHM BD72720\n");
+
+		break;
+	}
 	break;
 	default:
 		dev_err(pwr->dev, "Unknown PMIC\n");
@@ -2412,6 +2563,7 @@ static const struct platform_device_id bd71827_charger_id[] = {
 	{ "bd71815-power", ROHM_CHIP_TYPE_BD71815 },
 	{ "bd71827-power", ROHM_CHIP_TYPE_BD71827 },
 	{ "bd71828-power", ROHM_CHIP_TYPE_BD71828 },
+	{ "bd72720-power", ROHM_CHIP_TYPE_BD72720 },
 	{ },
 };
 MODULE_DEVICE_TABLE(platform, bd71827_charger_id);
