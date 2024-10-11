@@ -20,6 +20,22 @@
 #include <linux/regmap.h>
 #include <linux/types.h>
 
+#define BD72720_TYPED_IRQ_REG(_irq, _stat_offset, _mask, _type_offset)     \
+	[_irq] = {							   \
+		.reg_offset = (_stat_offset),				   \
+		.mask = (_mask),					   \
+		{							   \
+			.type_reg_offset = (_type_offset),		   \
+			.type_reg_mask = BD72720_GPIO_IRQ_TYPE_MASK,	   \
+			.type_rising_val = BD72720_GPIO_IRQ_TYPE_RISING,   \
+			.type_falling_val = BD72720_GPIO_IRQ_TYPE_FALLING, \
+			.type_level_low_val = BD72720_GPIO_IRQ_TYPE_LOW,   \
+			.type_level_high_val = BD72720_GPIO_IRQ_TYPE_HIGH, \
+			.types_supported = IRQ_TYPE_EDGE_BOTH |		   \
+				IRQ_TYPE_LEVEL_HIGH | IRQ_TYPE_LEVEL_LOW,  \
+		},							   \
+	}
+
 static struct gpio_keys_button button = {
 	.code = KEY_POWER,
 	.gpio = -1,
@@ -237,15 +253,15 @@ static const struct regmap_range bd71828_volatile_ranges[] = {
 
 /*
  * The BD72720 is an odd beast in that it contains two separate sets of
- * registers, both starting from 0. The twist is that these "pages" are behind
- * different I2C slave addresses. It seems most of the registers are behind
+ * registers, both starting from address 0x0. The twist is that these "pages"
+ * are behind different I2C slave addresses. Most of the registers are behind
  * a slave address 0x4b, which will be used as the "main" address for this
  * device.
- * However, (most?) of the charger related registers are located behind slave
- * address 0x4c. It is tempting to push the dealing with the charger registers
- * and the extra 0x4c device in power-supply driver - but perhaps it's better
- * for the sake of the cleaner re-use to deal with setting up all of the regmaps
- * here. Furthermore, the LED stuff may need access to both of these devices.
+ * Most of the charger related registers are located behind slave address 0x4c.
+ * It is tempting to push the dealing with the charger registers and the extra
+ * 0x4c device in power-supply driver - but perhaps it's better for the sake of
+ * the cleaner re-use to deal with setting up all of the regmaps here.
+ * Furthermore, the LED stuff may need access to both of these devices.
  */
 #define BD72720_SECONDARY_I2C_SLAVE 0x4c
 static const struct regmap_range bd72720_volatile_ranges_4b[] = {
@@ -275,6 +291,13 @@ static const struct regmap_range bd72720_volatile_ranges_4b[] = {
 	},
 };
 
+static const struct regmap_range bd72720_precious_ranges_4b[] = {
+	{
+		.range_min = BD72720_REG_INT_LVL1_STAT,
+		.range_max = BD72720_REG_INT_ETC2_STAT,
+	},
+};
+
 static const struct regmap_range bd72720_volatile_ranges_4c[] = {
 	{
 		/* Status information */
@@ -289,7 +312,7 @@ static const struct regmap_range bd72720_volatile_ranges_4c[] = {
 		.range_max = BD72720_REG_CHG_CTRL,
 	}, {
 		/*
-		 * TODO: Ensure this is used to advertice state, not (only?) to
+		 * TODO: Ensure this is used to advertise state, not (only?) to
 		 * control it.
 		 */
 		.range_min = BD72720_REG_VSYS_STATE_STAT,
@@ -332,6 +355,11 @@ static const struct regmap_access_table bd72720_volatile_regs_4b = {
 	.n_yes_ranges = ARRAY_SIZE(bd72720_volatile_ranges_4b),
 };
 
+static const struct regmap_access_table bd72720_precious_regs_4b = {
+	.yes_ranges = &bd72720_precious_ranges_4b[0],
+	.n_yes_ranges = ARRAY_SIZE(bd72720_precious_ranges_4b),
+};
+
 static const struct regmap_access_table bd72720_volatile_regs_4c = {
 	.yes_ranges = &bd72720_volatile_ranges_4c[0],
 	.n_yes_ranges = ARRAY_SIZE(bd72720_volatile_ranges_4c),
@@ -357,6 +385,7 @@ static const struct regmap_config bd72720_regmap_4b = {
 	.reg_bits = 8,
 	.val_bits = 8,
 	.volatile_table = &bd72720_volatile_regs_4b,
+	.precious_table = &bd72720_precious_regs_4b,
 	.max_register = BD72720_REG_INT_ETC2_SRC,
 	.cache_type = REGCACHE_MAPLE,
 };
@@ -659,8 +688,15 @@ static const struct regmap_irq bd72720_irqs[] = {
 	REGMAP_IRQ_REG(BD72720_INT_CC_MON1_DET, 10, BD72720_INT_CC_MON1_DET_MASK),
 	REGMAP_IRQ_REG(BD72720_INT_CC_MON2_DET, 10, BD72720_INT_CC_MON2_DET_MASK),
 	REGMAP_IRQ_REG(BD72720_INT_CC_MON3_DET, 10, BD72720_INT_CC_MON3_DET_MASK),
-	REGMAP_IRQ_REG(BD72720_INT_GPIO1_IN, 10, BD72720_INT_GPIO1_IN_MASK),
-	REGMAP_IRQ_REG(BD72720_INT_GPIO2_IN, 10, BD72720_INT_GPIO2_IN_MASK),
+/*
+ * The GPIO1_IN and GPIO2_IN IRQs are generated from the PMIC's GPIO1 and GPIO2
+ * pins. Eg, they may be wired to other devices which can then use the PMIC as
+ * an interrupt controller. The GPIO1 and GPIO2 can have the IRQ type
+ * specified. All of the types (falling, rising, and both edges as well as low
+ * and high levels) are supported.
+ */
+	BD72720_TYPED_IRQ_REG(BD72720_INT_GPIO1_IN, 10, BD72720_INT_GPIO1_IN_MASK, 0),
+	BD72720_TYPED_IRQ_REG(BD72720_INT_GPIO2_IN, 10, BD72720_INT_GPIO2_IN_MASK, 1),
 	REGMAP_IRQ_REG(BD72720_INT_VF125_RES, 11, BD72720_INT_VF125_RES_MASK),
 	REGMAP_IRQ_REG(BD72720_INT_VF125_DET, 11, BD72720_INT_VF125_DET_MASK),
 	REGMAP_IRQ_REG(BD72720_INT_VF_RES, 11, BD72720_INT_VF_RES_MASK),
@@ -669,6 +705,29 @@ static const struct regmap_irq bd72720_irqs[] = {
 	REGMAP_IRQ_REG(BD72720_INT_RTC1, 11, BD72720_INT_RTC1_MASK),
 	REGMAP_IRQ_REG(BD72720_INT_RTC2, 11, BD72720_INT_RTC2_MASK),
 };
+
+static int bd72720_set_type_config(unsigned int **buf, unsigned int type,
+				   const struct regmap_irq *irq_data,
+				   int idx, void *irq_drv_data)
+{
+	const struct regmap_irq_type *t = &irq_data->type;
+
+	/*
+	 * The regmap IRQ ecpects IRQ_TYPE_EDGE_BOTH to be written to register
+	 * as logical OR of the type_falling_val and type_rising_val. This is
+	 * not how the BD72720 implements this configuration, hence we need
+	 * to handle this specific case separately.
+	 */
+	if (type == IRQ_TYPE_EDGE_BOTH) {
+		buf[0][idx] &= ~t->type_reg_mask;
+		buf[0][idx] |= BD72720_GPIO_IRQ_TYPE_BOTH;
+
+		return 0;
+	}
+	
+	return regmap_irq_set_type_config_simple(buf, type, irq_data, idx,
+						 irq_drv_data);
+}
 
 static struct regmap_irq_chip bd71828_irq_chip = {
 	.name = "bd71828_irq",
@@ -702,6 +761,8 @@ static struct regmap_irq_chip bd71815_irq_chip = {
 	.irq_reg_stride = 1,
 };
 
+static const unsigned int bd72720_irq_type_base = BD72720_REG_GPIO1_CTRL;
+
 static struct regmap_irq_chip bd72720_irq_chip = {
 	.name = "bd72720_irq",
 	.main_status = BD72720_REG_INT_LVL1_STAT,
@@ -709,6 +770,10 @@ static struct regmap_irq_chip bd72720_irq_chip = {
 	.num_irqs = ARRAY_SIZE(bd72720_irqs),
 	.status_base = BD72720_REG_INT_PS1_STAT,
 	.unmask_base = BD72720_REG_INT_PS1_EN,
+	.config_base = &bd72720_irq_type_base,
+	.num_config_bases = 1,
+	.num_config_regs = 2,
+	.set_type_config = bd72720_set_type_config,
 	.ack_base = BD72720_REG_INT_PS1_STAT,
 	.init_ack_masked = true,
 	.num_regs = 12,

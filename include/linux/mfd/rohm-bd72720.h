@@ -116,6 +116,22 @@ enum {
 #define BD72720_INT_RTC2_MASK BIT(6)
 
 enum {
+	/*
+	 * The IRQs excluding GPIO1 and GPIO2 are ordered in a same way as the
+	 * respective IRQ bits in status and mask registers are ordered.
+	 *
+	 * The BD72720_INT_GPIO1_IN and BD72720_INT_GPIO2_IN are IRQs which can
+	 * be used by other devices. Let's have  GPIO1 and GPIO2 as first IRQs
+	 * here so we can use the regmap-IRQ with standard device tree xlate
+	 * while devices connected to the BD72720 IRQ input pins can refer to
+	 * the first two interrupt numbers in their device tree. If we placed
+	 * BD72720_INT_GPIO1_IN and BD72720_INT_GPIO2_IN after the CC_MON_DET 
+	 * interrupts (like they are in the registers), the devices using
+	 * BD72720 as an IRQ parent should refer the interrupts starting with
+	 * an offset which might not be trivial to understand.
+	 */
+	BD72720_INT_GPIO1_IN,
+	BD72720_INT_GPIO2_IN,
 	BD72720_INT_LONGPUSH,
 	BD72720_INT_MIDPUSH,
 	BD72720_INT_SHORTPUSH,
@@ -184,8 +200,6 @@ enum {
 	BD72720_INT_CC_MON1_DET,
 	BD72720_INT_CC_MON2_DET,
 	BD72720_INT_CC_MON3_DET,
-	BD72720_INT_GPIO1_IN,
-	BD72720_INT_GPIO2_IN,
 	BD72720_INT_VF125_RES,
 	BD72720_INT_VF125_DET,
 	BD72720_INT_VF_RES,
@@ -355,11 +369,17 @@ enum {
 
 	BD72720_REG_GPIO1_CTRL,
 	BD72720_REG_GPIO2_CTRL,
+#define BD72720_GPIO_IRQ_TYPE_MASK	GENMASK(6, 4)
+#define BD72720_GPIO_IRQ_TYPE_FALLING	0x0
+#define BD72720_GPIO_IRQ_TYPE_RISING	0x1
+#define BD72720_GPIO_IRQ_TYPE_BOTH	0x2
+#define BD72720_GPIO_IRQ_TYPE_HIGH	0x3
+#define BD72720_GPIO_IRQ_TYPE_LOW	0x4
 	BD72720_REG_GPIO3_CTRL,
 	BD72720_REG_GPIO4_CTRL,
 	BD72720_REG_GPIO5_CTRL,
-#define BD72720_GPIO_DRIVE_MASK	BIT(1)
-#define BD72720_GPIO_HIGH	BIT(0)
+#define BD72720_GPIO_DRIVE_MASK		BIT(1)
+#define BD72720_GPIO_HIGH		BIT(0)
 
 	BD72720_REG_EPDEN_CTRL,
 	BD72720_REG_GATECNT_CTRL,
