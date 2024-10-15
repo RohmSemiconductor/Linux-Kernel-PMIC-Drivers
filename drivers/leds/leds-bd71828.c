@@ -7,6 +7,7 @@
 #include <linux/leds.h>
 #include <linux/mfd/rohm-generic.h>
 #include <linux/mfd/rohm-bd71828.h>
+#include <linux/mfd/rohm-bd72720.h>
 #include <linux/module.h>
 #include <linux/mod_devicetable.h>
 #include <linux/platform_device.h>
@@ -47,12 +48,13 @@ static int bd71828_led_brightness_set(struct led_classdev *led_cdev,
 	if (value != LED_OFF)
 		val = BD71828_LED_ON;
 
-	return regmap_update_bits(data->regmap, BD71828_REG_LED_CTRL,
+	return regmap_update_bits(data->regmap, data->force_reg,
 			    l->force_mask, val);
 }
 
 static int bd71828_led_probe(struct platform_device *pdev)
 {
+	enum rohm_chip_type chip = platform_get_device_id(pdev)->driver_data;
 	struct bd71828_leds *l;
 	struct bd71828_led *g, *a;
 	struct regmap *r;
@@ -77,6 +79,18 @@ static int bd71828_led_probe(struct platform_device *pdev)
 	a->l.brightness_set_blocking = bd71828_led_brightness_set;
 	g->l.brightness_set_blocking = bd71828_led_brightness_set;
 
+	switch (chip) {
+		case ROHM_CHIP_TYPE_BD71828:
+			l->force_reg = BD71828_REG_LED_CTRL;
+			break;
+		case ROHM_CHIP_TYPE_BD72720:
+			l->force_reg = BD72720_REG_LED_CTRL;
+			break;
+		default:
+			dev_err(&pdev->dev, "Unknown IC");
+			return -EINVAL;
+	}
+
 	ret = devm_led_classdev_register(&pdev->dev, &g->l);
 	if (ret)
 		return ret;
@@ -86,6 +100,7 @@ static int bd71828_led_probe(struct platform_device *pdev)
 
 static const struct platform_device_id bd71828_led_id[] = {
 	{ "bd71828-led", ROHM_CHIP_TYPE_BD71828 },
+	{ "bd72720-led", ROHM_CHIP_TYPE_BD72720 },
 	{ },
 };
 MODULE_DEVICE_TABLE(platform, bd71828_led_id);
