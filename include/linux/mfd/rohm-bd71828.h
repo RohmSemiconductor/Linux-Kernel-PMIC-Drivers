@@ -488,4 +488,9 @@ enum {
 #define BD71828_OUT_TYPE_OPEN_DRAIN			0x0
 #define BD71828_OUT_TYPE_CMOS				0x2
 
+int bd71828_set_runlevel_voltage(struct regulator *regulator, unsigned int uv,
+                                 unsigned int level);
+int bd71828_set_runlevel(struct regulator *regulator, unsigned int level);
+int bd71828_get_runlevel(struct regulator *regulator, unsigned int *level);
+
 #endif /* __LINUX_MFD_BD71828_H__ */
