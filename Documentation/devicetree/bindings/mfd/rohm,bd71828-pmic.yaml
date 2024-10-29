@@ -53,11 +53,16 @@ properties:
   rohm,charger-sense-resistor-ohms:
     minimum: 10000000
     maximum: 50000000
+    description: Deprecated. Do not use.
+
+  rohm,charger-sense-resistor-milli-ohms:
+    minimum: 1
+    maximum: 50
     description: |
       BD71827 and BD71828 have SAR ADC for measuring charging currents.
       External sense resistor (RSENSE in data sheet) should be used. If some
-      other but 30MOhm resistor is used the resistance value should be given
-      here in Ohms.
+      other but 30 milli Ohm resistor is used the resistance value should be given
+      here in milli Ohms.
 
   regulators:
     $ref: ../regulator/rohm,bd71828-regulator.yaml
