@@ -461,27 +461,21 @@ struct bd72720_power {
 
 #define __CC_to_UAH(pwr, cc)				\
 ({							\
-	u64 __tmp = ((u64)(cc)) * 1000000000LLU;	\
+	u64 __tmp = ((u64)(cc)) * 1000000LLU;		\
 							\
-	do_div(__tmp, (pwr)->rsens * 36 / 1000);	\
+	do_div(__tmp, (pwr)->rsens * 36);		\
 	__tmp;						\
 })
 
 #define CC16_to_UAH(pwe, cc) ((int)__CC_to_UAH((pwr), (cc)))
 #define CC32_to_UAH(pwe, cc) ((int)(__CC_to_UAH((pwr), (cc)) >> 16))
 
-/*
- * rsens is typically tens of Mohms so dividing by 1000 should be ok. (usual
- * values are 10 and 30 Mohms so division is likely to go even). We do this
- * to avoid doing two do_divs which would be unnecessary performance hit
- * even if this should not be time critical.
- */
 #define UAH_to_CC(pwr, uah) ({			\
 	u64 __tmp = (uah);			\
-	u32 __rs = (pwr)->rsens / 1000;		\
+	u32 __rs = (pwr)->rsens;		\
 	__tmp *= ((u64)__rs) * 36LLU;		\
 						\
-	do_div(__tmp, 1000000000);		\
+	do_div(__tmp, 1000000);			\
 	(int)__tmp;				\
 })
 
@@ -1934,7 +1928,7 @@ void bd71827_chip_hibernate(void)
 }
 #endif
 
-#define RSENS_CURR 10000000000LLU
+#define RSENS_CURR 10000
 
 #define BD_ISR_NAME(name) \
 bd7181x_##name##_isr
@@ -2270,12 +2264,13 @@ static int bd7182x_get_irqs(struct platform_device *pdev,
 	return ret;
 }
 
-#define RSENS_DEFAULT_30MOHM 30000000
+/* Default to 30 milli Ohms */
+#define RSENS_DEFAULT_30MOHM 30
 
 static int bd7182x_get_rsens(struct bd71827_power *pwr)
 {
-	u64 tmp = RSENS_CURR;
-	int rsens_ohm = RSENS_DEFAULT_30MOHM;
+	unsigned int tmp = RSENS_CURR;
+	int rsens_mohm = RSENS_DEFAULT_30MOHM;
 	struct fwnode_handle *node = NULL;
 
 	if (pwr->dev->parent)
@@ -2286,7 +2281,7 @@ static int bd7182x_get_rsens(struct bd71827_power *pwr)
 		uint32_t rs;
 
 		ret = fwnode_property_read_u32(node,
-					       "rohm,charger-sense-resistor-ohms",
+					       "rohm,charger-sense-resistor-milli-ohms",
 					       &rs);
 		if (ret) {
 			if (ret == -EINVAL) {
@@ -2301,15 +2296,15 @@ static int bd7182x_get_rsens(struct bd71827_power *pwr)
 			return -EINVAL;
 		}
 
-		rsens_ohm = (int)rs;
+		rsens_mohm = (int)rs;
 	}
 
 	/* Reg val to uA */
-	do_div(tmp, rsens_ohm);
+	tmp /= rsens_mohm;
 
 	pwr->curr_factor = tmp;
-	pwr->rsens = rsens_ohm;
-	dev_dbg(pwr->dev, "Setting rsens to %u ohm\n", pwr->rsens);
+	pwr->rsens = rsens_mohm;
+	dev_dbg(pwr->dev, "Setting rsens to %u milli ohm\n", pwr->rsens);
 	dev_dbg(pwr->dev, "Setting curr-factor to %u\n", pwr->curr_factor);
 	return 0;
 }
