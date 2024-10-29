@@ -58,8 +58,38 @@
 #define BD7182x_MASK_WDT_AUTO			0x40
 #define BD7182x_MASK_VBAT_ALM_LIMIT_U		0x01
 #define BD7182x_MASK_CHG_EN			0x01
+#define BD7182x_MASK_CHG_I_TRICKLE		GENMASK(3, 0)
+#define BD7182x_MASK_CHG_I_PRE			GENMASK(7, 4)
 
 #define BD7182x_DCIN_COLLAPSE_DEFAULT		0x36
+
+static const struct linear_range bdxx_i_trickle[] = {
+	{
+		.min = 5000,
+		.min_sel = 0x0,
+		.max_sel = 0x2,
+		.step = 0,
+	}, {
+		.min = 7500,
+		.min_sel = 0x3,
+		.max_sel = 0x9,
+		.step = 2500,
+	}, {
+		.min = 25000,
+		.min_sel = 0xa,
+		.max_sel = 0xf,
+		.step = 0,
+	},
+};
+
+static const struct linear_range bd71815_i_trickle[] = {
+	{
+		.min = 0,
+		.min_sel = 0x0,
+		.max_sel = 0xA,
+		.step = 2500,
+	},
+};
 
 static const struct linear_range dcin_collapse = {
 	.min = 0,
@@ -108,6 +138,8 @@ static const struct linear_range dcin_collapse = {
 #define MAX_NUM_VDR_VALUES NUM_BAT_PARAMS
 
 struct pwr_regs {
+	const struct linear_range *i_trick_r;
+	int num_i_trick_r;
 	int used_init_regs;
 	u8 vdcin_himask;
 	u8 vbat_init;
@@ -138,6 +170,7 @@ struct pwr_regs {
 	u8 batcap_mon_limit_u;
 	u8 conf;
 	u8 vdcin;
+	u8 ipre;
 #ifdef PWRCTRL_HACK
 	u8 pwrctrl;
 #endif
@@ -162,6 +195,9 @@ static int vdr_temps[NUM_VDR_TEMPS] = { -EINVAL, -EINVAL, -EINVAL, -EINVAL};
 static int g_num_vdr_params;
 
 static struct pwr_regs pwr_regs_bd71827 = {
+	.i_trick_r = &bdxx_i_trickle[0],
+	.num_i_trick_r = ARRAY_SIZE(bdxx_i_trickle),
+	.ipre = BD71827_REG_CHG_IPRE,
 	.vbat_init = BD71827_REG_VM_OCV_PRE_U,
 	.vbat_init2 = BD71827_REG_VM_OCV_PST_U,
 	.vbat_init3 = BD71827_REG_VM_OCV_PWRON_U,
@@ -198,6 +234,8 @@ static struct pwr_regs pwr_regs_bd71827 = {
 };
 
 static struct pwr_regs pwr_regs_bd71828 = {
+	.i_trick_r = &bdxx_i_trickle[0],
+	.num_i_trick_r = ARRAY_SIZE(bdxx_i_trickle),
 	.vbat_init = BD71828_REG_VBAT_INITIAL1_U,
 	.vbat_init2 = BD71828_REG_VBAT_INITIAL2_U,
 	.vbat_init3 = BD71828_REG_OCV_PWRON_U,
@@ -228,6 +266,7 @@ static struct pwr_regs pwr_regs_bd71828 = {
 	.conf = BD71828_REG_CONF,
 	.vdcin = BD71828_REG_VDCIN_U,
 	.vdcin_himask = BD7182x_MASK_VDCIN_U,
+	.ipre = BD71828_REG_CHG_IPRE,
 #ifdef PWRCTRL_HACK
 	.pwrctrl = BD71828_REG_PS_CTRL_1,
 	.hibernate_mask = 0x2,
@@ -235,6 +274,8 @@ static struct pwr_regs pwr_regs_bd71828 = {
 };
 
 static struct pwr_regs pwr_regs_bd71815 = {
+	.i_trick_r = &bd71815_i_trickle[0],
+	.num_i_trick_r = ARRAY_SIZE(bd71815_i_trickle),
 	.vbat_init = BD71815_REG_VM_OCV_PRE_U,
 	.vbat_init2 = BD71815_REG_VM_OCV_PST_U,
 	.used_init_regs = 2,
@@ -267,12 +308,15 @@ static struct pwr_regs pwr_regs_bd71815 = {
 
 	.vdcin = BD71815_REG_VM_DCIN_U,
 	.vdcin_himask = BD7182x_MASK_VDCIN_U,
+	.ipre = BD71815_REG_CHG_IPRE, /* TODO: Check */
 #ifdef PWRCTRL_HACK
 	#error "Not implemented for BD71815"
 #endif
 };
 
 static struct pwr_regs pwr_regs_bd72720 = {
+	.i_trick_r = &bdxx_i_trickle[0],
+	.num_i_trick_r = ARRAY_SIZE(bdxx_i_trickle),
 	.vbat_init = BD72720_REG_VM_OCV_PRE_U,		/* Ok */
 	.vbat_init2 = BD72720_REG_VM_OCV_PST_U,		/* Ok */
 	.vbat_init3 = BD72720_REG_VM_OCV_PWRON_U,	/* Ok */
@@ -306,6 +350,7 @@ static struct pwr_regs pwr_regs_bd72720 = {
 	.conf = BD72720_REG_CONF, /* Ok, no XSTB, only PON. Seprate slave addr */
 	.vdcin = BD72720_REG_VM_VBUS_U, /* 10 bits not 11 as with other ICs */
 	.vdcin_himask = BD72720_MASK_VDCIN_U,
+	.ipre = BD72720_REG_CHG_IPRE,
 #ifdef PWRCTRL_HACK
 	/*
 	 * I'm not sure this belongs to the charger driver...
@@ -1316,9 +1361,41 @@ static int bd71815_bat_inserted(struct bd71827_power *pwr)
 	return ret;
 }
 
+static int get_set_charge_profile(struct bd71827_power *pwr)
+{
+	/* TODO: Add currents for the rest of the charging phases */
+	const char *trickle_prop = "trickle-charge-current-microamp";
+	struct fwnode_handle *node = NULL;
+	uint32_t val;
+	int sel, ret;
+	bool found;
+
+	node = dev_fwnode(pwr->dev->parent);
+	if (!node)
+		return dev_err_probe(pwr->dev, -ENODEV, "Failed to get the device node\n");
+
+	ret = fwnode_property_read_u32(node, trickle_prop, &val);
+	if (ret && ret != -EINVAL)
+		return ret;
+
+	if (ret == -EINVAL)
+		return 0;
+
+	ret = linear_range_get_selector_low_array(pwr->regs->i_trick_r,
+				pwr->regs->num_i_trick_r, val, &sel, &found);
+	if (ret)
+		return dev_err_probe(pwr->dev, ret, "Failed to set trickle charge current\n");
+
+	return regmap_update_bits(pwr->regmap, pwr->regs->ipre, BD7182x_MASK_CHG_I_TRICKLE, sel);
+}
+
 static int bd71827_init_hardware(struct bd71827_power *pwr)
 {
 	int ret;
+
+	ret = get_set_charge_profile(pwr);
+	if (ret)
+		return ret;
 
 	/* TODO: Collapse limit should come from device-tree ? */
 	if (pwr->regs->dcin_collapse_limit != -1) {
