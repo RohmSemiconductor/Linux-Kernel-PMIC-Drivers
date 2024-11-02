@@ -60,6 +60,12 @@
 #define BD7182x_MASK_CHG_EN			0x01
 #define BD7182x_MASK_CHG_I_TRICKLE		GENMASK(3, 0)
 #define BD7182x_MASK_CHG_I_PRE			GENMASK(7, 4)
+#define BD7182x_MASK_CHG_IFST			GENMASK(5, 0)
+#define BD71815_MASK_CHG_IFST			GENMASK(4, 0)
+#define BD72720_MASK_CHG_IFST			GENMASK(6, 0)
+#define BD7182x_MASK_CHG_IFST_TERM		GENMASK(3, 0)
+#define BD7182x_MASK_CHG_V_PRE_HI		GENMASK(7, 4)
+#define BD7182x_MASK_CHG_V_PRE_LO		GENMASK(3, 0)
 
 #define BD7182x_DCIN_COLLAPSE_DEFAULT		0x36
 
@@ -88,6 +94,159 @@ static const struct linear_range bd71815_i_trickle[] = {
 		.min_sel = 0x0,
 		.max_sel = 0xA,
 		.step = 2500,
+	},
+};
+
+static const struct linear_range bd71815_i_pre[] = {
+	{
+		.min = 0,
+		.min_sel = 0x0,
+		.max_sel = 0xf,
+		.step = 25000,
+	},
+};
+
+static const struct linear_range bdxx_i_pre[] = {
+	{
+		.min = 50000,
+		.min_sel = 0x0,
+		.max_sel = 0x2,
+		.step = 0,
+	}, {
+		.min = 75000,
+		.min_sel = 0x3,
+		.max_sel = 0xf,
+		.step = 25000,
+	},
+};
+
+/* IFST value when internal mosfet is used */
+static const struct linear_range bd71815_ifst_internal[] = {
+	{
+		.min = 0,
+		.min_sel = 0x0,
+		.max_sel = 0x14,
+		.step = 25000,
+	},
+};
+
+static const struct linear_range bd71827_ifst[] = {
+	{
+		.min = 100000,
+		.min_sel = 0x0,
+		.max_sel = 0x4,
+		.step = 0,
+	}, {
+		.min = 125000,
+		.min_sel = 0x4,
+		.max_sel = 0x28,
+		.step = 25000,
+	}, {
+		.min = 1000000,
+		.min_sel = 0x28,
+		.max_sel = 0x3f,
+		.step = 0,
+	},
+};
+
+static const struct linear_range bd71828_ifst[] = {
+	{
+		.min = 100000,
+		.min_sel = 0x0,
+		.max_sel = 0x4,
+		.step = 0,
+	}, {
+		.min = 125000,
+		.min_sel = 0x4,
+		.max_sel = 0x3f,
+		.step = 25000,
+	},
+};
+
+static const struct linear_range bd72720_ifst[] = {
+	{
+		.min = 100000,
+		.min_sel = 0x0,
+		.max_sel = 0x3,
+		.step = 0,
+	}, {
+		.min = 100000,
+		.min_sel = 0x4,
+		.max_sel = 0x7f,
+		.step = 25000,
+	},
+};
+
+/*
+ * Charge termination currents when Rsense is 1 milli-ohm.
+ *
+ * The real current is inversely proportional to used Rsense
+ * and it is computed at probe time when we get the used Rsense.
+ */
+static const struct linear_range bd71827_ifst_term_base[] = {
+	{
+		.min = 100000, /* 100 uA */
+		.min_sel = 0x0,
+		.max_sel = 0x1,
+		.step = 0,
+	}, {
+		.min = 200000, /* 100 uA */
+		.min_sel = 0x2,
+		.max_sel = 0x5,
+		.step = 100000,
+	}, {
+		.min = 1000000,
+		.min_sel = 0x6,
+		.max_sel = 0x7,
+		.step = 500000,
+	}, {
+		.min = 2000000,
+		.min_sel = 0x8,
+		.max_sel = 0xf,
+		.step = 0,
+	},
+};
+
+static const struct linear_range bd71828_ifst_term_base[] = {
+	{
+		.min = 100000, /* 100 uA */
+		.min_sel = 0x0,
+		.max_sel = 0x1,
+		.step = 0,
+	}, {
+		.min = 200000, /* 100 uA */
+		.min_sel = 0x2,
+		.max_sel = 0x5,
+		.step = 100000,
+	}, {
+		.min = 1000000,
+		.min_sel = 0x6,
+		.max_sel = 0xd,
+		.step = 500000,
+	}, {
+		.min = 4500000,
+		.min_sel = 0xe,
+		.max_sel = 0xf,
+		.step = 0,
+	},
+};
+
+static const struct linear_range bd71815_ifst_term_base[] = {
+	{
+		.min = 100000, /* 100 uA */
+		.min_sel = 0x1,
+		.max_sel = 0x8,
+		.step = 33333,
+	},
+};
+
+/* If VPRE_HI is used, AUTO_FST should be set in CHG_SET_1 */
+static const struct linear_range bdxx_vpre_r[] = {
+	{
+		.min = 2100000,
+		.min_sel = 0x0,
+		.max_sel = 0xf,
+		.step = 100000,
 	},
 };
 
@@ -140,6 +299,12 @@ static const struct linear_range dcin_collapse = {
 struct pwr_regs {
 	const struct linear_range *i_trick_r;
 	int num_i_trick_r;
+	const struct linear_range *i_pre_r;
+	int num_i_pre_r;
+	struct linear_range *i_fst_term_r;
+	int num_i_fst_term_r;
+	const struct linear_range *i_fst_r;
+	int num_i_fst_r;
 	int used_init_regs;
 	u8 vdcin_himask;
 	u8 vbat_init;
@@ -171,6 +336,10 @@ struct pwr_regs {
 	u8 conf;
 	u8 vdcin;
 	u8 ipre;
+	u8 vpre;
+	u8 ifst;
+	u8 ifst_mask;
+	u8 ifst_term;
 #ifdef PWRCTRL_HACK
 	u8 pwrctrl;
 #endif
@@ -196,8 +365,18 @@ static int g_num_vdr_params;
 
 static struct pwr_regs pwr_regs_bd71827 = {
 	.i_trick_r = &bdxx_i_trickle[0],
-	.num_i_trick_r = ARRAY_SIZE(bdxx_i_trickle),
+	.num_i_trick_r = ARRAY_SIZE(bdxx_i_pre),
+	.i_pre_r = &bdxx_i_trickle[0],
+	.num_i_pre_r = ARRAY_SIZE(bdxx_i_pre),
+	/* The ifst_term_r is computed and populated at probe */
+	.num_i_fst_term_r = ARRAY_SIZE(bd71827_ifst_term_base),
+	.i_fst_r = &bd71827_ifst[0],
+	.num_i_fst_r = ARRAY_SIZE(bd71827_ifst),
+	.ifst = BD71827_REG_CHG_IFST,
+	.ifst_mask = BD7182x_MASK_CHG_IFST,
+	.ifst_term = BD71827_REG_CHG_IFST_TERM,
 	.ipre = BD71827_REG_CHG_IPRE,
+	.vpre = BD71827_REG_CHG_VPRE,
 	.vbat_init = BD71827_REG_VM_OCV_PRE_U,
 	.vbat_init2 = BD71827_REG_VM_OCV_PST_U,
 	.vbat_init3 = BD71827_REG_VM_OCV_PWRON_U,
@@ -232,10 +411,18 @@ static struct pwr_regs pwr_regs_bd71827 = {
 	.hibernate_mask = 0x1,
 #endif
 };
-
 static struct pwr_regs pwr_regs_bd71828 = {
 	.i_trick_r = &bdxx_i_trickle[0],
 	.num_i_trick_r = ARRAY_SIZE(bdxx_i_trickle),
+	.i_pre_r = &bdxx_i_trickle[0],
+	.num_i_pre_r = ARRAY_SIZE(bdxx_i_pre),
+	.num_i_fst_term_r = ARRAY_SIZE(bd71828_ifst_term_base),
+	.i_fst_r = &bd71828_ifst[0],
+	.num_i_fst_r = ARRAY_SIZE(bd71828_ifst),
+	.ifst = BD71828_REG_CHG_IFST,
+	.ifst_mask = BD7182x_MASK_CHG_IFST,
+	.ifst_term = BD71828_REG_CHG_IFST_TERM,
+	.vpre = BD71828_REG_CHG_VPRE,
 	.vbat_init = BD71828_REG_VBAT_INITIAL1_U,
 	.vbat_init2 = BD71828_REG_VBAT_INITIAL2_U,
 	.vbat_init3 = BD71828_REG_OCV_PWRON_U,
@@ -276,6 +463,15 @@ static struct pwr_regs pwr_regs_bd71828 = {
 static struct pwr_regs pwr_regs_bd71815 = {
 	.i_trick_r = &bd71815_i_trickle[0],
 	.num_i_trick_r = ARRAY_SIZE(bd71815_i_trickle),
+	.i_pre_r = &bd71815_i_trickle[0],
+	.num_i_pre_r = ARRAY_SIZE(bd71815_i_pre),
+	.num_i_fst_term_r = ARRAY_SIZE(bd71815_ifst_term_base),
+	.i_fst_r = &bd71815_ifst_internal[0],
+	.num_i_fst_r = ARRAY_SIZE(bd71815_ifst_internal),
+	.ifst = BD71815_REG_CHG_IFST,
+	.ifst_mask = BD71815_MASK_CHG_IFST,
+	.vpre = BD71815_REG_CHG_VPRE,
+	.ifst_term = BD71815_REG_CHG_IFST_TERM,
 	.vbat_init = BD71815_REG_VM_OCV_PRE_U,
 	.vbat_init2 = BD71815_REG_VM_OCV_PST_U,
 	.used_init_regs = 2,
@@ -317,6 +513,15 @@ static struct pwr_regs pwr_regs_bd71815 = {
 static struct pwr_regs pwr_regs_bd72720 = {
 	.i_trick_r = &bdxx_i_trickle[0],
 	.num_i_trick_r = ARRAY_SIZE(bdxx_i_trickle),
+	.i_pre_r = &bdxx_i_trickle[0],
+	.num_i_pre_r = ARRAY_SIZE(bdxx_i_pre),
+	.num_i_fst_term_r = ARRAY_SIZE(bd71828_ifst_term_base),
+	.i_fst_r = &bd72720_ifst[0],
+	.num_i_fst_r = ARRAY_SIZE(bd72720_ifst),
+	.ifst = BD72720_REG_CHG_IFST_1,
+	.ifst_mask = BD72720_MASK_CHG_IFST,
+	.vpre = BD72720_REG_CHG_VPRE,
+	.ifst_term = BD72720_REG_CHG_IFST_TERM,
 	.vbat_init = BD72720_REG_VM_OCV_PRE_U,		/* Ok */
 	.vbat_init2 = BD72720_REG_VM_OCV_PST_U,		/* Ok */
 	.vbat_init3 = BD72720_REG_VM_OCV_PWRON_U,	/* Ok */
@@ -444,6 +649,8 @@ struct bd71827_power {
 	int (*get_temp)(struct bd71827_power *pwr, int *temp);
 	int (*bat_inserted)(struct bd71827_power *pwr);
 	int (*get_chg_online)(struct bd71827_power *pwr, int *chg_online);
+	int (*set_ifst)(struct bd71827_power *pwr, const struct linear_range *r,
+			int num_r, int reg, int mask, uint32_t cc_ua);
 	int battery_cap;
 	struct power_supply_battery_info *batinfo;
 };
@@ -571,7 +778,8 @@ static int bd71827_get_vbat(struct bd71827_power *pwr, int *vcell)
 
 static int bd71827_get_current_ds_adc(struct bd71827_power *pwr, int *curr, int *curr_avg)
 {
-	__be16 tmp_curr;
+	__be16 reg_curr;
+	int tmp_curr;
 	char *tmp = (char *)&tmp_curr;
 	int dir = 1;
 	int regs[] = { pwr->regs->ibat, pwr->regs->ibat_avg };
@@ -579,8 +787,8 @@ static int bd71827_get_current_ds_adc(struct bd71827_power *pwr, int *curr, int 
 	int ret, i;
 
 	for (dir = 1, i = 0; i < ARRAY_SIZE(regs); i++) {
-		ret = regmap_bulk_read(pwr->regmap, regs[i], &tmp_curr,
-				       sizeof(tmp_curr));
+		ret = regmap_bulk_read(pwr->regmap, regs[i], &reg_curr,
+				       sizeof(reg_curr));
 		if (ret)
 			break;
 
@@ -588,9 +796,9 @@ static int bd71827_get_current_ds_adc(struct bd71827_power *pwr, int *curr, int 
 			dir = -1;
 
 		*tmp &= BD7182x_MASK_IBAT_U;
-		tmp_curr = be16_to_cpu(tmp_curr);
+		tmp_curr = be16_to_cpu(reg_curr);
 
-		*vals[i] = dir * ((int)tmp_curr) * pwr->curr_factor;
+		*vals[i] = dir * tmp_curr * pwr->curr_factor;
 	}
 
 	return ret;
@@ -757,7 +965,7 @@ static int __write_cc(struct bd71827_power *pwr, uint16_t bcap,
 	int ret;
 	__be32 tmp;
 	__be16 *swap_hi = (__be16 *)&tmp;
-	uint16_t *swap_lo = swap_hi + 1;
+	__be16 *swap_lo = swap_hi + 1;
 
 	*swap_hi = cpu_to_be16(bcap & BD7182x_MASK_CC_CCNTD_HI);
 	*swap_lo = 0;
@@ -1355,32 +1563,203 @@ static int bd71815_bat_inserted(struct bd71827_power *pwr)
 	return ret;
 }
 
+struct bd71828_setting {
+	const char *prop;
+	const struct linear_range *range;
+	int num_range;
+	int reg;
+	int mask;
+	int (*handler)(struct bd71827_power *, const struct linear_range *, int,
+		       int, int, uint32_t);
+};
+
+static int bd718xx_set_current_prop(struct bd71827_power *pwr,
+				    const struct linear_range *r,
+				    int num_r, int reg, int mask, uint32_t val)
+{
+	int ret, sel;
+	bool found;
+
+	ret = linear_range_get_selector_low_array(r, num_r, val, &sel, &found);
+	if (ret)
+		return ret;
+
+	return regmap_update_bits(pwr->regmap, reg, mask, sel);
+}
+
+static int bd71815_set_ifst_ext_rsense(struct bd71827_power *pwr, int reg, int mask,
+				      uint32_t cc_ua)
+{
+	/* IFST when 1 milli-ohm external Rsense is used */
+	struct linear_range ifst_ext_base[] = {
+		{
+			.min = 0,
+			.min_sel = 0x0,
+			.max_sel = 0x4,
+			.step = 1000000,
+		},
+	};
+
+	ifst_ext_base[0].step /= pwr->rsens;
+
+	return bd718xx_set_current_prop(pwr, &ifst_ext_base[0], 1, reg, mask, cc_ua);
+}
+
+static int bd71815_set_ifst(struct bd71827_power *pwr, const struct linear_range *r,
+			    int num_r, int reg, int mask, uint32_t cc_ua)
+{
+	int ret, val;
+
+	ret = regmap_read(pwr->regmap, BD71815_REG_CHG_SET2, &val);
+	if (ret)
+		return ret;
+
+	/*
+	 * BD71815 can also use the Rsense for measuring charging current. If
+	 * this is the case we have different regval => current relation, which
+	 * depends on the used external Rsense.
+	 *
+	 * Check whether we use external Rsense, and if we do, go and compute
+	 * new linear ranges for currents, based on the Rsense.
+	 */
+	if (val & BD71815_MASK_EXTMOS_EN)
+		return bd71815_set_ifst_ext_rsense(pwr, reg, mask, cc_ua);
+	
+	return bd718xx_set_current_prop(pwr, r, num_r, reg, mask, cc_ua);
+
+}
+
+static int bd72720_set_ifst(struct bd71827_power *pwr, const struct linear_range *r,
+			    int num_r, int reg, int mask, uint32_t cc_ua)
+{
+	int ret, sel;
+        bool found;
+
+	ret = linear_range_get_selector_low_array(r, num_r, cc_ua, &sel, &found);
+	if (ret)
+		return ret;
+
+	/* Set the room temp charging current */
+	ret = regmap_update_bits(pwr->regmap, reg, mask, sel);
+	if (ret)
+		return ret;
+	
+	/*
+	 * Set the HOT1 charging current.
+	 *
+	 * TODO: Find a way to specify this. I won't set this to same value as
+	 * room temperature charging current because it might cause hazards
+	 * depending on the battery and configuration of the HOT limits.
+	 *
+	 * ret = regmap_update_bits(pwr->regmap, reg + 1, mask, sel);
+	 * if (ret)
+	 *         return ret;
+	 */
+	
+	/*
+	 * TODO: Same with HOT2 as with HOT1
+	 *
+	 * ret = regmap_update_bits(pwr->regmap, reg + 2, mask, sel);
+	 * if (ret)
+	 *         return ret;
+	 */
+	
+	/* Set the COLD1 temp charging current. TODO: find a way to specify this */
+	return regmap_update_bits(pwr->regmap, reg + 3, mask, sel);
+}
+
 static int get_set_charge_profile(struct bd71827_power *pwr)
 {
-	/* TODO: Add currents for the rest of the charging phases */
-	const char *trickle_prop = "trickle-charge-current-microamp";
 	struct fwnode_handle *node = NULL;
 	uint32_t val;
-	int sel, ret;
-	bool found;
+	int ret, i;
+	const struct bd71828_setting charge_settings[] = {
+		{
+			.prop = "trickle-charge-current-microamp",
+			.range = pwr->regs->i_trick_r,
+			.num_range = pwr->regs->num_i_trick_r,
+			.reg = pwr->regs->ipre,
+			.mask = BD7182x_MASK_CHG_I_TRICKLE,
+			.handler = bd718xx_set_current_prop,
+		}, {
+			.prop = "precharge-current-microamp",
+			.reg = pwr->regs->ipre,
+			.mask = BD7182x_MASK_CHG_I_PRE,
+			.range = pwr->regs->i_pre_r,
+			.num_range = pwr->regs->num_i_pre_r,
+			.handler = bd718xx_set_current_prop,
+		}, {
+			/* VPRE_HI */
+			.prop = "precharge-upper-limit-microvolt",
+			.reg = pwr->regs->vpre,
+			.mask =  BD7182x_MASK_CHG_V_PRE_HI,
+			.range = &bdxx_vpre_r[0],
+			.num_range = 1,
+			.handler = bd718xx_set_current_prop,
+		}, {
+			/*
+			 * This is the CHG_IFST_TERM. The register value
+			 * <=> uA depends on Rsense. We need to build the
+			 * range table after we know the Rsense.
+			*/
+                        .prop = "charge-term-current-microamp",
+			.range = pwr->regs->i_fst_term_r,
+			.num_range = pwr->regs->num_i_fst_term_r,
+			.reg = pwr->regs->ifst_term,
+			.mask = BD7182x_MASK_CHG_IFST_TERM,
+			.handler = bd718xx_set_current_prop,
+		}, {
+			/* TODO: IFST_CHG */
+                        .prop = "constant-charge-current-max-microamp",
+			.range = pwr->regs->i_fst_r,
+			.num_range = pwr->regs->num_i_fst_r,
+			.reg = pwr->regs->ifst,
+			.mask = pwr->regs->ifst_mask,
+			.handler = pwr->set_ifst,
+		}, {
+			/* TODO: VFST_CHG */
+                        .prop = "constant-charge-voltage-max-microvolt",
+			.handler = bd718xx_set_current_prop,
+		}, {
+			/* VPRE_LO - TODO: Add binding */
+                        .prop = "tricklecharge-upper-limit-microvolt",
+			.reg = pwr->regs->vpre,
+			.mask = BD7182x_MASK_CHG_V_PRE_LO,
+			.range = &bdxx_vpre_r[0],
+			.num_range = 1,
+		},
+	};
 
 	node = dev_fwnode(pwr->dev->parent);
 	if (!node)
-		return dev_err_probe(pwr->dev, -ENODEV, "Failed to get the device node\n");
+		return dev_err_probe(pwr->dev, -ENODEV,
+				     "Failed to get the device node\n");
 
-	ret = fwnode_property_read_u32(node, trickle_prop, &val);
-	if (ret && ret != -EINVAL)
-		return ret;
+	for (i = 0; i < ARRAY_SIZE(charge_settings); i++) {
+		const struct bd71828_setting *c = &charge_settings[i];
 
-	if (ret == -EINVAL)
-		return 0;
+		if (!c->mask || !c->handler)
+			continue;
 
-	ret = linear_range_get_selector_low_array(pwr->regs->i_trick_r,
-				pwr->regs->num_i_trick_r, val, &sel, &found);
-	if (ret)
-		return dev_err_probe(pwr->dev, ret, "Failed to set trickle charge current\n");
+		ret = fwnode_property_read_u32(node, c->prop, &val);
+		if (ret && ret != -EINVAL)
+			return ret;
 
-	return regmap_update_bits(pwr->regmap, pwr->regs->ipre, BD7182x_MASK_CHG_I_TRICKLE, sel);
+		if (ret == -EINVAL)
+			continue;
+
+		/*
+		 * The IFST setting requires special handlin on some PMICs. Also, the
+		 * AUTO_FST needs handling when VPRE_HI is set. (TODO: handle AUTO_FST)
+		 */
+		WARN_ON(!c->range);
+
+		ret = c->handler(pwr, c->range, c->num_range, c->reg, c->mask, val);
+		if (ret)
+			return dev_err_probe(pwr->dev, ret, "Failed to handle %s\n", c->prop);
+	}
+
+	return 0;
 }
 
 static int bd71827_init_hardware(struct bd71827_power *pwr)
@@ -2489,6 +2868,18 @@ static void fgauge_initial_values(struct bd71827_power *pwr)
 	}
 }
 
+static void scale_currents(struct bd71827_power *pwr,
+			   struct linear_range *i_fst_term_r)
+{
+	int i;
+
+	for (i = 0; i < pwr->regs->num_i_fst_term_r; i++) {
+		i_fst_term_r[i].min /= pwr->rsens;
+		i_fst_term_r[i].step /= pwr->rsens;
+	}
+	pwr->regs->i_fst_term_r = &i_fst_term_r[0];
+}
+
 static int bd71827_power_probe(struct platform_device *pdev)
 {
 	struct bd71827_power *pwr;
@@ -2496,6 +2887,7 @@ static int bd71827_power_probe(struct platform_device *pdev)
 	struct simple_gauge_psy psycfg;
 	int ret;
 	struct regmap *regmap;
+	struct linear_range *tmp_lr;
 
 	psycfg = gauge_psy_config;
 
@@ -2515,23 +2907,41 @@ static int bd71827_power_probe(struct platform_device *pdev)
 
 	switch (pwr->chip_type) {
 	case ROHM_CHIP_TYPE_BD71828:
+		tmp_lr = devm_kmemdup(&pdev->dev, &bd71828_ifst_term_base[0],
+				   sizeof(bd71828_ifst_term_base), GFP_KERNEL);
+		if (!tmp_lr)
+			return -ENOMEM;
+
 		pwr->get_chg_online = get_chg_online;
 		pwr->bat_inserted = bd71828_bat_inserted;
 		pwr->regs = &pwr_regs_bd71828;
 		dev_dbg(pwr->dev, "Found ROHM BD71828\n");
 		psycfg.psy_name	= "bd71828-charger";
+		pwr->set_ifst = bd718xx_set_current_prop;
 		break;
 	case ROHM_CHIP_TYPE_BD71827:
+		tmp_lr = devm_kmemdup(&pdev->dev, &bd71827_ifst_term_base[0],
+				   sizeof(bd71827_ifst_term_base), GFP_KERNEL);
+		if (!tmp_lr)
+			return -ENOMEM;
+
 		pwr->get_chg_online = get_chg_online;
 		pwr->bat_inserted = bd71828_bat_inserted;
 		pwr->regs = &pwr_regs_bd71827;
+		pwr->set_ifst = bd718xx_set_current_prop;
 		dev_dbg(pwr->dev, "Found ROHM BD71817\n");
 		psycfg.psy_name	= "bd71827-charger";
 		break;
 	case ROHM_CHIP_TYPE_BD71815:
+		tmp_lr = devm_kmemdup(&pdev->dev, &bd71815_ifst_term_base[0],
+				   sizeof(bd71815_ifst_term_base), GFP_KERNEL);
+		if (!tmp_lr)
+			return -ENOMEM;
+
 		pwr->get_chg_online = get_chg_online;
 		pwr->bat_inserted = bd71815_bat_inserted;
 		pwr->regs = &pwr_regs_bd71815;
+		pwr->set_ifst = bd71815_set_ifst,
 		psycfg.psy_name	= "bd71815-charger";
 		dev_dbg(pwr->dev, "Found ROHM BD71815\n");
 	case ROHM_CHIP_TYPE_BD72720:
@@ -2557,6 +2967,11 @@ static int bd71827_power_probe(struct platform_device *pdev)
 		bd72720_pwr->pwr = *pwr;
 		devm_kfree(&pdev->dev, pwr);
 		pwr = &bd72720_pwr->pwr;
+		tmp_lr = devm_kmemdup(&pdev->dev, &bd71828_ifst_term_base[0],
+				   sizeof(bd71828_ifst_term_base), GFP_KERNEL);
+		if (!tmp_lr)
+			return -ENOMEM;
+
 		bd72720_pwr->genregmap = pwr->regmap;
 		pwr->regmap = dev_get_platdata(&pdev->dev);
 		if (!pwr->regmap)
@@ -2566,6 +2981,7 @@ static int bd71827_power_probe(struct platform_device *pdev)
 		pwr->bat_inserted = bd72720_bat_inserted;
 		pwr->regs = &pwr_regs_bd72720;
 		pwr->get_chg_online = bd72720_get_chg_online;
+		pwr->set_ifst = bd72720_set_ifst;
 		dev_dbg(pwr->dev, "Found ROHM BD72720\n");
 
 		break;
@@ -2592,6 +3008,18 @@ static int bd71827_power_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "sense resistor missing\n");
 		return ret;
 	}
+	/*
+	 * The current measurement depends on the Rsense value. Hence we need
+	 * to calculate correct current values for entities which are set to
+	 * the PMIC based on the used Rsense. (Eg, internally PMIC relies on
+	 * measuring voltage difference around the sense resistor when for
+	 * example measuring the charging current in order to stop charging
+	 * when current on CV charging drops to given value. We need to compute
+	 * these values here when we know the used Rsense).
+	 */
+	scale_currents(pwr, tmp_lr);
+
+	pwr->regs->i_fst_term_r = tmp_lr;
 
 	dev_set_drvdata(&pdev->dev, pwr);
 	bd71827_init_hardware(pwr);
