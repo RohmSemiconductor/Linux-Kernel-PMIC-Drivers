@@ -556,6 +556,8 @@ enum {
 /* BD71815_REG_REX_CTRL_1 bits */
 #define REX_PMU_STATE_MASK				BIT(2)
 
+#define BD71815_MASK_EXTMOS_EN				BIT(6)
+
 /* BD71815_REG_LED_CTRL bits */
 #define CHGDONE_LED_EN					BIT(4)
 
