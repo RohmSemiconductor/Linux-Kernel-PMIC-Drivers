@@ -1974,7 +1974,7 @@ static int bd71827_set_battery_parameters(struct bd71827_power *pwr)
 
 		if (pwr->batinfo->voltage_min_design_uv == -EINVAL) {
 			/* We could try digging this from OCV table....? */
-			dev_err(pwr->dev, "Unknown max voltage\n");
+			dev_err(pwr->dev, "Unknown min voltage\n");
 			return -EINVAL;
 		}
 		pwr->min_voltage = pwr->batinfo->voltage_min_design_uv;
