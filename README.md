@@ -14,6 +14,14 @@ mean ROHM is out of the game - we have our personnel in Linux driver reviewers/
 maintainers - but we don't "own" these components or frameworks anymore. You
 get the best possible contacts via the MAINTAINERS file.
 
+## Upstream driver testing
+A few automated tests are being ran for the upstreamed ROHM PMIC drivers. The
+tests are ran for tags created from the:
+- Torvald's main Linux repository
+- Linux-Next integration testing repository
+- Linux stable repository
+The test results are upload to the [PMIC branch](https://github.com/RohmSemiconductor/rohm-linux-test-results/tree/PMIC) of the rohm-linux-test-results repository.
+
 ## Contents of this repository
 We occasionally develop something which does not perfectly fit into
 the upstream Linux frameworks or policies. This content may include something
