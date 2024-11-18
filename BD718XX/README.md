@@ -1,5 +1,6 @@
 ---
 permalink: /BD718XX/
+upstreamed: 4.19-rc1
 #items:
 configs:
   - config: CONFIG_MFD_ROHM_BD718XX
@@ -16,18 +17,13 @@ configs:
 
 ## Linux:
 
-Device driver for BD71837, BD71847 and BD71850 can be found from the Linux community kernel.
+{% include source_upstream_status.md %}
 
-The driver has been included in the Linux kernel since the Linux version
-4.19-rc1. Please note that few crucial patches has been applied since then.
-It is highly recommended to use driver included in the Linux kernel version
-5.0-rc1 or later. On i.MX8 setups it is suggested to use Linux 5.1-rc1 or later because
-the i.MX8 SNVS state support for BD71837 and BD71847 was included
-in mainline kernel at release 5.1-rc1. Support for leaving enable/disable
-states of given regulators under the control of the HW-state machine landed in 5.10.
+NOTE:
+Please note that a multiple crucial patches has been applied since initial release.
+It is highly recommended to use driver included in the most recent Linux kernel version.
 
-Please note that there is no own device-tree compatible in old Linux releases for the
-BD71850. If such Linux release is used the BD71850 can be
+The device-tree compatible for the BD71850 is missing from initial releases. If such Linux release is used the BD71850 can be
 described using exactly same device-tree bindings as BD71847. Please use
 
 compatible = "rohm,bd71847";
@@ -38,19 +34,6 @@ compatible = "rohm,bd71850";
 
 is not recognized.
 
-Linux kernel can be obtained from:
-
-```
-https://www.kernel.org/
-```
-
-or by cloning Linus Torvald's official linux development tree from:
-
-```
-git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
-https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
-https://kernel.googlesource.com/pub/scm/linux/kernel/git/torvalds/linux.git
-```
 {% include kernel_conf_tbl.md %}
 
 {% include upstream_support.md %}
