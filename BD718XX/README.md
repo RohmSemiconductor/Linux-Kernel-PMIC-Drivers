@@ -1,3 +1,17 @@
+---
+permalink: /BD718XX/
+#items:
+configs:
+  - config: CONFIG_MFD_ROHM_BD718XX
+    subsystem: mfd
+  - config: CONFIG_REGULATOR_BD718XX
+    subsystem: regulator
+  - config: CONFIG_COMMON_CLK_BD718XX
+    subsystem: clk
+  - config: CONFIG_KEYBOARD_GPIO
+    description: Enables support for sending shutdown request using power button.
+    subsystem: input
+---
 # ROHM Power Management IC BD71837, BD71847 and BD71850 device drivers.
 
 ## Linux:
@@ -37,12 +51,7 @@ git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
 https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
 https://kernel.googlesource.com/pub/scm/linux/kernel/git/torvalds/linux.git
 ```
-
-Configuration options may want to enable are:
-* CONFIG_MFD_ROHM_BD718XX for BD71837/BD71847 core
-* CONFIG_REGULATOR_BD718XX for regulator control
-* CONFIG_COMMON_CLK_BD718XX for clock gate control
-* CONFIG_KEYBOARD_GPIO for reset induced by short press of power button.
+{% include kernel_conf_tbl.md %}
 
 ## Das u-Boot:
 
