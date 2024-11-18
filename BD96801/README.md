@@ -25,21 +25,13 @@ An early [RFC Series](https://lore.kernel.org/all/cover.1712920132.git.mazziesac
 
 {% include upstream_support.md %}
 
-### Downstream drivers:
+### Downstream driver:
 
-Currently there are two initial reference design releases. Please note that these drivers are intended to be used as a reference design only. No warranty is given and feasibility for target setup must be verified. Drivers are also not fully tested and bugs may be hiding. Evaluate at your own risk.
+There were two initial reference design releases but one is dropped. The functionality provided by the downstream 'simple driver' is already supported by the better maintained upstream driver. Please us it instead.
 
-#### Simple driver:
+Please note that these drivers are intended to be used as a reference design only. No warranty is given and feasibility for target setup must be verified. Drivers are also not fully tested and bugs may be hiding. Evaluate at your own risk.
 
-This patch series brings initial and hopefully easy to understand support for configuring BUCK voltages and feeding the watchdog. All configurations which require the PMIC to be in STANDBY mode are unsupported. This includes the safety-limits. The INTB interrupts from the pre-programmed limits are to be handled though. ERRB interrupts are ignored by the driver because thet are likely to lead the SoC reset. Also the watchdog driver is included.
-
-The version 001 is tagged in our Linux git tree as tag [bd96801-simple-v001](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/releases/tag/bd96801-simple-v001).
-
-This driver has support for
-* Regulators
-* Watchdog
-
-#### Driver with experimental features
+#### Downstream driver with experimental features
 
 This patch series brings initial and experimental support for
 configuring voltages and safety limits on Linux system. Also a driver
@@ -88,4 +80,4 @@ This driver has support for
 
 ### Known issues
 
-For the downstream reference drivers, please see the bug-tracker for bd96801 Linux drivers related [known issues](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/issues?q=is%3Aissue+repo%3ALinux-Kernel-PMIC-Drivers+BD96801+in%3Atitle). If you encounter a bug which is not known - feel free to report it - thanks!
+For the downstream reference driver, please see the bug-tracker for bd96801 Linux drivers related [known issues](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/issues?q=is%3Aissue+repo%3ALinux-Kernel-PMIC-Drivers+BD96801+in%3Atitle). If you encounter a bug which is not known - feel free to report it - thanks!
