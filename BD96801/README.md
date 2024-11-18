@@ -1,5 +1,5 @@
 ---
-permalink: /BD957XMUF/
+permalink: /BD96801/
 configs:
   - config: CONFIG_MFD_ROHM_BD96801
     subsystem: mfd
