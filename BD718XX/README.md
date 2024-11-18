@@ -53,6 +53,8 @@ https://kernel.googlesource.com/pub/scm/linux/kernel/git/torvalds/linux.git
 ```
 {% include kernel_conf_tbl.md %}
 
+{% include upstream_support.md %}
+
 ## Das u-Boot:
 
 Limited u-Boot regulator driver for BD71837 and BD71847 is included in the official Denx u-boot. First u-boot release containing the driver is the 1.st release candidate for 2019.10 (version u-boot-2019.10-rc1). The u-boot driver works with pmic device-tree which is compatible with dt-documentation included in the Linux source code but a few of the properties are ignored. BD71850 can be used with same u-boot driver using the BD71847 device-tree bindings.
