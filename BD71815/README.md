@@ -30,9 +30,9 @@ A Linux driver for the ROHM BD71815 Power Management IC is available
 Please note that this driver has been originally written for an early Linux 4.9
 kernel and has not been actively maintained. Here we have a port to the more
 recent Linux v.4.9.99 - but this port has not been fully tested. Please treat
-this as a reference design only. See also the issues found from this version:
-https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/issues?q=is%3Aissue+is%3Aclosed+BD71815
-These issues are fixed in upstream linux patches referred above.
+this as a reference design only. See also the [issues](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/issues?q=is%3Aissue+is%3Aclosed+BD71815).
+Note: The issue list is not comprehensive. These and many other 
+issues are fixed in upstream linux.
 
 Please find the driver ported on Linux v4.9.99 [here](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/v4.9.99-BD71815AGW)
 
