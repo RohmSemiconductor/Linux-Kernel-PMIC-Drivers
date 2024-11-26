@@ -27,7 +27,11 @@ https://kernel.googlesource.com/pub/scm/linux/kernel/git/torvalds/linux.git
 Being upstreamed. See [Patches]({{ page.patchlink }}).
     {%- endif %}
     {%- if page.downstreamlink %}
-Here is an unmaintained [reference driver]({{ page.downstreamlink }}) which you can try. Please note that this reference driver is provided as is, without a warranty. It is not a "production ready quality", and you are required to do all porting, fixing and testing while writing your driver using it as a starting point.
+Here is an unmaintained [reference driver]({{ page.downstreamlink }}) which you can try.
+        {%- if page.downstreamunstable %}
+The driver branch is unstable, meaning it is under development and the git branch can be changed without a warning. Changes include rebases and other operations which can break the change history and modify the commits. Furthermore, drivers under development are expected to be buggy, even up to the point where even compilation can fail. You should know the risks of trying such code. Hardware breakages are possible and it is user's responsibility to ensure the code is safe before using it.
+        {% endif -%}
+Please note that this reference driver is provided as is, without a warranty. It is not a "production ready quality", and you are required to do all porting, fixing and testing while writing your driver using it as a starting point.
     {%- endif %}
     {%- if page.expectupstreamed %}
 
