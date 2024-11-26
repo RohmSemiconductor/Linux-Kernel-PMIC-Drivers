@@ -1,6 +1,6 @@
 ### Configuration:
 
-Configuration options may want to enable for kernel build are:
+Configuration options one may want to enable for kernel build are:
 
 
 ```
