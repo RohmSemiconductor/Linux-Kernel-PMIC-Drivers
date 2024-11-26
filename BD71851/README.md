@@ -1,3 +1,19 @@
+---
+permalink: /BD71851/
+configs:
+  - config: CONFIG_MFD_ROHM_BD71828
+    subsystem: mfd
+  - config: CONFIG_REGULATOR_BD71828
+    subsystem: regulator
+  - config: CONFIG_COMMON_CLK_BD718XX
+    subsystem: clk
+  - config: CONFIG_GPIO_BD71851
+    subsystem: gpio
+downstreamlink: https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/bd71851-v1
+downstreamunstable: true
+expectupstreamed: during spring 2025
+---
+
 # ROHM Power Management IC BD71851
 
 The ROHM BD71851 is a Power Management IC which has:
@@ -10,7 +26,9 @@ amount of available GPIOs depend on what are the other enabled functions
 
 ## Linux:
 
-Linux drivers are being worked on.
+{% include source_upstream_status.md %}
+
+{% include kernel_conf_tbl.md %}
 
 ## uBoot:
 
