@@ -9,25 +9,23 @@ to upstream the Linux drivers for some of our power components.
 
 | IC information                        | upstream status   | downstream extensions     |
 |---------------------------------------|-------------------|---------------------------|
-| [BD71815AGW PMIC](BD71815)            | Upstream          | ROHM extensions available |
-| [BD71828 / BD71878 PMICs](BD71828)    | Upstream          | ROHM extensions available |
-| [BD71879 PMICs](BD71879)              | Upstream          | ROHM extensions available |
-| [BD71837](BD718XX)                    | Fully upstreamed  | No extensions             |
-| [BD71847](BD718XX)                    | Fully upstreamed  | No extensions             |
-| [BD71850](BD718XX)                    | Fully upstreamed  | No extensions             |
-| [BD9573](BD957XMUF)                   | Fully upstreamed  | No extensions             |
-| [BD9576](BD957XMUF)                   | Fully upstreamed  | No extensions             |
-| [BD99954 CHARGER](BD99954)            | Fully upstreamed  | No extensions             |
-| [BD96801 "Scalable PMIC"](BD96801)    | Upstream          | ROHM extensions available |
-| [BD71851](BD71851)                    | Under development | Development version for study |
-| [BD96802](BD96802)                    | Planned           | Development version for study |
-| [BD96811](BD96811)                    | Planned           | Development version for study |
-| [~~BD70528 PMIC~~](BD70528) Obsolete      | ~~Upstream~~ removed |                           |
-
-## Not upstream
-* [BD2657](BD2657)
-* [BD71827](BD71827)
-* BD72720
+| [BD9573](BD957XMUF) PMIC              | Fully upstreamed  | No extensions             |
+| [BD9576](BD957XMUF) PMIC              | Fully upstreamed  | No extensions             |
+| [BD71815AGW](BD71815) PMIC            | Upstream          | ROHM extensions available |
+| [BD71828 / BD71878](BD71828) PMICs    | Upstream          | ROHM extensions available |
+| [BD71837](BD718XX) PMIC               | Fully upstreamed  | No extensions             |
+| [BD71847](BD718XX) PMIC               | Fully upstreamed  | No extensions             |
+| [BD71850](BD718XX) PMIC               | Fully upstreamed  | No extensions             |
+| [BD71879 PMICs](BD71879) PMIC         | Upstream          | ROHM extensions available |
+| [BD96801"](BD96801) Scalable PMIC     | Upstream          | ROHM extensions available |
+| [BD71851](BD71851) Generic PMIC       | _Under development_ | Development version for study |
+| [BD96802](BD96802) Scalable PMIC      | Planned <sup>2025</sup> | Development version for study |
+| [BD96811](BD96811) Scalable PMIC      | Planned <sup>2025</sup> | Development version for study |
+| [BD99954](BD99954) Charger            | Fully upstreamed  | No extensions             |
+| [BD2657](BD2657) Specific purpose PMIC | Downstream only  | Downstream only           |
+| [BD71827](BD71827) PMIC               | Downstream only   | Downstream only           |
+| BD72720                               | Downstream only   | Downstream only           |
+| [~~BD70528 PMIC~~](BD70528) <sup>Obsolete</sup>      | ~~Upstream~~ removed | No extensions |
 
 ## Upstream driver questions
 If you have questions related to the Linux community drivers - please
