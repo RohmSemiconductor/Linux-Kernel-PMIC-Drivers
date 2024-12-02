@@ -1,4 +1,5 @@
 # Linux-Kernel-PMIC-Drivers
+
 Rohm power management IC drivers for Linux kernel and u-Boot.
 
 ROHM has been collaborating with the Linux kernel community 
@@ -18,11 +19,10 @@ to upstream the Linux drivers for some of our power components.
 | [BD9576](BD957XMUF)                   | Fully upstreamed  | No extensions             |
 | [BD99954 CHARGER](BD99954)            | Fully upstreamed  | No extensions             |
 | [BD96801 "Scalable PMIC"](BD96801)    | Upstream          | ROHM extensions available |
-<!-- Not yet upstream -->
 | [BD71851](BD71851)                    | Under development | Development version for study |
 | [BD96802](BD96802)                    | Planned           | Development version for study |
 | [BD96811](BD96811)                    | Planned           | Development version for study |
-| [~~BD70528 PMIC~~](BD70528) Obsolete      | ~~Upstream, removed~~ |                           |
+| [~~BD70528 PMIC~~](BD70528) Obsolete      | ~~Upstream~~ removed |                           |
 
 ## Not upstream
 * [BD2657](BD2657)
