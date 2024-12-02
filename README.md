@@ -4,6 +4,30 @@ Rohm power management IC drivers for Linux kernel and u-Boot.
 ROHM has been collaborating with the Linux kernel community 
 to upstream the Linux drivers for some of our power components.
 
+## Upstream driver status
+| IC information                        | upstream status   | downstream extensions     |
+|---------------------------------------|-------------------|---------------------------|
+| [BD71815AGW PMIC](BD71815)            | Upstream          | ROHM extensions available |
+| [BD71828 / BD71878 PMICs](BD71828)    | Upstream          | ROHM extensions available |
+| [BD71879 PMICs](BD71879)              | Upstream          | ROHM extensions available |
+| [BD71837](BD718XX)                    | Fully upstreamed  | No extensions             |
+| [BD71847](BD718XX)                    | Fully upstreamed  | No extensions             |
+| [BD71850](BD718XX)                    | Fully upstreamed  | No extensions             |
+| [BD9573](BD957XMUF)                   | Fully upstreamed  | No extensions             |
+| [BD9576](BD957XMUF)                   | Fully upstreamed  | No extensions             |
+| [BD99954 CHARGER](BD99954)            | Fully upstreamed  | No extensions             |
+| [BD96801 "Scalable PMIC"](BD96801)    | Upstream          | ROHM extensions available |
+<!-- Not yet upstream -->
+| [BD71851](BD71851)                    | Under development | Development version for study |
+| [BD96802](BD96802)                    | Planned           | Development version for study |
+| [BD96811](BD96811)                    | Planned           | Development version for study |
+| [BD70528 PMIC](BD70528) ~~Obsolete~~  | ~~Upstream, removed~~ |                           |
+
+## Not upstream
+* [BD2657](BD2657)
+* [BD71827](BD71827)
+* BD72720
+
 ## Upstream driver questions
 If you have questions related to the Linux community drivers - please
 use the linux community mail-lists and maintainer information. Once the
@@ -31,25 +55,6 @@ The [Linux-Kernel-PMIC-Drivers](https://github.com/RohmSemiconductor/Linux-Kerne
 Please be aware that these extensions are provided as reference implementation
 only and they are not actively developed/maintained.
 
-### Upstream driver status
-* [BD71815AGW PMIC](BD71815) - ROHM extensions available
-* [BD71828 / BD71878 PMICs](BD71828) - ROHM extensions available
-* [BD71879 PMICs](BD71879) - ROHM extensions available
-* [BD71837 / BD71847 / BD71850 PMICs](BD718XX) - Fully upstreamed
-* [BD9576 / BD9573](BD957XMUF) - Fully upstreamed
-* [BD99954 CHARGER](BD99954) - Fully upstreamed (no ACPI support)
-* [BD96801 "Scalable PMIC"](BD96801) - ROHM extensions available
-* Obsoleted (Fully upstreamed, removed) - [BD70528 PMIC](BD70528)
-
-### Not yet upstream
-* [BD71851](BD71851)
-* [BD96802](BD96802)
-* [BD96811](BD96811)
-
-### Not upstream
-* [BD2657](BD2657)
-* BD72720
-* [BD71827](BD71827)
 
 ### Generic upstream effort
 ROHM aims giving back to the community. We know it's two-way road, really. We get
