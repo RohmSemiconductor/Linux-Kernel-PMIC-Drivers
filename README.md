@@ -5,6 +5,7 @@ ROHM has been collaborating with the Linux kernel community
 to upstream the Linux drivers for some of our power components.
 
 ## Upstream driver status
+
 | IC information                        | upstream status   | downstream extensions     |
 |---------------------------------------|-------------------|---------------------------|
 | [BD71815AGW PMIC](BD71815)            | Upstream          | ROHM extensions available |
@@ -21,7 +22,7 @@ to upstream the Linux drivers for some of our power components.
 | [BD71851](BD71851)                    | Under development | Development version for study |
 | [BD96802](BD96802)                    | Planned           | Development version for study |
 | [BD96811](BD96811)                    | Planned           | Development version for study |
-| [BD70528 PMIC](BD70528) ~~Obsolete~~  | ~~Upstream, removed~~ |                           |
+| [~~BD70528 PMIC~~](BD70528) Obsolete      | ~~Upstream, removed~~ |                           |
 
 ## Not upstream
 * [BD2657](BD2657)
