@@ -225,6 +225,11 @@ static struct mfd_cell bd96805_cells[] = {
 	[REGULATOR_CELL] = { .name = "bd96805-regulator", },
 };
 
+static struct mfd_cell bd96806_cells[] = {
+	[WDG_CELL] = { .name = "bd96806-wdt", },
+	[REGULATOR_CELL] = { .name = "bd96806-regulator", },
+};
+
 static const struct regmap_range bd96801_volatile_ranges[] = {
 	/* Status registers */
 	regmap_reg_range(BD96801_REG_WD_FEED, BD96801_REG_WD_FAILCOUNT),
@@ -617,6 +622,20 @@ static const struct bd968xx_chip_data bd96805_chip_data = {
 	.unlock_val = BD96801_UNLOCK,
 };
 
+static struct bd968xx_chip_data bd96806_chip_data = {
+	.errb_irqs = bd96802_reg_errb_irqs,
+	.intb_irqs = bd96802_reg_intb_irqs,
+	.num_errb_irqs = ARRAY_SIZE(bd96802_reg_errb_irqs),
+	.num_intb_irqs = ARRAY_SIZE(bd96802_reg_intb_irqs),
+	.errb_irq_chip = &bd96802_irq_chip_errb,
+	.intb_irq_chip = &bd96802_irq_chip_intb,
+	.regmap_config = &bd96802_regmap_config,
+	.cells = bd96806_cells,
+	.num_cells = ARRAY_SIZE(bd96806_cells),
+	.unlock_reg = BD96801_LOCK_REG,
+	.unlock_val = BD96801_UNLOCK,
+};
+
 static int bd96801_i2c_probe(struct i2c_client *i2c)
 {
 	int i, ret, intb_irq, errb_irq, num_regu_irqs, num_errb = 0, wdg_irq_no;
@@ -726,6 +745,7 @@ static const struct of_device_id bd96801_of_match[] = {
 	{ .compatible = "rohm,bd96801", .data = &bd96801_chip_data, },
 	{ .compatible = "rohm,bd96802", .data = &bd96802_chip_data, },
 	{ .compatible = "rohm,bd96805", .data = &bd96805_chip_data, },
+	{ .compatible = "rohm,bd96806", .data = &bd96806_chip_data, },
 	{ }
 };
 MODULE_DEVICE_TABLE(of, bd96801_of_match);
