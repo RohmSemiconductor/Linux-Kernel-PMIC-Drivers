@@ -1,10 +1,28 @@
+---
+permalink: /BD96802/
+configs:
+  - config: CONFIG_MFD_ROHM_BD96801
+    subsystem: mfd
+  - config: CONFIG_REGULATOR_BD96801
+    subsystem: regulator
+  - config: CONFIG_BD96801_WATCHDOG
+    subsystem: watchdog
+---
 # ROHM Power Management IC BD96802 Linux device drivers.
 
 The ROHM BD96802 "Scalable PMIC" is an automotive grade PMIC which can scale to different applications by allowing chaining of PMICs. BD96802 provides 2 BUCK regulators with configurable, voltages, and safety limits. A watchdog is also included. The BD96802 can be used as a companion PMIC for [ROHM BD96801](../BD96801)
 
 ## Linux:
 
-Currently there is a initial reference driver for Linux available tagged in our Linux git tree as tag [scalable-bd96802-unstable-alpha-v0.01](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/releases/tag/scalable-bd96802-unstable-alpha-v0.01).
+### Upstream:
+
+The BD96802 support is being added to the upstream BD96801 driver. Please see the [patch series](https://lore.kernel.org/all/cover.1741864404.git.mazziesaccount@gmail.com/).
+
+{% include kernel_conf_tbl.md %}
+
+### Downstream reference driver:
+
+Currently there is an initial reference driver for Linux available tagged in our Linux git tree as tag [scalable-bd96802-unstable-alpha-v0.01](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/releases/tag/scalable-bd96802-unstable-alpha-v0.01).
 Please note that the driver is intended to be used as a reference design only. No warranty is given and feasibility for target setup must be verified. Driver is also not fully tested and bugs may be hiding. Evaluate at your own risk.
 
 The driver implements same features as the experimental version of BD96801 driver. Below is a summary copied from the BD96801 notes:
