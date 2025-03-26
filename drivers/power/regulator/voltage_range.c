@@ -7,7 +7,7 @@
 #include <power/voltage_range.h>
 #include <errno.h>
 
-int vrange_find_value(struct regulator_vrange *r, unsigned int sel,
+int vrange_find_value(const struct regulator_vrange *r, unsigned int sel,
 			     unsigned int *val)
 {
 	if (!val || sel < r->min_sel || sel > r->max_sel)
@@ -18,7 +18,7 @@ int vrange_find_value(struct regulator_vrange *r, unsigned int sel,
 	return 0;
 }
 
-int vrange_find_selector(struct regulator_vrange *r, int val,
+int vrange_find_selector(const struct regulator_vrange *r, int val,
 				unsigned int *sel)
 {
 	int ret = -EINVAL;
