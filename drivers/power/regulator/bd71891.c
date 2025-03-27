@@ -266,7 +266,8 @@ static int __bd71891_set_volt_value(struct udevice *dev, int uvolt, int flag)
 	 * RANGE_SEL
 	 */
 	if (plat->id < BOOST) {
-		/* We don't want to change a range if this is not required.
+		/*
+		 * We don't want to change a range if this is not required.
 		 * Hence, read currently used RANGE selector and scan it for
 		 * suitable voltage.
 		 */
@@ -294,26 +295,28 @@ static int __bd71891_set_volt_value(struct udevice *dev, int uvolt, int flag)
 				/*
 				 * If we can support new voltage with current
 				 * range, just write it and be done.
-				 *
-				 * TODO: Check from the HW team when new voltage
-				 * is applied. With 'pickable voltage ranges',
-				 * setting a new range is racy because writing
-				 * both the range selector and vsel is not
-				 * atomic. There has been different approaches
-				 * to mitigate this issue, one of which is that
-				 * a voltage change is not done until range
-				 * selection bit is written. If this was used,
-				 * then we should always write the range
-				 * selection bit, no matter whether the range
-				 * stays same or not (and not directly return
-				 * after writing the sel here. That'd made this
-				 * 'prefer current range' code obsolete too?).
 				 */
 				ret = vrange_find_selector(r, uvolt, &sel);
 				if (!ret)
 					return pmic_reg_write(dev->parent,
 							      plat->vsel_reg, sel);
 			}
+			/*
+			 * The voltage was not supported with current range. As
+			 * per the data-sheet, it is not allowed to change
+			 * voltage range when regulator is enabled.
+			 *
+			 * NOTE: There is no protection so this check is racy.
+			 * We expect the caller or the voltage setting framework
+			 * to serialize the voltage setting and enable requests.
+			 */
+			if (flag == BD71891_VAL_TYPE_RUNVOLT &&
+			    bd71891_get_enable(dev)) {
+				printf("%s: enabled. Can't change range\n", plat->name);
+
+				return -EBUSY;
+			}
+			break;
 		}
 	}
 
