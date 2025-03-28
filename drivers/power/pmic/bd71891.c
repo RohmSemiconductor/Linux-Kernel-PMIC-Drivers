@@ -23,6 +23,21 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
+static inline struct udevice *get_bd71891(void)
+{
+	return get_currdev(PMIC_DT_NAME);
+}
+
+static inline int bd71891_reg_read(uint reg)
+{
+	return pmic_reg_read(get_bd71891(), reg);
+}
+
+static inline int bd71891_clrsetbits(uint reg, uint clr, uint set)
+{
+	return pmic_clrsetbits(get_bd71891(), reg, clr, set);
+}
+
 static inline int bd71891_pr_reas_bf(const struct reason_reg *r)
 {
 	return print_reason_bf_reg(PMIC_DT_NAME, r);
@@ -248,8 +263,51 @@ static int do_chipinfo(struct cmd_tbl *cmdtp, int flag, int argc,
 	return cmd_ret(ret);
 }
 
+static int do_set_state(struct cmd_tbl *cmdtp, int flag, int argc,
+			char *const argv[])
+{
+	static struct udevice *pmicdev;
+	char *state;
+	int ret;
+
+	pmicdev = get_bd71891();
+
+	if (!pmicdev)
+		return cmd_failure(-ENODEV);
+
+	if (argc != 2)
+		return CMD_RET_USAGE;
+
+	state = argv[1];
+
+	if (!strcmp(state, "run")) {
+		ret = bd71891_reg_read(BD71891_REG_PS_CTRL_1);
+		if (ret < 0)
+			return cmd_failure(ret);
+
+		if (ret & BD71891_MASK_IDLE_MODE)
+			ret = bd71891_clrsetbits(BD71891_REG_PS_CTRL_1,
+						 BD71891_MASK_IDLE_MODE, 0);
+		return cmd_ret(ret);
+	} else if (!strcmp(state, "idle")) {
+		ret = bd71891_reg_read(BD71891_REG_PS_CTRL_1);
+		if (ret < 0)
+			return cmd_failure(ret);
+
+		if (!(ret & BD71891_MASK_IDLE_MODE))
+			ret = bd71891_clrsetbits(BD71891_REG_PS_CTRL_1,
+						 0, BD71891_MASK_IDLE_MODE);
+		return cmd_ret(ret);
+
+	} else {
+		printf("Invalid state '%s' requested (supporting 'run'/'idle')\n", state);
+		return CMD_RET_USAGE;
+	}
+}
+
 static struct cmd_tbl subcmd[] = {
 	U_BOOT_CMD_MKENT(chipinfo, 1, 1, do_chipinfo, "", ""),
+	U_BOOT_CMD_MKENT(set_state, 2, 1, do_set_state, "", ""),
 	/*U_BOOT_CMD_MKENT(dt_init, 1, 1, do_dt_init, "", ""),
 	U_BOOT_CMD_MKENT(hibernate, 1, 1, do_hibernate, "", ""),
 	U_BOOT_CMD_MKENT(get_state, 1, 1, do_get_state, "", ""),
@@ -283,5 +341,6 @@ static int do_bd71891(struct cmd_tbl *cmdtp, int flag, int argc,
 U_BOOT_CMD(bd71891, CONFIG_SYS_MAXARGS, 1, do_bd71891,
 	"BD71891 sub-system",
 	"bd71891 chipinfo - recorded power-on reasons and current power state\n"
+	"bd71891 set_state <state> - set run mode (idle, run)\n"
 );
 
