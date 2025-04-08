@@ -4,9 +4,9 @@
 
 #### Upstream
 
-    {% if page.upstreamlink -%}
+    {% if page.upstreamlink %}
 The ROHM Finland SWDC has created a Linux driver in collaboration with the Linux kernel community. Driver is included in the [Upstream Linux]({{ page.upstreamlink }}) from {{ page.upstreamed }} onwards.
-    {%- else -%}
+    {% else %}
 The ROHM Finland SWDC has created a Linux driver in collaboration with the Linux kernel community. Driver is included in the Upstream Linux from {{ page.upstreamed }} onwards.
 
 The Linux kernel can be obtained from:
