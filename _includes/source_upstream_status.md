@@ -23,8 +23,7 @@ https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
 https://kernel.googlesource.com/pub/scm/linux/kernel/git/torvalds/linux.git
 ```
 
-    {% endif -%}
-
+    {% endif %}
 {% else %}
     {% if page.patchlink %}
 
