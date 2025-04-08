@@ -1,5 +1,7 @@
 ---
 permalink: /BD96802/
+patchlink: https://lore.kernel.org/all/cover.1744090658.git.mazziesaccount@gmail.com/
+expectupstreamed: v6.16
 configs:
   - config: CONFIG_MFD_ROHM_BD96801
     subsystem: mfd
@@ -14,13 +16,9 @@ The ROHM BD96802 "Scalable PMIC" is an automotive grade PMIC which can scale to 
 
 ## Linux:
 
-### Upstream:
-
-The BD96802 support is being added to the upstream BD96801 driver. Please see the [patch series](https://lore.kernel.org/all/cover.1741864404.git.mazziesaccount@gmail.com/).
-
 {% include kernel_conf_tbl.md %}
 
-### Downstream reference driver:
+#### Downstream reference driver:
 
 Currently there is an initial reference driver for Linux available tagged in our Linux git tree as tag [scalable-bd96802-unstable-alpha-v0.01](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/releases/tag/scalable-bd96802-unstable-alpha-v0.01).
 Please note that the driver is intended to be used as a reference design only. No warranty is given and feasibility for target setup must be verified. Driver is also not fully tested and bugs may be hiding. Evaluate at your own risk.
@@ -72,3 +70,6 @@ This driver has support for
 * Watchdog
 
 Bugs from this version can be reported in GitHub [issue tracker](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/issues) or to matti.vaittinen@fi.rohmeurope.com
+
+{% include kernel_conf_tbl.md %}
+
