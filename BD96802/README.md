@@ -16,7 +16,7 @@ The ROHM BD96802 "Scalable PMIC" is an automotive grade PMIC which can scale to 
 
 ## Linux:
 
-{% include kernel_conf_tbl.md %}
+{% include source_upstream_status.md %}
 
 #### Downstream reference driver:
 
