@@ -1,5 +1,7 @@
 ---
 permalink: /BD96805/
+patchlink: https://lore.kernel.org/all/cover.1744090658.git.mazziesaccount@gmail.com/
+expectupstreamed: v6.16
 configs:
   - config: CONFIG_MFD_ROHM_BD96801
     subsystem: mfd
@@ -17,9 +19,7 @@ The ROHM BD96805 is almost identical to the [BD96801](../BD96801/). The main dif
 
 ## Linux:
 
-### Upstream:
-
-The BD96805 support is being added to the upstream BD96801 driver. Please see the [patch series](https://lore.kernel.org/all/cover.1741864404.git.mazziesaccount@gmail.com/).
+{% include source_upstream_status.md %}
 
 {% include kernel_conf_tbl.md %}
 
