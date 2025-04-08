@@ -27,7 +27,7 @@ https://kernel.googlesource.com/pub/scm/linux/kernel/git/torvalds/linux.git
 {% else %}
     {% if page.patchlink %}
 
-    #### Upstream
+#### Upstream
 
 Being upstreamed. See [Patches]({{ page.patchlink }}).
     {% endif %}
