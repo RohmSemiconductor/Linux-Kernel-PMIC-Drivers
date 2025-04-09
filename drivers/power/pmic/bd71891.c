@@ -45,9 +45,62 @@ static int bd71891_reg_count(struct udevice *dev)
 	return BD71891_MAX_REGISTER - 1;
 }
 
+static inline int bd71891_i2c_is_locked(struct udevice *dev)
+{
+	uint8_t lockval;
+	int ret;
+
+	ret = bdxxxx_read(dev, BD71891_REG_I2C_LOCK, &lockval, 1);
+	if (ret)
+		return ret;
+
+	return (lockval != BD71891_I2C_UNLOCKED);
+}
+
+static int bd71891_i2c_unlock(struct udevice *dev)
+{
+	int i;
+	uint8_t writeval = 1;
+
+	/*
+	 * Data sheet says writing anything else except the
+	 * BD71891_I2C_UNLOCK_VAL will lock the I2C. Writing the
+	 * BD71891_I2C_UNLOCK_VAL 3 times is said to unlock the I2C. It is not
+	 * specified what happens if the BD71891_I2C_UNLOCK_VAL is written when
+	 * I2C has already been unlocked. Eg, if writing BD71891_I2C_UNLOCK_VAL
+	 * 4 times locks the I2C again. Nor has it been said if the 3 writes
+	 * should be consequent, or if there can be reads done in between.
+	 * Hence, let's first write something else (hoping this will clear the
+	 * 'unlock' sequence should it have been started already) - and then do
+	 * 3 consequent BD71891_I2C_UNLOCK_VAL writes.
+	 */
+	bdxxxx_write(dev, BD71891_REG_I2C_LOCK, &writeval, 1);
+
+	writeval = BD71891_I2C_UNLOCK_VAL;
+	for (i = 0; i < 3; i++)
+		bdxxxx_write(dev, BD71891_REG_I2C_LOCK, &writeval, 1);
+
+	if (bd71891_i2c_is_locked(dev)) {
+		printf("Failed to unlock\n");
+
+		return -EIO;
+	}
+
+	return 0;
+}
+
 static int bd71891_probe(struct udevice *dev)
 {
+	int locked;
+
 	debug("%s: '%s' probed\n", __func__, dev->name);
+
+	locked = bd71891_i2c_is_locked(dev);
+	if (locked < 0)
+		return locked;
+
+	if (locked)
+		return bd71891_i2c_unlock(dev);
 
 	return 0;
 }
