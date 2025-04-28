@@ -112,6 +112,16 @@ config DM_REGULATOR_BD71891
 	BD71891 contains 4 bucks and 2 LDOS. The driver implements get/set api
 	for value and enable.
 
+config DM_REGULATOR_BD71892
+	bool "Enable Driver Model for ROHM BD71892 regulators"
+	depends on DM_REGULATOR && DM_PMIC_BD71892
+	select DM_REGULATOR_VOLTAGE_RANGE
+	help
+	This config enables implementation of driver-model regulator uclass
+	features for regulators on ROHM BD71892 PMIC.
+	BD71892 contains 5 bucks and 1 LDO. The driver implements get/set api
+	for value and enable.
+
 config SPL_DM_REGULATOR_BD71891
 	bool "Enable Driver Model for ROHM BD71891 regulators in SPL"
 	depends on DM_REGULATOR_BD71891 && SPL
@@ -119,6 +129,14 @@ config SPL_DM_REGULATOR_BD71891
 	help
 	This config enables implementation of driver-model regulator uclass
 	features for regulators on ROHM BD71891 in SPL.
+
+config SPL_DM_REGULATOR_BD71892
+	bool "Enable Driver Model for ROHM BD71892 regulators in SPL"
+	depends on DM_REGULATOR_BD71892 && SPL
+	select SPL_DM_REGULATOR_VOLTAGE_RANGE
+	help
+	This config enables implementation of driver-model regulator uclass
+	features for regulators on ROHM BD71892 in SPL.
 
 config DM_REGULATOR_DA9063
 	bool "Enable Driver Model for REGULATOR DA9063"
