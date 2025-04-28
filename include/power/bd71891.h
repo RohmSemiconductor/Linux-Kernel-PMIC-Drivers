@@ -35,8 +35,8 @@ enum {
 	BD71891_MASK_POWER_STATE = GENMASK(2, 0),
 #define BD71891_POWER_STATE_IDLE 0x6
 #define BD71891_POWER_STATE_RUN 0x5
-#define is_idle_state(reg) (reg == BD71891_POWER_STATE_IDLE)
-#define is_run_state(reg) (reg == BD71891_POWER_STATE_RUN)
+#define is_idle_state(reg) (((reg) & BD71891_MASK_POWER_STATE) == BD71891_POWER_STATE_IDLE)
+#define is_run_state(reg) (((reg) & BD71891_MASK_POWER_STATE) == BD71891_POWER_STATE_RUN)
 
 	BD71891_REG_WRST_SEL			= 0x0f,
 
