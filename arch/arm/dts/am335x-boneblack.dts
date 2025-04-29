@@ -55,107 +55,78 @@
 		};
 	};
 	bdpmic: pmic@4b { /* the "test" defined as child of the i2c1 bus */
-		compatible = "rohm,bd71885";
+		compatible = "rohm,bd71891";
 		reg = <0x4b>;
 		/* GPIO 1_29 - (connector 8, pin 26) for irq */
 /*		interrupt-parent = <&gpio1>; */
 /*		interrupts = <29 GPIO_ACTIVE_LOW>; */
 /*		interrupts = <29 8>; */
-		rohm,short-press-ms = <30>;
+/*		rohm,short-press-ms = <30>;
 		rohm,mid-press-ms = <1000>;
 		rohm,long-press-ms = <5000>;
-		/* Try 10 milli-ohm Rsense */
-		rohm,sense-resistor-mohms = <10>;
+*/
 
 		regulators {
 			buck1: BUCK1 {
 				regulator-name = "buck1";
+/*
 				regulator-min-microvolt = <500000>;
 				regulator-max-microvolt = <1300000>;
+*/
 /*				regulator-boot-on; */
 /*				regulator-always-on; */
-				regulator-ramp-delay = <1250>;
+/*				regulator-ramp-delay = <1250>; */
 			};
 			buck2: BUCK2 {
 				regulator-name = "buck2";
-				regulator-min-microvolt = <500000>;
+/*				regulator-min-microvolt = <500000>;
 				regulator-max-microvolt = <1300000>;
 				regulator-always-on;
 				regulator-ramp-delay = <1250>;
+*/
 			};
 			buck3: BUCK3 {
 				regulator-name = "buck3";
+/*
 				regulator-min-microvolt = <500000>;
 				regulator-max-microvolt = <1300000>;
 		//		regulator-boot-on;
 				rohm,no-regulator-enable-control;
+*/
 			};
 			buck4: BUCK4 {
 				regulator-name = "buck4";
-				regulator-min-microvolt = <500000>;
+/*				regulator-min-microvolt = <500000>;
 				regulator-max-microvolt = <1300000>;
 				regulator-boot-on;
+*/
 			};
-			buck5: BUCK5 {
-				regulator-name = "buck5";
-				/* min-max here includes both HI and LO ranges */
+			boost: BOOST {
+				regulator-name = "boost";
+/*
 				regulator-min-microvolt = <300000>;
 				regulator-max-microvolt = <1300000>;
 				regulator-boot-on;
-			};
-
-			BUCK6: BUCK6 {
-				regulator-name = "buck6";
-				regulator-min-microvolt = <1500000>;
-				regulator-max-microvolt = <3500000>;
-				regulator-boot-on;
-			};
-
-			buck7: BUCK7 {
-				regulator-name = "buck7";
-				regulator-min-microvolt = <1500000>;
-				regulator-max-microvolt = <3500000>;
-				regulator-boot-on;
-			};
-
-			buck8: BUCK8 {
-				regulator-name = "buck8";
-				regulator-min-microvolt = <500000>;
-				regulator-max-microvolt = <1300000>;
+*/
 			};
 
 			ldo1: LDO1 {
 				regulator-name = "ldo1";
-				regulator-min-microvolt = <600000>;
-				regulator-max-microvolt = <3300000>;
+/*
+				regulator-min-microvolt = <1500000>;
+				regulator-max-microvolt = <3500000>;
 				regulator-boot-on;
-/*				regulator-always-on; */
+*/
 			};
 
 			ldo2: LDO2 {
 				regulator-name = "ldo2";
-				regulator-min-microvolt = <750000>;
-				regulator-max-microvolt = <3300000>;
+/*
+				regulator-min-microvolt = <1500000>;
+				regulator-max-microvolt = <3500000>;
 				regulator-boot-on;
-/*				regulator-always-on; */
+*/
 			};
-
-			ldo3: LDO3 {
-				regulator-name = "ldo3";
-				regulator-min-microvolt = <600000>;
-				regulator-max-microvolt = <3300000>;
-/*				regulator-boot-on; */
-/*				regulator-always-on; */
-			};
-
-			ldo4: LDO4 {
-				regulator-name = "ldo4";
-				regulator-min-microvolt = <750000>;
-				regulator-max-microvolt = <3300000>;
-/*				regulator-boot-on; */
-/*				regulator-always-on; */
-			};
-
 		};
 	};
 };
