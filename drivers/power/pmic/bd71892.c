@@ -12,6 +12,7 @@
 #include <i2c.h>
 #include <log.h>
 #include <asm/global_data.h>
+#include <linux/compiler.h>
 #include <linux/delay.h>
 #include <power/pmic.h>
 #include <power/regulator.h>
@@ -31,6 +32,16 @@ DECLARE_GLOBAL_DATA_PTR;
 static inline struct udevice *get_bd71892(void)
 {
 	return get_currdev(PMIC_DT_NAME);
+}
+
+static inline int bd71892_reg_write(uint reg, uint val)
+{
+	struct udevice *pmicdev = get_bd71892();
+
+	if (!pmicdev)
+		return -ENODEV;
+
+	return pmic_reg_write(pmicdev, reg, val);
 }
 
 static inline int bd71892_reg_read(uint reg)
@@ -343,16 +354,204 @@ static int do_set_idle_state(struct cmd_tbl *cmdtp, int flag, int argc,
 	return CMD_RET_USAGE;
 }
 
+static int wait_adc_meas_complete(void)
+{
+	int kick;
+
+	for (kick = bd71892_reg_read(BD71892_REG_ADC_KICK);
+	     kick > -1;
+	     kick = bd71892_reg_read(BD71892_REG_ADC_KICK))
+		/* We could add small delay here to not choke the I2C */;
+
+	if (kick != 0) {
+		printf("Failed to read ADC_KICK\n");
+
+		return kick;
+	}
+
+	return 0;
+}
+
+static int reg_to_temp(uint16_t *reg_be)
+{
+	return 351300 - be16_to_cpu(*reg_be) * 2310 / 4;
+}
+
+static int __read_temp_from_reg(int reg, int *temp_mc)
+{
+	int ret;
+	char buf[2] __attribute__((aligned(2)));
+	struct udevice *dev = get_bd71892();
+
+	if (!dev)
+		return -ENODEV;
+
+	ret = pmic_read(dev, reg, &buf[0], 2);
+	if (ret)
+		return ret;
+
+	*temp_mc = reg_to_temp((uint16_t *)&buf[0]);
+
+	return 0;
+}
+
+static int do_read_temp(struct cmd_tbl *cmdtp, int flag, int argc,
+		       char *const argv[])
+{
+	int ret, temp_mc;
+
+	ret = __read_temp_from_reg(BD71892_REG_ADC_TEMP_HI, &temp_mc);
+
+	if (!ret)
+		printf("measured temperature: %d mC \n", temp_mc);
+	else
+		printf("Failed to read temperature\n");
+
+	return cmd_ret(ret);
+}
+
+int is_hiawatha(void)
+{
+	unsigned short one = 1;
+	char *tmp = (char *)&one;
+
+	return *tmp;
+}
+
+static int limit2regval(int limit, char *regs)
+{
+	int reg;
+
+	/*
+	 * limit_mC = 351300 - 2310 * regs / 4
+	 *
+	 *        (351300 - limit_mC) * 4
+	 * regs = ----------------------
+	 *               2310
+	 */
+
+	reg = (351300 - limit) * 4;
+	reg /= 4;
+
+	if ((reg & BD71892_MASK_ADC_TEMP_LIMIT) != reg) {
+		printf("Unsupported limit %d\n", limit);
+		return -EINVAL;
+	}
+
+	if (is_hiawatha()) {
+		unsigned int tmp = limit;
+
+		regs[0] = tmp >> 8;
+		regs[1] = tmp;
+	} else {
+		unsigned int tmp = limit;
+
+		regs[1] = tmp >> 8;
+		regs[0] = tmp;
+	}
+
+	return 0;
+}
+
+static int write_temp_limit(int limit)
+{
+	u8 regval[2];
+	int ret;
+
+	ret = limit2regval(limit, &regval[0]);
+	if (ret)
+		return ret;
+
+	/*
+	 * NOTE! This is not atomic! It is possible the writes will generate a,
+	 * smaller than intended, intermediate limit value when first register
+	 * is written and second isn't. I don't see a way around this. So,
+	 * the final and proper design should probably either mask the ADC WARN
+	 * interrupt or be prepared to handle a bogus interrupt when limit
+	 * is changed.
+	 *
+	 * TODO: See if writing both registers without I2C stop can update the
+	 * limit atomically.
+	 */
+	ret = bd71892_reg_write(BD71892_REG_ADC_TEMP_LIMIT_HI, regval[0]);
+	if (ret)
+		return ret;
+
+	return bd71892_reg_write(BD71892_REG_ADC_TEMP_LIMIT_LO, regval[1]);
+}
+
+static int do_temp_limit(struct cmd_tbl *cmdtp, int flag, int argc,
+			 char *const argv[])
+{
+	int limit_mc, ret;
+	char *eptr;
+
+	if (argc == 1) {
+		ret = __read_temp_from_reg(BD71892_REG_ADC_TEMP_LIMIT_HI,
+					   &limit_mc);
+		if (!ret)
+			printf("Temperature limit %d mC\n", limit_mc);
+		else
+			printf("Temperature limit read failed\n");
+
+		return cmd_ret(ret);
+	}
+
+	if (argc != 2)
+		return CMD_RET_USAGE;
+
+        limit_mc = simple_strtol(argv[1], &eptr, 10);
+        if (!*argv[1] || *eptr)
+		return CMD_RET_USAGE;
+
+	ret = write_temp_limit(limit_mc);
+	return cmd_ret(ret);
+}
+
+static int do_adc_meas(struct cmd_tbl *cmdtp, int flag, int argc,
+		       char *const argv[])
+{
+	int kick, ret;
+	char buf[2];
+	uint16_t *val_be = (uint16_t *)&buf[0];
+	struct udevice *dev = get_bd71892();
+
+	if (!dev)
+		return cmd_ret(-ENODEV);
+
+	ret = wait_adc_meas_complete();
+	if (ret)
+		return cmd_ret(ret);
+
+	ret = bd71892_reg_write(BD71892_REG_ADC_KICK, 1);
+	if (ret)
+		return cmd_ret(kick);
+
+	ret = wait_adc_meas_complete();
+	if (ret)
+		return cmd_ret(ret);
+
+	ret = pmic_read(dev, BD71892_REG_ADC_VOL_HI, &buf[0], 2);
+	if (ret)
+		return cmd_ret(ret);
+
+	printf("measured VSYS: %u mV\n", be16_to_cpu(*val_be) * 5860);
+
+	return cmd_ret(0);
+}
+
 static struct cmd_tbl subcmd[] = {
 	U_BOOT_CMD_MKENT(chipinfo, 1, 1, do_chipinfo, "", ""), /* Ok */
 	U_BOOT_CMD_MKENT(set_idle_state, 2, 1, do_set_idle_state, "", ""),
+	U_BOOT_CMD_MKENT(adc_meas, 1, 1, do_adc_meas, "", ""),
+	U_BOOT_CMD_MKENT(read_temp, 1, 1, do_read_temp, "", ""),
+	U_BOOT_CMD_MKENT(temp_limit, 1, 1, do_temp_limit, "", ""),
 	/*U_BOOT_CMD_MKENT(dt_init, 1, 1, do_dt_init, "", ""),
 	U_BOOT_CMD_MKENT(hibernate, 1, 1, do_hibernate, "", ""),
 	U_BOOT_CMD_MKENT(adc_state, 2, 1, do_adc_state, "", ""),
 	U_BOOT_CMD_MKENT(adc_source, 2, 1, do_adc_source, "", ""),
 	U_BOOT_CMD_MKENT(adc_vol_source, 2, 1, do_adc_vol_source, "", ""),
 	U_BOOT_CMD_MKENT(adc_gain, 2, 1, do_adc_gain, "", ""),
-	U_BOOT_CMD_MKENT(adc_meas, 4, 1, do_adc_meas, "", ""),
 	U_BOOT_CMD_MKENT(adc_limit, 3, 1, do_adc_limit, "", ""),
 	U_BOOT_CMD_MKENT(adc_get, 2, 1, do_adc_get, "", ""),*/
 };
@@ -377,6 +576,8 @@ U_BOOT_CMD(bd71892, CONFIG_SYS_MAXARGS, 1, do_bd71892,
 	"BD71892 sub-system",
 	"bd71892 chipinfo - recorded power-on reasons and current power state\n"
 	"bd71892 set_idle_state [idle, run] - set run mode\n"
+	"bd71885 adc_meas - measure VSYS using ADC\n"
+	"bd71885 read_temp - read the latest measured temperature\n"
 	"bd71892 dt_init - initialize PMIC based on DT values\n"
 	"bd71885 adc_state - get or set ADC accum state (start, stop)\n"
 	"bd71885 adc_source - get or set ADC accum source (voltage, current, power)\n"
