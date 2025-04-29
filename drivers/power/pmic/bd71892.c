@@ -13,6 +13,7 @@
 #include <log.h>
 #include <asm/global_data.h>
 #include <linux/compiler.h>
+#include <dm/lists.h>
 #include <linux/delay.h>
 #include <power/pmic.h>
 #include <power/regulator.h>
@@ -90,9 +91,27 @@ enum {
 	#define TYPE_MAX TYPE_TEMPERATURE
 };
 
+static int bd71892_gpio_bind(struct udevice *dev)
+{
+	struct udevice *gpio_dev;
+	int ret;
+
+	ret = device_bind_driver(dev, "gpio_bd71892", "gpio_bd71892", &gpio_dev);
+	if (ret)
+		debug("%s: Cannot bind GPIOs (ret=%d)\n", __func__, ret);
+
+	return ret;
+}
+
 static int bd71892_bind(struct udevice *dev)
 {
-	return bdxxxx_bind(dev, pmic_children_info);
+	int ret;
+
+	ret = bdxxxx_bind(dev, pmic_children_info);
+	if (ret)
+		return ret;
+
+	return bd71892_gpio_bind(dev);
 }
 
 static int bd71892_reg_count(struct udevice *dev)
@@ -578,6 +597,7 @@ U_BOOT_CMD(bd71892, CONFIG_SYS_MAXARGS, 1, do_bd71892,
 	"bd71892 set_idle_state [idle, run] - set run mode\n"
 	"bd71885 adc_meas - measure VSYS using ADC\n"
 	"bd71885 read_temp - read the latest measured temperature\n"
+	/*
 	"bd71892 dt_init - initialize PMIC based on DT values\n"
 	"bd71885 adc_state - get or set ADC accum state (start, stop)\n"
 	"bd71885 adc_source - get or set ADC accum source (voltage, current, power)\n"
@@ -586,5 +606,6 @@ U_BOOT_CMD(bd71892, CONFIG_SYS_MAXARGS, 1, do_bd71892,
 	"bd71885 adc_meas [v, i, p] <num_samples> <interval> - measure\n"
 	"bd71885 adc_limit [a(ccum), p(ower), t(emperature)] <threshold value> - set limit\n"
 	"bd71885 adc_get [v, i, p, t] - get last measured value\n"
+	*/
 );
 
