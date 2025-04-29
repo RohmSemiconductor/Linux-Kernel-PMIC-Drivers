@@ -15,42 +15,56 @@
 
 /* MVa Added */
 &i2c2 {
-	companionpmic: companion@6a {
-		compatible = "rohm,bd2659";
-		reg = <0x6a>;
+	companionpmic: companion@47 {
+		compatible = "rohm,bd71892";
+		reg = <0x47>;
 		/* GPIO 1_29 - (connector 8, pin 26) for irq */
 /*		interrupt-parent = <&gpio1>; */
 /*		interrupts = <29 GPIO_ACTIVE_LOW>; */
 /*		interrupts = <29 8>; */
 
 		regulators {
-			BUCK1 {
-				regulator-name = "BUCK1";
+			buck1 {
+				regulator-name = "buck1";
+/*
 				regulator-min-microvolt = <500000>;
 				regulator-max-microvolt = <1350000>;
+*/
 /*				regulator-boot-on; */
 /*				regulator-always-on; */
 				regulator-ramp-delay = <1250>;
 			};
-			BUCK2 {
-				regulator-name = "BUCK2";
+			buck2 {
+				regulator-name = "buck2";
+/*
 				regulator-min-microvolt = <500000>;
 				regulator-max-microvolt = <1350000>;
 				regulator-always-on;
 				regulator-ramp-delay = <1250>;
+*/
 			};
-			BUCK3 {
-				regulator-name = "BUCK3";
+			buck3 {
+				regulator-name = "buck3";
+/*
 				regulator-min-microvolt = <500000>;
 				regulator-max-microvolt = <1350000>;
 		//		regulator-boot-on;
 				rohm,no-regulator-enable-control;
+*/
 			};
-			BUCK4 {
-				regulator-name = "BUCK4";
+			buck4 {
+				regulator-name = "buck4";
+/*
 				regulator-min-microvolt = <500000>;
 				regulator-max-microvolt = <1850000>;
 				regulator-boot-on;
+*/
+			};
+			buck5 {
+				regulator-name = "buck5";
+			};
+			ldo1 {
+				regulator-name = "ldo1";
 			};
 		};
 	};
