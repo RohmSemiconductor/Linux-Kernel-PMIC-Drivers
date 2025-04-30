@@ -12,6 +12,7 @@
 #include <i2c.h>
 #include <log.h>
 #include <asm/global_data.h>
+#include <dm/read.h>
 #include <linux/delay.h>
 #include <power/pmic.h>
 #include <power/regulator.h>
@@ -20,6 +21,9 @@
 
 #define PMIC_DT_NAME "pmic@4b"
 
+/* Add debug checks to detect overflows in computations */
+#define CHECK_OVERFLOW 1
+
 /*
  * Wait 10 mS before rechecking if state was changed
  * There is 10 attempts and always this delay before re-checking
@@ -27,6 +31,8 @@
 #define WAIT_FOR_IDLE_CHANGE_US 10000
 
 DECLARE_GLOBAL_DATA_PTR;
+
+static uint g_r_sense;
 
 static inline struct udevice *get_bd71891(void)
 {
@@ -41,6 +47,16 @@ static inline int bd71891_reg_write(uint reg, uint val)
 		return -ENODEV;
 
 	return pmic_reg_write(pmicdev, reg, val);
+}
+
+static inline int bd71891_pmic_read(uint reg, uint8_t *buf, int len)
+{
+	struct udevice *pmicdev = get_bd71891();
+
+	if (!pmicdev)
+		return -ENODEV;
+
+	return pmic_read(pmicdev, reg, buf, len);
 }
 
 static inline int bd71891_reg_read(uint reg)
@@ -973,6 +989,360 @@ static int do_adc_vol_source(struct cmd_tbl *cmdtp, int flag, int argc,
 	return cmd_ret(ret);
 }
 
+static int get_operation_type(char *arg)
+{
+	if (!arg)
+		return -EINVAL;
+
+	switch(arg[0])
+	{
+	case 'v':
+		return TYPE_VOLTAGE;
+	case 'i':
+		return TYPE_CURRENT;
+	case 'p':
+		return TYPE_POWER;
+	case 't':
+		return TYPE_TEMPERATURE;
+	}
+
+	printf("Invalid operation\n");
+	return -EINVAL;
+}
+
+static int do_dt_init(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
+{
+	struct udevice *ud = get_bd71891();
+	int ret;
+
+	if (!ud)
+		return cmd_ret(-ENODEV);
+
+	ret =  dev_read_u32u(ud, "rohm,sense-resistor-mohms", &g_r_sense);
+	if (!ret)
+		printf("R_sense set to %u milli ohms\n", g_r_sense);
+	else
+		printf("No sense resistor value found\n");
+
+	return 0;
+}
+
+static int scale_adc_volt(uint64_t orig, uint64_t *scaled)
+{
+	const struct bd71891_adc_vol_src *src;
+	int ret;
+
+	ret = __get_adc_vol_source(&src);
+	if (ret)
+		return ret;
+
+	//printf("Scaling %llu to uV. Source %s\n", orig, src->name);
+
+	/* Scale */
+	*scaled = orig * src->reso_uv;
+
+#ifdef CHECK_OVERFLOW
+	{
+		uint64_t tmp = *scaled;
+
+		do_div(tmp, src->reso_uv);
+		if (tmp != orig)
+			printf("OVERFLOW, %llu != %llu\n",
+			       (unsigned long long)tmp,
+			       (unsigned long long)orig);
+	}
+#endif
+
+	return 0;
+}
+
+static int gain_idx_resolution(unsigned int gain_idx)
+{
+	/* Unit 0.1 uV / register step */
+	static const int gain2reso[] = { 2343, 781, 391, 195, };
+
+	if (gain_idx < ARRAY_SIZE(gain2reso))
+		return gain2reso[gain_idx];
+
+	return -EINVAL;
+}
+
+static int get_adc_reg_reso(void)
+{
+	int ret;
+
+	ret = __get_adc_gain_idx();
+	if (ret < 0)
+		return ret;
+
+	ret = gain_idx_resolution(ret);
+	if (ret < 0)
+		return -EINVAL;
+
+	return ret;
+}
+
+
+/* Scales to milli Amperes */
+static int scale_adc_curr(uint64_t orig, uint64_t *scaled)
+{
+	unsigned reso, rsens;
+	uint64_t curr;
+	int ret;
+
+	ret = get_adc_reg_reso();
+	if (ret < 0)
+		return ret;
+
+	reso = (unsigned)ret;
+
+	curr = orig * reso;
+#ifdef CHECK_OVERFLOW
+	{
+		uint64_t tmp = curr;
+
+		do_div(tmp, reso);
+		if (tmp != orig)
+			printf("scale_adc_curr(): OVERFLOW, %llu != %llu\n",
+			       (unsigned long long)tmp,
+			       (unsigned long long)orig);
+	}
+#endif
+
+	/*
+	 * V = resolution * reg_val
+	 *
+	 * V = RI => I = V/R
+	 *
+	 * Unit of V is 0.1 uV
+	 * Unit of R is milli ohm
+	 * => Unit of I is 100 uA
+	 *
+	 * For now I just assume Rsense
+	 * will be magnitude of 10 milli-ohm and scale the computation to mA
+	 * by multiplying the Rsense with 10 before the division.
+	 *
+	 * This may be a bad idea as:
+	 * a) If Rsense is a lot smaller than the curr, then a loop-based
+	 * implementation of do_div() may take plenty of time.
+	 *
+	 * b) When the current value is close to the Rsense we may get
+	 * flooring or significant loss of accuracy.
+	 *
+	 * TODO:
+	 * So, this scaling needs to be fitted according to the expected values,
+	 * or a comparison logig for the relative sizes of curr and Rsens need
+	 * to be used to select the optimal scale.
+	 */
+	rsens = g_r_sense * 10;
+	do_div(curr, rsens);
+	*scaled = curr;
+
+	return 0;
+}
+
+static int scale_adc_pow(uint64_t orig, uint64_t *scaled)
+{
+	const struct bd71891_adc_vol_src *src;
+	unsigned int rsens;
+	uint64_t reso, power;
+	int ret;
+
+/*
+ *  And Power is calculated by the following formula: ACC_POW_VAL =
+ *  (ADC_VOL_VAL[9:0] * ADC_CUR_VAL[9:0]) / 64
+ *
+ *  Voltage resolution is in uV
+ *
+ *  Gain correction is in units of 0.1uV. Rsense is in units of milli ohm.
+ *  By multiplying Rsense with 10 the current resolution is in mA.
+ *  According to the formula above:
+ *  => unit of power is nW / 64.
+ */
+	ret = __get_adc_vol_source(&src);
+	if (ret)
+		return ret;
+
+	ret = get_adc_reg_reso();
+	if (ret < 0)
+		return ret;
+
+	reso = (unsigned)ret;
+	reso *= src->reso_uv;
+
+#ifdef CHECK_OVERFLOW
+	{
+		uint64_t tmp = reso;
+
+		do_div(tmp, src->reso_uv);
+
+		if (tmp != ((unsigned)ret))
+			printf("scale_adc_pow(): reso OVERFLOW, %llu != %u\n",
+			       tmp, (unsigned)ret);
+	}
+#endif
+
+	rsens = g_r_sense * 10;
+
+	/* Can we overflow here? */
+	power = orig * reso * 64;
+#ifdef CHECK_OVERFLOW
+	{
+		uint64_t tmp = power;
+
+		do_div(tmp, src->reso_uv);
+		do_div(tmp, ret);
+		do_div(tmp, 64);
+
+		if (tmp != orig)
+			printf("scale_adc_pow(): pow OVERFLOW, %llu != %llu\n",
+			       tmp, orig);
+	}
+#endif
+
+	do_div(power, rsens);
+	*scaled = power;
+
+	return 0;
+}
+
+/* Convert register value to
+ * V => uV
+ * I => uA
+ * P => uW
+ * t => mC
+ *
+ * TODO: Check these
+ */
+static int adc_scale_smp(uint type, uint *smp)
+{
+	uint64_t tmp;
+	int ret;
+
+	switch(type)
+	{
+	case TYPE_VOLTAGE:
+		ret = scale_adc_volt(*smp, &tmp);
+		if (ret)
+			return ret;
+		#ifdef CHECK_OVERFLOW
+		if (tmp > 0xffffffff)
+			printf("adc_scale_smp(): volt OVERFLOW %llu > %u\n",
+			       tmp, 0xffffffff);
+		#endif
+		*smp = (uint)tmp;
+		break;
+	case TYPE_CURRENT:
+		ret = scale_adc_curr(*smp, &tmp);
+		if (ret)
+			return ret;
+		#ifdef CHECK_OVERFLOW
+		if (tmp > 0xffffffff)
+			printf("adc_scale_smp(): curr OVERFLOW %llu > %u\n",
+			       tmp, 0xffffffff);
+		#endif
+		*smp = (uint)tmp;
+		break;
+	case TYPE_POWER:
+		ret = scale_adc_pow(*smp, &tmp);
+		if (ret)
+			return ret;
+		#ifdef CHECK_OVERFLOW
+		if (tmp > 0xffffffff)
+			printf("adc_scale_smp(): pow OVERFLOW %llu > %u\n",
+			       tmp, 0xffffffff);
+		#endif
+		*smp = (uint)tmp;
+		break;
+	case TYPE_TEMPERATURE:
+		tmp = 351300 - 2310 * *smp / 4;
+		*smp = (uint)tmp;
+		break;
+
+	default:
+		printf("adc_scale_smp(): Unsupported type\n");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+#define BD71891_ADC_CUR_VAL_BASE 0x8f
+#define BD71891_ADC_VOL_VAL_BASE 0x8d
+#define BD71891_ADC_TEMP_VAL_BASE 0x93
+#define BD71891_ADC_CVT_VAL_HIMASK GENMASK(1, 0)
+#define BD71891_ADC_POW_VAL_BASE 0x91
+#define BD71891_ADC_POW_VAL_HIMASK GENMASK(3, 0)
+
+static int adc_get_single_sample(uint type, uint *sample)
+{
+	int ret;
+	char buf[2] __attribute__((aligned(2)));
+	u16 *s;
+	int himask[] = { BD71891_ADC_CVT_VAL_HIMASK, BD71891_ADC_CVT_VAL_HIMASK,
+		BD71891_ADC_POW_VAL_HIMASK, BD71891_ADC_CVT_VAL_HIMASK };
+	int smp_reg[] = {
+		[TYPE_VOLTAGE] = BD71891_ADC_VOL_VAL_BASE,
+		[TYPE_CURRENT] = BD71891_ADC_CUR_VAL_BASE,
+		[TYPE_POWER] = BD71891_ADC_POW_VAL_BASE,
+		[TYPE_TEMPERATURE] = BD71891_ADC_TEMP_VAL_BASE,
+	};
+
+	if (type > TYPE_MAX) {
+		printf("Bad type\n");
+		return -EINVAL;
+	}
+
+	ret = bd71891_pmic_read(smp_reg[type], &buf[0], 2);
+	if (ret < 0) {
+		printf("Read failed\n");
+		return ret;
+	}
+
+	buf[0] &= himask[type];
+	s = (u16 *)&buf[0];
+
+	*sample = be16_to_cpu(*s);
+	printf("Raw value from registers 0x%x\n", *sample);
+
+	return adc_scale_smp(type, sample);
+}
+
+static int do_adc_get(struct cmd_tbl *cmdtp, int flag, int argc,
+		      char *const argv[])
+{
+	int type, ret;
+	uint sample;
+	const char* unit[] = {
+		[TYPE_VOLTAGE] = "uV",
+		[TYPE_CURRENT] = "mA",
+		[TYPE_POWER] = "nW",
+		[TYPE_TEMPERATURE] = "mC"
+	};
+
+	if (argc != 2) {
+		printf("expecting single argument [v,i,p,t]\n");
+		return CMD_RET_USAGE;
+	}
+
+	type = get_operation_type(argv[1]);
+	if (type < 0)
+		return CMD_RET_USAGE;
+
+	if (type == TYPE_CURRENT || type == TYPE_POWER) {
+		if (!g_r_sense) {
+			printf("Sense resistor value not known\n");
+			return cmd_failure(-EINVAL);
+		}
+	}
+
+	ret = adc_get_single_sample(type, &sample);
+	if (!ret)
+		printf("%u %s\n", sample, unit[type]);
+
+	return cmd_ret(ret);
+}
+
 #define HPD_PINCTRL_USAGE "hpd_pin_ctrl [pin [pull soc/conn value] [nmos value]]\n"
 #define HPD_PINCTRL_HELP  "hpd_pin_ctrl - get HDMI HPD info\n" 		\
 	"hpd_pin_ctrl pin - get HDMI HPD info for a specific pin\n" 	\
@@ -987,11 +1357,8 @@ static int do_adc_vol_source(struct cmd_tbl *cmdtp, int flag, int argc,
 
 /*
  * TODO: Add commands for:
- * - ADC: set ADC source mux (what is measured)
- * - ADC: set ADC gain
- * - ADC: perform a measurement cycle (config mux, kick, read result)
  * - ADC: limit setting
- * - ADC: read temperature
+ * - ADC: constant measurement
  * - USB characterization
  */
 static struct cmd_tbl subcmd[] = {
@@ -1003,12 +1370,15 @@ static struct cmd_tbl subcmd[] = {
 	U_BOOT_CMD_MKENT(adc_state, 2, 1, do_adc_state, "", ""),
 	U_BOOT_CMD_MKENT(adc_gain, 2, 1, do_adc_gain, "", ""),
 	U_BOOT_CMD_MKENT(adc_vol_source, 2, 1, do_adc_vol_source, "", ""),
-	/*U_BOOT_CMD_MKENT(dt_init, 1, 1, do_dt_init, "", ""),
+	U_BOOT_CMD_MKENT(adc_get, 2, 1, do_adc_get, "", ""),
+	U_BOOT_CMD_MKENT(dt_init, 1, 1, do_dt_init, "", ""),
+
+	/*
 	U_BOOT_CMD_MKENT(hibernate, 1, 1, do_hibernate, "", ""),
 	U_BOOT_CMD_MKENT(adc_vol_source, 2, 1, do_adc_vol_source, "", ""),
 	U_BOOT_CMD_MKENT(adc_meas, 4, 1, do_adc_meas, "", ""),
 	U_BOOT_CMD_MKENT(adc_limit, 3, 1, do_adc_limit, "", ""),
-	U_BOOT_CMD_MKENT(adc_get, 2, 1, do_adc_get, "", ""),*/
+	*/
 };
 
 static int do_bd71891(struct cmd_tbl *cmdtp, int flag, int argc,
@@ -1028,6 +1398,7 @@ static int do_bd71891(struct cmd_tbl *cmdtp, int flag, int argc,
 
 U_BOOT_CMD(bd71891, CONFIG_SYS_MAXARGS, 1, do_bd71891,
 	"BD71891 sub-system",
+	"bd71891 dt_init - initialize based on DT\n"
 	"bd71891 chipinfo - recorded power-on reasons and current power state\n"
 	"bd71891 set_idle_state [idle, run] - set run mode\n"
 	"bd71891 hpd_idle_ctrl [1,0] - Query or set HDMI detector's IDLE control\n"
@@ -1036,5 +1407,6 @@ U_BOOT_CMD(bd71891, CONFIG_SYS_MAXARGS, 1, do_bd71891,
 	"bd71891 adc_state - get or set ADC accum state (start, stop)\n"
 	"bd71891 adc_gain - get or set gain for ADC current accumulator\n"
 	"bd71891 adc_vol_source - get or set ADC accum voltage source\n"
+	"bd71891 adc_get [v, i, p, t] - get last measured value\n"
 );
 
