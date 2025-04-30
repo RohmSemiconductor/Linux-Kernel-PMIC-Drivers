@@ -33,6 +33,16 @@ static inline struct udevice *get_bd71891(void)
 	return get_currdev(PMIC_DT_NAME);
 }
 
+static inline int bd71891_reg_write(uint reg, uint val)
+{
+	struct udevice *pmicdev = get_bd71891();
+
+	if (!pmicdev)
+		return -ENODEV;
+
+	return pmic_reg_write(pmicdev, reg, val);
+}
+
 static inline int bd71891_reg_read(uint reg)
 {
 	struct udevice *pmicdev = get_bd71891();
@@ -256,6 +266,22 @@ const struct reason_reg_field bd71891_power_state = {
 		.reg = BD71891_REG_POWER_STATE,
 	},
 	.mask = 0x3,
+};
+
+const struct reason_info bd71891_adc_source_info[] = {
+	REASON_INFO("Voltage", 0),
+	REASON_INFO("Current", 1),
+	REASON_INFO("Power", 2),
+};
+
+const struct reason_reg_field bd71891_adc_source = {
+	.reason_reg = {
+		.explanation = "ADC ACCUM SOURCE",
+		.reasons = &bd71891_adc_source_info[0],
+		.num_reasons = ARRAY_SIZE(bd71891_adc_source_info),
+		.reg = BD71891_REG_ADC_CTRL1,
+	},
+	.mask = BD71891_MASK_ADC_ACCUM_SRC,
 };
 
 /* Get the power-on reason */
@@ -598,6 +624,161 @@ static int do_set_idle_state(struct cmd_tbl *cmdtp, int flag, int argc,
 
 	return CMD_RET_USAGE;
 }
+
+static int get_adc_accum(void)
+{
+	int ret;
+
+	ret = bd71891_reg_read(BD71891_REG_ADC_ACCUM_KICK);
+
+	if (ret < 0) {
+		printf("Could not get ADC ACCUM state\n");
+
+		return 0;
+	}
+
+	return ret & BD71891_MASK_ADC_ACCUM_KICK;
+}
+
+static int set_adc_accum(bool enable, bool clear)
+{
+	uint val = 0;
+	int ret;
+
+	if (clear)
+		val |= BD71891_MASK_ADC_ACCUM_CLR;
+
+	if (enable)
+		val |= BD71891_MASK_ADC_ACCUM_KICK;
+	else
+		val |= BD71891_MASK_ADC_ACCUM_STOP;
+
+	//printf("accum en=%d, clear=%d, write reg 0x%x val 0x%x\n", enable, clear,
+	//       BD71885_ADC_ACCUM_KICK, val);
+	ret = bd71891_reg_write(BD71891_REG_ADC_ACCUM_KICK, val);
+	if (ret)
+		printf("Failed to %s ADC accumulator\n",
+		       enable ? "start" : "stop");
+
+	return ret;
+}
+
+static int __stop_adc_accum(bool clear)
+{
+	int ret;
+
+	ret = set_adc_accum(0, clear);
+
+	if (ret)
+		return ret;
+
+	/* Ensure ADC is stopped prior returning */
+	while (get_adc_accum())
+		;
+
+	return ret;
+}
+
+static int stop_adc_accum(void)
+{
+	return __stop_adc_accum(0);
+}
+
+static int stop_clear_adc_accum(void)
+{
+	return __stop_adc_accum(1);
+}
+
+static int start_adc_accum(void)
+{
+	return set_adc_accum(1, 0);
+}
+
+static int accum_stopped_config_helper(uint reg, uint mask,
+				       uint val)
+{
+	int started, ret;
+
+	started = get_adc_accum();
+	if (started) {
+		ret = stop_adc_accum();
+
+		if (ret)
+			return ret;
+	}
+
+	printf("Updating accum register 0x%x, mask 0x%x, val 0x%x\n",
+	       reg, mask, val);
+
+	ret = bd71891_clrsetbits(reg, mask, val);
+	if (ret) {
+		if (started)
+			printf("ADC config failed, ADC stopped\n");
+
+		return ret;
+	}
+
+	if (started) {
+		ret = start_adc_accum();
+		if (ret)
+			printf("Could not restart ADC\n");
+	}
+
+	return ret;
+}
+
+static int __set_adc_source(int src)
+{
+	int ret;
+
+	if (src < TYPE_VOLTAGE || src > TYPE_POWER) {
+		printf("Bad ADC source\n");
+		return -EINVAL;
+	}
+
+	src <<= BD71891_ADC_ACCUM_SRC_SHIFT;
+
+	ret = accum_stopped_config_helper(BD71891_REG_ADC_CTRL1,
+					  BD71891_MASK_ADC_ACCUM_SRC, src);
+	if (ret)
+		printf("Failed to set ADC source\n");
+
+	return ret;
+}
+
+static int do_adc_source(struct cmd_tbl *cmdtp, int flag, int argc,
+			 char *const argv[])
+{
+	char *src;
+	int ret, src_no;
+
+	if (argc == 1)
+		return ret = bd71891_pr_reas_field(&bd71891_adc_source);
+
+	if (argc != 2)
+		return CMD_RET_USAGE;
+
+	src = argv[1];
+
+	if (!strcmp(src, "voltage")) {
+		src_no = TYPE_VOLTAGE;
+	} else if (!strcmp(src, "current")) {
+		src_no = TYPE_CURRENT;
+	} else if (!strcmp(src, "power")) {
+		src_no = TYPE_POWER;
+	} else {
+		printf("Unsupported ADC accum source\n");
+
+		return CMD_RET_USAGE;
+	}
+
+	ret = __set_adc_source(src_no);
+	if (ret)
+		return cmd_failure(ret);
+
+	return CMD_RET_SUCCESS;
+}
+
 #define HPD_PINCTRL_USAGE "hpd_pin_ctrl [pin [pull soc/conn value] [nmos value]]\n"
 #define HPD_PINCTRL_HELP  "hpd_pin_ctrl - get HDMI HPD info\n" 		\
 	"hpd_pin_ctrl pin - get HDMI HPD info for a specific pin\n" 	\
@@ -610,11 +791,21 @@ static int do_set_idle_state(struct cmd_tbl *cmdtp, int flag, int argc,
 	"\ti2c\tsoc\t1000, 2200, 5000, 10000 (values represent ohms)\n"	\
 	"\ti2c\tconn\t0(open), 1750 (1.75kOhm)\n"
 
+/*
+ * TODO: Add commands for:
+ * - ADC: set ADC source mux (what is measured)
+ * - ADC: set ADC gain
+ * - ADC: perform a measurement cycle (config mux, kick, read result)
+ * - ADC: limit setting
+ * - ADC: read temperature
+ * - USB characterization
+ */
 static struct cmd_tbl subcmd[] = {
 	U_BOOT_CMD_MKENT(chipinfo, 1, 1, do_chipinfo, "", ""),
 	U_BOOT_CMD_MKENT(set_idle_state, 2, 1, do_set_idle_state, "", ""),
 	U_BOOT_CMD_MKENT(hpd_idle_ctrl, 2, 1, do_hpd_idle_ctrl, "", ""),
 	U_BOOT_CMD_MKENT(hpd_pin_ctrl, 2, 1, do_hpd_pin_ctrl, HPD_PINCTRL_USAGE, HPD_PINCTRL_HELP),
+	U_BOOT_CMD_MKENT(adc_source, 2, 1, do_adc_source, "", ""),
 	/*U_BOOT_CMD_MKENT(dt_init, 1, 1, do_dt_init, "", ""),
 	U_BOOT_CMD_MKENT(hibernate, 1, 1, do_hibernate, "", ""),
 	U_BOOT_CMD_MKENT(adc_state, 2, 1, do_adc_state, "", ""),
@@ -649,5 +840,6 @@ U_BOOT_CMD(bd71891, CONFIG_SYS_MAXARGS, 1, do_bd71891,
 	"bd71891 set_idle_state [idle, run] - set run mode\n"
 	"bd71891 hpd_idle_ctrl [1,0] - Query or set HDMI detector's IDLE control\n"
 	"bd71891 hpd_pin_ctrl - Query or configure HDMI pins\n"
+	"bd71891 adc_source [voltage power current] - Query or configure ADC ACCUM source\n"
 );
 
