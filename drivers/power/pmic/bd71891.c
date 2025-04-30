@@ -653,8 +653,8 @@ static int set_adc_accum(bool enable, bool clear)
 	else
 		val |= BD71891_MASK_ADC_ACCUM_STOP;
 
-	//printf("accum en=%d, clear=%d, write reg 0x%x val 0x%x\n", enable, clear,
-	//       BD71885_ADC_ACCUM_KICK, val);
+	printf("accum en=%d, clear=%d, write reg 0x%x val 0x%x\n", enable, clear,
+	       BD71891_REG_ADC_ACCUM_KICK, val);
 	ret = bd71891_reg_write(BD71891_REG_ADC_ACCUM_KICK, val);
 	if (ret)
 		printf("Failed to %s ADC accumulator\n",
@@ -809,6 +809,67 @@ static int do_adc_source(struct cmd_tbl *cmdtp, int flag, int argc,
 	return CMD_RET_SUCCESS;
 }
 
+static const long bd71891_adc_gain[] = { 5, 15, 30, 60 };
+
+static int __get_adc_gain_idx(void)
+{
+	int ret;
+
+	ret = bd71891_reg_read(BD71891_REG_ADC_CTRL2);
+	if (ret < 0)
+		return ret;
+
+	return ((ret & BD71891_MASK_ADC_GAIN) >> BD71891_ADC_GAIN_SHIFT);
+}
+
+static int get_adc_gain(void)
+{
+	int ret;
+
+	ret = __get_adc_gain_idx();
+	if (ret > 0)
+		printf("ADC gain set to '%ld'\n", bd71891_adc_gain[ret]);
+
+	return cmd_ret(ret);
+}
+
+static int do_adc_gain(struct cmd_tbl *cmdtp, int flag, int argc,
+		       char *const argv[])
+{
+	long gain;
+	int ret, i;
+	char *eptr;
+
+	if (argc == 1)
+		return get_adc_gain();
+
+	if (argc != 2)
+		return CMD_RET_USAGE;
+
+        gain = simple_strtol(argv[1], &eptr, 10);
+        if (!*argv[1] || *eptr)
+		goto ret_usage;
+
+	for (i = 0; i < ARRAY_SIZE(bd71891_adc_gain); i++)
+		if (bd71891_adc_gain[i] == gain)
+			break;
+
+	if (i == ARRAY_SIZE(bd71891_adc_gain))
+		goto ret_usage;
+
+	ret = accum_stopped_config_helper(BD71891_REG_ADC_CTRL2,
+					  BD71891_MASK_ADC_GAIN,
+					  i << BD71891_ADC_GAIN_SHIFT);
+	return cmd_ret(ret);
+
+ret_usage:
+	printf("Bad gain. Should be one of [5, 15, 30, 60]\n");
+
+	return CMD_RET_USAGE;
+}
+
+
+
 #define HPD_PINCTRL_USAGE "hpd_pin_ctrl [pin [pull soc/conn value] [nmos value]]\n"
 #define HPD_PINCTRL_HELP  "hpd_pin_ctrl - get HDMI HPD info\n" 		\
 	"hpd_pin_ctrl pin - get HDMI HPD info for a specific pin\n" 	\
@@ -837,10 +898,9 @@ static struct cmd_tbl subcmd[] = {
 	U_BOOT_CMD_MKENT(hpd_pin_ctrl, 2, 1, do_hpd_pin_ctrl, HPD_PINCTRL_USAGE, HPD_PINCTRL_HELP),
 	U_BOOT_CMD_MKENT(adc_source, 2, 1, do_adc_source, "", ""),
 	U_BOOT_CMD_MKENT(adc_state, 2, 1, do_adc_state, "", ""),
+	U_BOOT_CMD_MKENT(adc_gain, 2, 1, do_adc_gain, "", ""),
 	/*U_BOOT_CMD_MKENT(dt_init, 1, 1, do_dt_init, "", ""),
 	U_BOOT_CMD_MKENT(hibernate, 1, 1, do_hibernate, "", ""),
-	U_BOOT_CMD_MKENT(adc_state, 2, 1, do_adc_state, "", ""),
-	U_BOOT_CMD_MKENT(adc_source, 2, 1, do_adc_source, "", ""),
 	U_BOOT_CMD_MKENT(adc_vol_source, 2, 1, do_adc_vol_source, "", ""),
 	U_BOOT_CMD_MKENT(adc_gain, 2, 1, do_adc_gain, "", ""),
 	U_BOOT_CMD_MKENT(adc_meas, 4, 1, do_adc_meas, "", ""),
@@ -871,5 +931,6 @@ U_BOOT_CMD(bd71891, CONFIG_SYS_MAXARGS, 1, do_bd71891,
 	"bd71891 hpd_pin_ctrl - Query or configure HDMI pins\n"
 	"bd71891 adc_source [voltage power current] - Query or configure ADC ACCUM source\n"
 	"bd71891 adc_state - get or set ADC accum state (start, stop)\n"
+	"bd71891 adc_gain - get or set gain for ADC current accumulator\n"
 );
 
