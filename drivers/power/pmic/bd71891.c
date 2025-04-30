@@ -39,6 +39,16 @@ static inline struct udevice *get_bd71891(void)
 	return get_currdev(PMIC_DT_NAME);
 }
 
+int bd71891_pmic_write(uint reg, const uint8_t *buffer, int len)
+{
+	struct udevice *pmicdev = get_bd71891();
+
+	if (!pmicdev)
+		return -ENODEV;
+
+	return pmic_write(pmicdev, reg, buffer, len);
+}
+
 static inline int bd71891_reg_write(uint reg, uint val)
 {
 	struct udevice *pmicdev = get_bd71891();
@@ -1343,6 +1353,269 @@ static int do_adc_get(struct cmd_tbl *cmdtp, int flag, int argc,
 	return cmd_ret(ret);
 }
 
+static int interval2reg(long interval)
+{
+	static const int ivals[] = { 50, 100, 1000, 10000, 100000, 1000000};
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(ivals); i++)
+		if (ivals[i] == interval)
+			return i;
+
+	return -EINVAL;
+}
+
+#define BD71891_ADC_NUM_SAMPLES_BASE	0x82
+#define BD71891_MAX_ADC_SAMPLES		0x3fffff
+
+static int bd71891_adc_set_num_samples(long samples)
+{
+	u32 val = cpu_to_be32((u32)samples << 8);
+
+	printf("Setting ADC num samples to %lu\n", samples);
+
+	return bd71891_pmic_write(BD71891_ADC_NUM_SAMPLES_BASE, (char *)&val, 3);
+}
+
+#define BD71891_ADC_ACCUM_VAL_BASE	0x89
+#define BD71891_ADC_ACCUM_CNT_BASE	0x86
+
+static int get_adc_accum_avg(uint32_t *avg_value, uint32_t *accum)
+{
+	uint32_t *tmp2, val2;
+	char buf[4] __attribute__((aligned(4))), buf2[4]__attribute__((aligned(4)));
+	uint num_samples;
+	u32 *tmp;
+	int ret;
+
+	tmp = (u32 *)&buf[0];
+	*tmp = 0;
+
+	/*
+	 * TODO: Ensure accumulator is stopped to avoid value being changed
+	 * betweem register reads.
+	 */
+	ret = bd71891_pmic_read(BD71891_ADC_ACCUM_CNT_BASE, &buf[1], 3);
+	if (ret)
+		return ret;
+
+	num_samples = be32_to_cpu(*tmp);
+
+	if (!num_samples) {
+		printf("No samples collected\n");
+		*avg_value = *accum = 0;
+
+		return -EINVAL;
+	}
+
+	tmp2 = (uint32_t *)&buf2[0];
+	*tmp2 = 0;
+
+	ret = bd71891_pmic_read(BD71891_ADC_ACCUM_VAL_BASE, &buf2[0], 4);
+	if (ret)
+		return ret;
+
+	val2 = be32_to_cpu(*tmp2);
+
+	*accum = val2;
+	val2 += num_samples / 2;
+	*avg_value = val2 / num_samples;
+
+	return 0;
+}
+
+static int get_avg_voltage(uint64_t *value, uint64_t *accum)
+{
+	int ret;
+	uint32_t raw_accum, raw_value;
+
+	ret = get_adc_accum_avg(&raw_value, &raw_accum);
+	if (ret)
+		return ret;
+
+	ret = scale_adc_volt(raw_value, value);
+	if (ret)
+		return ret;
+
+	ret = scale_adc_volt(raw_accum, accum);
+	if (ret)
+		return ret;
+
+	return 0;
+}
+
+static int get_avg_current(uint64_t *value, uint64_t *accum)
+{
+	int ret;
+	uint32_t raw_accum, raw_value;
+
+	ret = get_adc_accum_avg(&raw_value, &raw_accum);
+	if (ret)
+		return ret;
+
+	ret = scale_adc_curr(raw_value, value);
+	if (ret)
+		return ret;
+
+	ret = scale_adc_curr(raw_accum, accum);
+	if (ret)
+		return ret;
+
+	return 0;
+}
+
+static int get_avg_power(uint64_t *value, uint64_t *accum)
+{
+	int ret;
+	uint32_t raw_accum, raw_value;
+
+	ret = get_adc_accum_avg(&raw_value, &raw_accum);
+	if (ret)
+		return ret;
+
+	ret = scale_adc_pow(raw_value, value);
+	if (ret)
+		return ret;
+
+	ret = scale_adc_pow(raw_accum, accum);
+	if (ret)
+		return ret;
+
+	return 0;
+}
+
+static int measure_avg(int type, long samples, long interval)
+{
+	unsigned long tmp = interval, meas_time;
+	static const int delay_arr[] = { 1, 10, 100, 1000, 10000, 100000, 1000000 };
+	int multiplier = 0;
+	int ret, i;
+	int ireg;
+
+	ireg = interval2reg(interval);
+	ret = stop_clear_adc_accum();
+	if (ret)
+		return cmd_failure(ret);
+
+	ret = bd71891_clrsetbits(BD71891_REG_ADC_CTRL2, BD71891_MASK_ADC_INTERVAL,
+			      ireg);
+	if (ret) {
+		printf("Setting interval failed\n");
+
+		return cmd_failure(ret);
+	}
+	if (ret)
+		return cmd_failure(ret);
+
+	ret = bd71891_adc_set_num_samples(samples);
+	if (ret) {
+		printf("Setting sample amount failed\n");
+		return cmd_failure(ret);
+	}
+	if (ret)
+		return cmd_failure(ret);
+
+	while (tmp > 1000) {
+		tmp /= 10;
+		multiplier++;
+	}
+
+	if (multiplier >= ARRAY_SIZE(delay_arr)) {
+		printf("interval %lu too big? Max 1 000 000\n", interval);
+		return cmd_failure(-EINVAL);
+	}
+
+	meas_time = samples * tmp;
+	#ifdef CHECK_OVERFLOW
+	if (meas_time / tmp != samples)
+		printf("OVERFLOW: measure_avg() measurement time overflow SHOULD NOT HAPPEN - TMP SCALED DOWN, %lu != %lu\n",
+		       meas_time / tmp, samples);
+	#endif
+	ret = start_adc_accum();
+	if (ret)
+		return cmd_failure(ret);
+
+	/*
+	 * Here we should catch the IRQ but for the sake of the simplicity
+	 * we just sleep/delay for the time it takes to complete measurement.
+	 *
+	 * Note, we keep the CPU busy. This should probably be avoided in
+	 * the product code using IRQs instead.
+	 */
+	for (i = 0; i < delay_arr[multiplier]; i++)
+		udelay(meas_time);
+
+	switch (type) {
+	uint64_t avg, accum;
+
+	case TYPE_VOLTAGE:
+		ret = get_avg_voltage(&avg, &accum);
+		printf("Samples %lu, interval %lu, average voltage %llu uV, accumulated %llu uV\n",
+		       samples, interval, avg, accum);
+		break;
+	case TYPE_CURRENT:
+		ret = get_avg_current(&avg, &accum);
+		printf("Samples %lu, interval %lu, average current %llu mA accumulated %llu mA\n",
+		       samples, interval, avg, accum);
+		break;
+	case TYPE_POWER:
+		ret = get_avg_power(&avg, &accum);
+		printf("Samples %lu, interval %lu, average power %llu nW accumulated %llu nW\n",
+		       samples, interval, avg, accum);
+		break;
+	default:
+		printf("Unknown type\n");
+		ret = -EINVAL;
+		break;
+	}
+
+	return cmd_ret(ret);
+}
+
+static int do_adc_meas(struct cmd_tbl *cmdtp, int flag, int argc,
+			     char *const argv[])
+{
+	long samples, interval;
+	int type, ret;
+	char *eptr;
+
+	if (argc != 4) {
+		printf("bd71891 adc_meas [v, i, p] <num_samples> <interval>\n");
+		return CMD_RET_USAGE;
+	}
+
+	type = get_operation_type(argv[1]);
+	if (type < 0 || type == TYPE_TEMPERATURE) {
+		printf("Unknown measurement type, known types [v, i, p]\n");
+		return CMD_RET_USAGE;
+	}
+
+	if ( (type == TYPE_CURRENT || TYPE_POWER) && !g_r_sense) {
+		printf("sense-resistor not known\n");
+
+		return cmd_failure(-EINVAL);
+	}
+
+        samples = simple_strtol(argv[2], &eptr, 10);
+        if (!*argv[2] || *eptr || ((unsigned long)samples) >= BD71891_MAX_ADC_SAMPLES)
+		return CMD_RET_USAGE;
+
+        interval = simple_strtol(argv[3], &eptr, 10);
+        if (!*argv[3] || *eptr)
+		return CMD_RET_USAGE;
+
+	if (0 > interval2reg(interval))
+		return CMD_RET_USAGE;
+
+	ret = __set_adc_source(type);
+	if (ret)
+		return cmd_failure(ret);
+
+
+	return measure_avg(type, samples, interval);
+}
+
+
 #define HPD_PINCTRL_USAGE "hpd_pin_ctrl [pin [pull soc/conn value] [nmos value]]\n"
 #define HPD_PINCTRL_HELP  "hpd_pin_ctrl - get HDMI HPD info\n" 		\
 	"hpd_pin_ctrl pin - get HDMI HPD info for a specific pin\n" 	\
@@ -1356,10 +1629,6 @@ static int do_adc_get(struct cmd_tbl *cmdtp, int flag, int argc,
 	"\ti2c\tconn\t0(open), 1750 (1.75kOhm)\n"
 
 /*
- * TODO: Add commands for:
- * - ADC: limit setting
- * - ADC: constant measurement
- * - USB characterization
  */
 static struct cmd_tbl subcmd[] = {
 	U_BOOT_CMD_MKENT(chipinfo, 1, 1, do_chipinfo, "", ""),
@@ -1372,12 +1641,17 @@ static struct cmd_tbl subcmd[] = {
 	U_BOOT_CMD_MKENT(adc_vol_source, 2, 1, do_adc_vol_source, "", ""),
 	U_BOOT_CMD_MKENT(adc_get, 2, 1, do_adc_get, "", ""),
 	U_BOOT_CMD_MKENT(dt_init, 1, 1, do_dt_init, "", ""),
+	U_BOOT_CMD_MKENT(adc_meas, 4, 1, do_adc_meas, "", ""),
 
 	/*
-	U_BOOT_CMD_MKENT(hibernate, 1, 1, do_hibernate, "", ""),
-	U_BOOT_CMD_MKENT(adc_vol_source, 2, 1, do_adc_vol_source, "", ""),
+	 * TODO: Add commands for:
+	 * - ADC: limit setting
+	 * - ADC: constant measurement
+	 * - USB characterization
+
 	U_BOOT_CMD_MKENT(adc_meas, 4, 1, do_adc_meas, "", ""),
 	U_BOOT_CMD_MKENT(adc_limit, 3, 1, do_adc_limit, "", ""),
+	U_BOOT_CMD_MKENT(usb_char, 3, 1, do_usb_char, "", ""),
 	*/
 };
 
@@ -1408,5 +1682,6 @@ U_BOOT_CMD(bd71891, CONFIG_SYS_MAXARGS, 1, do_bd71891,
 	"bd71891 adc_gain - get or set gain for ADC current accumulator\n"
 	"bd71891 adc_vol_source - get or set ADC accum voltage source\n"
 	"bd71891 adc_get [v, i, p, t] - get last measured value\n"
+	"bd71885 adc_meas [v, i, p] <num_samples> <interval> - measure\n"
 );
 
