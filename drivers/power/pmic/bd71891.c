@@ -783,7 +783,7 @@ static int do_adc_source(struct cmd_tbl *cmdtp, int flag, int argc,
 	int ret, src_no;
 
 	if (argc == 1)
-		return ret = bd71891_pr_reas_field(&bd71891_adc_source);
+		return bd71891_pr_reas_field(&bd71891_adc_source);
 
 	if (argc != 2)
 		return CMD_RET_USAGE;
@@ -868,7 +868,110 @@ ret_usage:
 	return CMD_RET_USAGE;
 }
 
+struct bd71891_adc_vol_src {
+	const char * const name;
+	const uint reso_uv;
+};
 
+#define BD71891_ADC_VOL(_name, _vol) { .name = (_name), .reso_uv = (_vol) }
+
+static const struct bd71891_adc_vol_src adc_vol_sources[] = {
+	BD71891_ADC_VOL("vsys", 5860),
+	BD71891_ADC_VOL("gatedrv", 1170),
+};
+
+static int __get_adc_vol_source(const struct bd71891_adc_vol_src **src)
+{
+	int ret;
+
+	ret = bd71891_reg_read(BD71891_REG_ADC_CTRL1);
+	if (ret < 0) {
+		printf("Could not get ADC source\n");
+		return ret;
+	}
+
+	ret &= BD71891_MASK_ADC_ACCUM_VOL_SRC;
+
+	*src = &adc_vol_sources[ret];
+
+	return 0;
+}
+
+static int get_adc_vol_source(void)
+{
+	int ret;
+	const struct bd71891_adc_vol_src * src;
+
+	ret = __get_adc_vol_source(&src);
+
+	if (!ret)
+		printf("ADC Accumulator voltage source set to '%s'\n",
+		       src->name);
+
+	return cmd_ret(ret);
+}
+
+static int __get_adc_source(void)
+{
+	int ret;
+
+	ret = bd71891_reg_read(BD71891_REG_ADC_CTRL1);
+	if (ret < 0)
+		return ret;
+
+	ret &= BD71891_MASK_ADC_ACCUM_SRC;
+	ret >>= BD71891_ADC_ACCUM_SRC_SHIFT;
+
+	if (ret >= 3) {
+		printf("Bad ADC accum source %d\n", ret);
+
+		return -EINVAL;
+	}
+
+	return ret;
+}
+
+static int do_adc_vol_source(struct cmd_tbl *cmdtp, int flag, int argc,
+			     char *const argv[])
+{
+	char *src;
+	int ret, i;
+
+	if (argc == 1)
+		return get_adc_vol_source();
+
+	if (argc != 2)
+		return CMD_RET_USAGE;
+
+	/* This is actually not compulsory. We could also allow setting the
+	 * voltage source before setting the type to voltage. I did this check
+	 * purely to help pointing out misconfiguration.
+	 */
+	if (TYPE_VOLTAGE !=  __get_adc_source()) {
+		printf("ADC ACCUM not set to accumulate voltage\n");
+		bd71891_pr_reas_field(&bd71891_adc_source);
+
+		return cmd_failure(-EINVAL);
+	}
+
+	src = argv[1];
+
+	for (i = 0; i < ARRAY_SIZE(adc_vol_sources); i++) {
+		if (!strcmp(src, adc_vol_sources[i].name))
+			break;
+
+	}
+	if (i == ARRAY_SIZE(adc_vol_sources)) {
+		printf("Unsupported ADC accum voltage source\n");
+
+		return CMD_RET_USAGE;
+	}
+
+	ret = accum_stopped_config_helper(BD71891_REG_ADC_CTRL1,
+					  BD71891_MASK_ADC_ACCUM_VOL_SRC, i);
+
+	return cmd_ret(ret);
+}
 
 #define HPD_PINCTRL_USAGE "hpd_pin_ctrl [pin [pull soc/conn value] [nmos value]]\n"
 #define HPD_PINCTRL_HELP  "hpd_pin_ctrl - get HDMI HPD info\n" 		\
@@ -899,10 +1002,10 @@ static struct cmd_tbl subcmd[] = {
 	U_BOOT_CMD_MKENT(adc_source, 2, 1, do_adc_source, "", ""),
 	U_BOOT_CMD_MKENT(adc_state, 2, 1, do_adc_state, "", ""),
 	U_BOOT_CMD_MKENT(adc_gain, 2, 1, do_adc_gain, "", ""),
+	U_BOOT_CMD_MKENT(adc_vol_source, 2, 1, do_adc_vol_source, "", ""),
 	/*U_BOOT_CMD_MKENT(dt_init, 1, 1, do_dt_init, "", ""),
 	U_BOOT_CMD_MKENT(hibernate, 1, 1, do_hibernate, "", ""),
 	U_BOOT_CMD_MKENT(adc_vol_source, 2, 1, do_adc_vol_source, "", ""),
-	U_BOOT_CMD_MKENT(adc_gain, 2, 1, do_adc_gain, "", ""),
 	U_BOOT_CMD_MKENT(adc_meas, 4, 1, do_adc_meas, "", ""),
 	U_BOOT_CMD_MKENT(adc_limit, 3, 1, do_adc_limit, "", ""),
 	U_BOOT_CMD_MKENT(adc_get, 2, 1, do_adc_get, "", ""),*/
@@ -932,5 +1035,6 @@ U_BOOT_CMD(bd71891, CONFIG_SYS_MAXARGS, 1, do_bd71891,
 	"bd71891 adc_source [voltage power current] - Query or configure ADC ACCUM source\n"
 	"bd71891 adc_state - get or set ADC accum state (start, stop)\n"
 	"bd71891 adc_gain - get or set gain for ADC current accumulator\n"
+	"bd71891 adc_vol_source - get or set ADC accum voltage source\n"
 );
 
