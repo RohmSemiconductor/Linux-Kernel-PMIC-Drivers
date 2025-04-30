@@ -727,6 +727,36 @@ static int accum_stopped_config_helper(uint reg, uint mask,
 	return ret;
 }
 
+static int do_adc_state(struct cmd_tbl *cmdtp, int flag, int argc,
+			char *const argv[])
+{
+	char *state;
+	int ret;
+
+	if (argc == 1) {
+		if (get_adc_accum())
+			printf("ADC ACCUM is started\n");
+		else
+			printf("ADC ACCUM is stopped\n");
+
+		return CMD_RET_SUCCESS;
+	}
+
+	if (argc != 2)
+		return CMD_RET_USAGE;
+
+	state = argv[1];
+
+	if (!strcmp(state, "start"))
+		ret = start_adc_accum();
+	else if (!strcmp(state, "stop"))
+		ret = stop_adc_accum();
+	else
+		return CMD_RET_USAGE;
+
+	return cmd_ret(ret);
+}
+
 static int __set_adc_source(int src)
 {
 	int ret;
@@ -806,6 +836,7 @@ static struct cmd_tbl subcmd[] = {
 	U_BOOT_CMD_MKENT(hpd_idle_ctrl, 2, 1, do_hpd_idle_ctrl, "", ""),
 	U_BOOT_CMD_MKENT(hpd_pin_ctrl, 2, 1, do_hpd_pin_ctrl, HPD_PINCTRL_USAGE, HPD_PINCTRL_HELP),
 	U_BOOT_CMD_MKENT(adc_source, 2, 1, do_adc_source, "", ""),
+	U_BOOT_CMD_MKENT(adc_state, 2, 1, do_adc_state, "", ""),
 	/*U_BOOT_CMD_MKENT(dt_init, 1, 1, do_dt_init, "", ""),
 	U_BOOT_CMD_MKENT(hibernate, 1, 1, do_hibernate, "", ""),
 	U_BOOT_CMD_MKENT(adc_state, 2, 1, do_adc_state, "", ""),
@@ -832,8 +863,6 @@ static int do_bd71891(struct cmd_tbl *cmdtp, int flag, int argc,
 	return cmd->cmd(cmdtp, flag, argc, argv);
 }
 
-
-
 U_BOOT_CMD(bd71891, CONFIG_SYS_MAXARGS, 1, do_bd71891,
 	"BD71891 sub-system",
 	"bd71891 chipinfo - recorded power-on reasons and current power state\n"
@@ -841,5 +870,6 @@ U_BOOT_CMD(bd71891, CONFIG_SYS_MAXARGS, 1, do_bd71891,
 	"bd71891 hpd_idle_ctrl [1,0] - Query or set HDMI detector's IDLE control\n"
 	"bd71891 hpd_pin_ctrl - Query or configure HDMI pins\n"
 	"bd71891 adc_source [voltage power current] - Query or configure ADC ACCUM source\n"
+	"bd71891 adc_state - get or set ADC accum state (start, stop)\n"
 );
 
