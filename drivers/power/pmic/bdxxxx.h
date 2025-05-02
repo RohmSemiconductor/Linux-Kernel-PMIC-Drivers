@@ -45,7 +45,7 @@ struct reason_reg_field {
 
 #define for_each_valid_reason_field(_reas_reg, _reas, _mask, _value)		\
 	for_each_reason(_reas_reg, _reas)					\
-	     if ((((_reas)->value & (_mask)) != ((_value)&(_mask)))) {} else
+	     if ((( ((_reas)->value << (ffs(_mask) - 1)) & (_mask)) != (((_value) << (ffs(_mask) -1))&(_mask)))) {} else
 
 static inline int cmd_failure(int ret)
 {
