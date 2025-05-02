@@ -310,6 +310,135 @@ const struct reason_reg_field bd71891_adc_source = {
 	.mask = BD71891_MASK_ADC_ACCUM_SRC,
 };
 
+static const struct reason_info bd71891_usb_char_cur_lim_info[] = {
+	REASON_INFO("600", 0),
+	REASON_INFO("700", 1),
+	REASON_INFO("800", 2),
+	REASON_INFO("900", 3),
+	REASON_INFO("1000", 4),
+	REASON_INFO("1100", 5),
+	REASON_INFO("1200", 6),
+	REASON_INFO("1300", 7),
+};
+static const struct reason_reg_field bd71891_usb_char_cur_lim = {
+	.reason_reg = {
+		.explanation = "USB charazterization current limit",
+		.reasons = &bd71891_usb_char_cur_lim_info[0],
+		.num_reasons = ARRAY_SIZE(bd71891_usb_char_cur_lim_info),
+		.reg = BD71891_REG_USB_CHAR_CFG1,
+	},
+	.mask = BD71891_MASK_USB_CHAR_CURR_LIM,
+};
+
+static const struct reason_info bd71891_usb_char_itvl_info[] = {
+	REASON_INFO("1", 0),
+	REASON_INFO("4", 1),
+	REASON_INFO("10", 2),
+	REASON_INFO("20", 3),
+};
+static const struct reason_reg_field bd71891_usb_char_itvl = {
+	.reason_reg = {
+		.explanation = "USB charazterization, interval between two sinking current pulse",
+		.reasons = &bd71891_usb_char_itvl_info[0],
+		.num_reasons = ARRAY_SIZE(bd71891_usb_char_itvl_info),
+		.reg = BD71891_REG_USB_CHAR_CFG1,
+	},
+	.mask = BD71891_MASK_USB_CHAR_ITVL,
+};
+
+static const struct reason_info bd71891_usb_char_pulse_w_info[] = {
+	REASON_INFO("1", 0),
+	REASON_INFO("2", 1),
+	REASON_INFO("5", 2),
+	REASON_INFO("10", 3),
+};
+static const struct reason_reg_field bd71891_usb_char_pulse_w = {
+	.reason_reg = {
+		.explanation = "USB charazterization, sinking current pulse width",
+		.reasons = &bd71891_usb_char_pulse_w_info[0],
+		.num_reasons = ARRAY_SIZE(bd71891_usb_char_pulse_w_info),
+		.reg = BD71891_REG_USB_CHAR_CFG1,
+	},
+	.mask = BD71891_MASK_USB_CHAR_ITVL,
+};
+
+static const struct reason_info bd71891_usb_char_cur_avg_info[] = {
+	REASON_INFO("16", 0),
+	REASON_INFO("32", 1),
+};
+static const struct reason_reg_field bd71891_usb_char_cur_avg = {
+	.reason_reg = {
+		.explanation = "USB characterizaton, number of results to average",
+		.reasons = &bd71891_usb_char_cur_avg_info[0],
+		.num_reasons = ARRAY_SIZE(bd71891_usb_char_cur_avg_info),
+		.reg = BD71891_REG_USB_CHAR_CFG2,
+	},
+	.mask = BD71891_MASK_USB_CHAR_CUR_AVG,
+};
+
+static const struct reason_info bd71891_usb_char_rsens_info[] = {
+	REASON_INFO("10", 0),
+	REASON_INFO("20", 1),
+	REASON_INFO("30", 2),
+};
+static const struct reason_reg_field bd71891_usb_char_rsens = {
+	.reason_reg = {
+		.explanation = "USB characterizaton, sense resistor value mOhm",
+		.reasons = &bd71891_usb_char_rsens_info[0],
+		.num_reasons = ARRAY_SIZE(bd71891_usb_char_rsens_info),
+		.reg = BD71891_REG_USB_CHAR_CFG2,
+	},
+	.mask = BD71891_MASK_USB_CHAR_RSENS,
+};
+
+static const struct reason_info bd71891_usb_char_v_start_info[] = {
+	REASON_INFO("4000", 0),
+	REASON_INFO("4250", 1),
+	REASON_INFO("4500", 2),
+	REASON_INFO("4750", 3),
+};
+static const struct reason_reg_field bd71891_usb_char_v_start = {
+	.reason_reg = {
+		.explanation = "USB characterizaton, start voltage mV",
+		.reasons = &bd71891_usb_char_v_start_info[0],
+		.num_reasons = ARRAY_SIZE(bd71891_usb_char_v_start_info),
+		.reg = BD71891_REG_USB_CHAR_CFG2,
+	},
+	.mask = BD71891_MASK_USB_CHAR_V_START,
+};
+
+static const struct reason_info bd71891_usb_char_uvp_info[] = {
+	REASON_INFO("3600", 0),
+	REASON_INFO("4000", 1),
+	REASON_INFO("4200", 2),
+	REASON_INFO("4500", 3),
+};
+static const struct reason_reg_field bd71891_usb_char_uvp = {
+	.reason_reg = {
+		.explanation = "USB characterizaton, under voltage limit mV",
+		.reasons = &bd71891_usb_char_uvp_info[0],
+		.num_reasons = ARRAY_SIZE(bd71891_usb_char_uvp_info),
+		.reg = BD71891_REG_USB_CHAR_CFG2,
+	},
+	.mask = BD71891_MASK_USB_CHAR_UVP,
+};
+
+static const struct reason_info bd71891_usb_char_vsys_debounce_info[] = {
+	REASON_INFO("0", 0),
+	REASON_INFO("1", 1),
+	REASON_INFO("2", 2),
+	REASON_INFO("4", 3),
+};
+static const struct reason_reg_field bd71891_usb_char_vsys_debounce = {
+	.reason_reg = {
+		.explanation = "USB characterization Vsys debounce time, uS",
+		.reasons = &bd71891_usb_char_vsys_debounce_info[0],
+		.num_reasons = ARRAY_SIZE(bd71891_usb_char_vsys_debounce_info),
+		.reg = BD71891_REG_USB_CHAR_CFG3,
+	},
+	.mask = BD71891_MASK_USB_CHAR_VSYS_DEB,
+};
+
 /* Get the power-on reason */
 static int do_chipinfo(struct cmd_tbl *cmdtp, int flag, int argc,
 		   char *const argv[])
@@ -1615,6 +1744,217 @@ static int do_adc_meas(struct cmd_tbl *cmdtp, int flag, int argc,
 	return measure_avg(type, samples, interval);
 }
 
+int usb_char_done(void)
+{
+	int ret;
+
+	ret = bd71891_reg_read(BD71891_REG_BOOTSRC);
+	if (ret < 0) {
+		printf("Failed to read USB characterization completion status\n");
+
+		return 0;
+	}
+
+	return ret & BD71891_MASK_USB_CHAR_DONE;
+}
+
+static int usb_char_read(void)
+{
+	int i, ret;
+
+	for (i = 0; i < 10; i++) {
+		int uc_done = usb_char_done();
+
+		printf("poll [%d/10], USB characterization %s done...\n", i,
+		       uc_done ? "IS" : "NOT");
+
+		if (usb_char_done())
+			break;
+
+		mdelay(100);
+	}
+	if (i == 10) {
+		printf("Giving up.\n");
+		return -ETIMEDOUT;
+	}
+
+	for (i = 0; i < 20; i++) {
+		int raw_usb_vol;
+
+		raw_usb_vol = bd71891_reg_read(BD71891_REG_USB_CHAR_VOL0 - 2 * i);
+		if (raw_usb_vol < 0)
+			return cmd_ret(ret);
+
+		printf("RAW USB voltage[%d] %u\n", i, raw_usb_vol);
+	}
+	for (i = 0; i < 20; i++) {
+		int raw_usb_curr;
+
+		raw_usb_curr = bd71891_reg_read(BD71891_REG_USB_CHAR_CURR0 - 2 * i);
+		if (raw_usb_curr < 0)
+			return cmd_ret(ret);
+
+		printf("RAW USB current[%d] %u\n", i, raw_usb_curr);
+	}
+
+	return 0;
+}
+
+static int do_usb_char(struct cmd_tbl *cmdtp, int flag, int argc,
+		       char *const argv[])
+{
+	int ret;
+
+	if (argc == 1)
+		return usb_char_read();
+
+	if (argc != 2 || strcmp(argv[1], "start"))
+		return CMD_RET_USAGE;
+
+	ret = bd71891_clrsetbits(BD71891_REG_BOOTSRC,
+				 BD71891_MASK_USB_CHAR_DONE, 0);
+	if (ret)
+		return cmd_ret(ret);
+
+	return usb_char_read();
+}
+
+static int usb_char_cfg_read(void)
+{
+	int ret;
+
+	ret = bd71891_pr_reas_field(&bd71891_usb_char_cur_lim);
+	if (ret)
+		return cmd_failure(ret);
+	printf("Units mA\n");
+
+	ret = bd71891_pr_reas_field(&bd71891_usb_char_itvl);
+	if (ret)
+		return cmd_failure(ret);
+	printf("Units mS\n");
+
+	ret = bd71891_pr_reas_field(&bd71891_usb_char_pulse_w);
+	if (ret)
+		return cmd_failure(ret);
+	printf("Units mS\n");
+
+	ret = bd71891_pr_reas_field(&bd71891_usb_char_cur_avg);
+	if (ret)
+		return cmd_failure(ret);
+
+	ret = bd71891_pr_reas_field(&bd71891_usb_char_rsens);
+	if (ret)
+		return cmd_failure(ret);
+
+	ret = bd71891_pr_reas_field(&bd71891_usb_char_v_start);
+	if (ret)
+		return cmd_failure(ret);
+
+	ret = bd71891_pr_reas_field(&bd71891_usb_char_uvp);
+	if (ret)
+		return cmd_failure(ret);
+
+	ret = bd71891_pr_reas_field(&bd71891_usb_char_vsys_debounce);
+	if (ret)
+		return cmd_failure(ret);
+
+	return cmd_ret(ret);
+}
+
+static int bd71891_pr_reas_field_set(const struct reason_reg_field *field,
+				     char *value)
+{
+	int ret, i;
+
+	ret = bd71891_reg_read(field->reason_reg.reg);
+	if (ret < 0)
+		return cmd_ret(ret);
+
+	for (i = 0; i < field->reason_reg.num_reasons; i++)
+		if (!strcmp(field->reason_reg.reasons[i].reason, value))
+			break;
+
+	if (i == field->reason_reg.num_reasons) {
+		printf("'%s': Unsupported value '%s'\n",
+		       field->reason_reg.explanation, value);
+		return CMD_RET_USAGE;
+	}
+
+	ret = bd71891_clrsetbits(field->reason_reg.reg, field->mask,
+				 field->reason_reg.reasons[i].value);
+
+	return cmd_ret(ret);
+}
+
+struct usb_char_cfg_field {
+	const char *name;
+	const struct reason_reg_field *field;
+};
+#define USB_CHAR_CFG_FIELD(_name, _field)				\
+{ .name = (_name), .field = (_field), }
+
+static int bd71891_usb_char_cfg(char *config, char *value)
+{
+	static const struct usb_char_cfg_field configs[] = {
+		USB_CHAR_CFG_FIELD("Ilim", &bd71891_usb_char_cur_lim),
+		USB_CHAR_CFG_FIELD("interval", &bd71891_usb_char_itvl),
+		USB_CHAR_CFG_FIELD("pulse", &bd71891_usb_char_pulse_w),
+		USB_CHAR_CFG_FIELD("Iavg", &bd71891_usb_char_cur_avg),
+		USB_CHAR_CFG_FIELD("Rsens", &bd71891_usb_char_rsens),
+		USB_CHAR_CFG_FIELD("Vstart", &bd71891_usb_char_v_start),
+		USB_CHAR_CFG_FIELD("UVP", &bd71891_usb_char_uvp),
+		USB_CHAR_CFG_FIELD("debounce", &bd71891_usb_char_vsys_debounce),
+	};
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(configs); i++)
+		if (!strcmp(config, configs[i].name))
+			return bd71891_pr_reas_field_set(configs[i].field, value);
+
+	printf("Unknown USB characterization config. Known configs:\n");
+	for (i = 0; i < ARRAY_SIZE(configs); i++)
+		printf("%s\n", configs[i].name);
+
+	return CMD_RET_USAGE;
+}
+
+static int do_usb_char_cfg(struct cmd_tbl *cmdtp, int flag, int argc,
+		       char *const argv[])
+{
+	if (argc == 1)
+		return usb_char_cfg_read();
+
+	if (argc != 3)
+		return CMD_RET_USAGE;
+
+	return bd71891_usb_char_cfg(argv[1], argv[2]);
+}
+
+#define USB_CHAR_CFG_USAGE "usb_char_cfg [config value]\n"
+#define USB_CHAR_CFG_HELP "usb_char_cfg config value] - get/set USB characterization config(s)\n" \
+	"usb_char_cfg\n" 							\
+	"\tGet USB charazterization configuration\n"				\
+	"usb_char_cfg Ilim <val> - set current limit in mA\n"			\
+	"\tSupported values 600, 700, 800, 900, 1000, 1100, 1200, 1300\n"	\
+	"usb_char_cfg interval <val> - set sinking pulse interval mS\n"		\
+	"\tSupported values 1, 4, 10, 20\n"					\
+	"usb_char_cfg pulse <val> - set sinking pulse width mS\n"		\
+	"\tSupported values 1, 2, 5, 10\n"					\
+	"usb_char_cfg Iavg <val> - set number of current samples to average\n"	\
+	"\tSupported values 16, 32\n"						\
+	"usb_char_cfg Rsens <val> - set size of sense resistor mOhm\n"		\
+	"\tSupported values 10, 20, 30\n"					\
+	"usb_char_cfg Vstart <val> - set the voltage to start with mV\n"	\
+	"\tSupported values 4000, 4250, 4500, 4750\n"				\
+	"usb_char_cfg UVP <val> - set the under voltage detection limt mV\n"	\
+	"\tSupported values 3600, 4000, 4200, 4500\n"				\
+
+#define USB_CHAR_USAGE "usb_char [start]\n"
+#define USB_CHAR_HELP "usb_char [start] - get USB characterization info\n" \
+	"usb_char\n"							   \
+	"\tGet USB charazterization status\n"				   \
+	"usb_char start\n"						   \
+	"\tStart the USB charazterization and get status\n"
 
 #define HPD_PINCTRL_USAGE "hpd_pin_ctrl [pin [pull soc/conn value] [nmos value]]\n"
 #define HPD_PINCTRL_HELP  "hpd_pin_ctrl - get HDMI HPD info\n" 		\
@@ -1642,6 +1982,8 @@ static struct cmd_tbl subcmd[] = {
 	U_BOOT_CMD_MKENT(adc_get, 2, 1, do_adc_get, "", ""),
 	U_BOOT_CMD_MKENT(dt_init, 1, 1, do_dt_init, "", ""),
 	U_BOOT_CMD_MKENT(adc_meas, 4, 1, do_adc_meas, "", ""),
+	U_BOOT_CMD_MKENT(usb_char, 2, 1, do_usb_char, USB_CHAR_USAGE, USB_CHAR_HELP),
+	U_BOOT_CMD_MKENT(usb_char_cfg, 2, 1, do_usb_char_cfg, USB_CHAR_CFG_USAGE, USB_CHAR_CFG_HELP),
 
 	/*
 	 * TODO: Add commands for:
@@ -1682,6 +2024,8 @@ U_BOOT_CMD(bd71891, CONFIG_SYS_MAXARGS, 1, do_bd71891,
 	"bd71891 adc_gain - get or set gain for ADC current accumulator\n"
 	"bd71891 adc_vol_source - get or set ADC accum voltage source\n"
 	"bd71891 adc_get [v, i, p, t] - get last measured value\n"
-	"bd71885 adc_meas [v, i, p] <num_samples> <interval> - measure\n"
+	"bd71891 adc_meas [v, i, p] <num_samples> <interval> - measure\n"
+	"bd71891 usb_char [start] - USB characterization state\n"
+	"bd71891 usb_char_cfg - USB characterization state\n"
 );
 
