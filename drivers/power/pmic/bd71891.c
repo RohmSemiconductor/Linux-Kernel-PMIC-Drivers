@@ -1758,9 +1758,37 @@ int usb_char_done(void)
 	return ret & BD71891_MASK_USB_CHAR_DONE;
 }
 
+static inline int usb_char_reg2uvolt(int reg)
+{
+	return reg * 5860 * 4;
+}
+
+static inline int usb_char_reg2ua(int reg, int rsens)
+{
+	return reg * 781000 * 4 / rsens / 100;
+}
+
+static int get_uc_rsens_mohm(void)
+{
+	int ret;
+	int rsens_mohm[] = { 10, 20, 30 };
+
+	ret = bd71891_reg_read(BD71891_REG_USB_CHAR_CFG2);
+	if (ret < 0)
+		return ret;
+
+	ret &= BD71891_MASK_USB_CHAR_RSENS;
+	ret >>= BD71891_MASK_USB_CHAR_RSENS_SHIFT;
+
+	if (ret > 3)
+		return -EINVAL;
+
+	return rsens_mohm[ret];
+}
+
 static int usb_char_read(void)
 {
-	int i, ret;
+	int i, ret, uc_rsens_mohm;
 
 	for (i = 0; i < 10; i++) {
 		int uc_done = usb_char_done();
@@ -1778,6 +1806,10 @@ static int usb_char_read(void)
 		return -ETIMEDOUT;
 	}
 
+	uc_rsens_mohm = get_uc_rsens_mohm();
+	if (uc_rsens_mohm < 0)
+		return cmd_failure(uc_rsens_mohm);
+
 	for (i = 0; i < 20; i++) {
 		int raw_usb_vol;
 
@@ -1786,6 +1818,7 @@ static int usb_char_read(void)
 			return cmd_ret(ret);
 
 		printf("RAW USB voltage[%d] %u\n", i, raw_usb_vol);
+		printf("USB voltage[%d] %u uV\n", i, usb_char_reg2uvolt(raw_usb_vol));
 	}
 	for (i = 0; i < 20; i++) {
 		int raw_usb_curr;
@@ -1795,6 +1828,7 @@ static int usb_char_read(void)
 			return cmd_ret(ret);
 
 		printf("RAW USB current[%d] %u\n", i, raw_usb_curr);
+		printf("USB current[%d] %u\n", i, usb_char_reg2ua(raw_usb_curr, uc_rsens_mohm));
 	}
 
 	return 0;
@@ -2026,6 +2060,6 @@ U_BOOT_CMD(bd71891, CONFIG_SYS_MAXARGS, 1, do_bd71891,
 	"bd71891 adc_get [v, i, p, t] - get last measured value\n"
 	"bd71891 adc_meas [v, i, p] <num_samples> <interval> - measure\n"
 	"bd71891 usb_char [start] - USB characterization state\n"
-	"bd71891 usb_char_cfg - USB characterization state\n"
+	"bd71891 usb_char_cfg [cfg val] - USB characterization state\n"
 );
 
