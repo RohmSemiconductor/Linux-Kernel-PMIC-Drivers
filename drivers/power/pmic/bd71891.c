@@ -931,6 +931,202 @@ static int __set_adc_source(int src)
 	return ret;
 }
 
+static int saccum_running(void)
+{
+	int ret;
+
+	ret = bd71891_reg_read(BD71891_REG_ADC_SACCUM_KICK);
+	if (ret < 0)
+		return ret;
+
+	return (ret & BD71891_MASK_ADC_SACCUM_KICK);
+}
+
+static int bd71891_set_sa_num_samples(u16 num_samples)
+{
+	int ret;
+
+	if (num_samples > 1023)
+		return cmd_ret(-EINVAL);
+
+	num_samples = cpu_to_be16(num_samples);
+
+	ret = bd71891_pmic_write(BD71891_REG_ADC_SACCUM_NUM_HI, (char *)&num_samples, 2);
+
+	return cmd_ret(ret);
+}
+
+static int bd71891_set_sa_mode(int mode)
+{
+	int ret;
+
+	if (mode != BD71891_SACCUM_MODE_CONT && mode != BD71891_SACCUM_MODE_NUM)
+		return cmd_failure(-EINVAL);
+
+	ret = bd71891_clrsetbits(BD71891_REG_ADC_SACCUM_KICK,
+				 BD71891_MASK_ADC_SACCUM_MODE, mode);
+
+	return cmd_ret(ret);
+}
+
+static int am_i_little_endian(void)
+{
+	u16 one = 1;
+	u8 *test = (u8 *)&one;
+
+	return *test;
+}
+
+static int do_saccum_read(struct cmd_tbl *cmdtp, int flag, int argc,
+			  char *const argv[])
+{
+	uint8_t buf[5];
+	u16 cnt;
+	unsigned int val = 0;
+	u8 *tmp_cnt = (u8 *)&cnt;
+	u8 *tmp_val = (u8 *)&val;
+	int ret;
+
+	ret = bd71891_pmic_read(BD71891_REG_ADC_SACCUM_CNT_HI, buf, 5);
+	if (ret)
+		cmd_failure(ret);
+
+	if (am_i_little_endian()) {
+		tmp_cnt[0] = buf[4];
+		tmp_cnt[1] = buf[3];
+
+		tmp_val[0] = buf[2] & BD71891_MASK_ADC_SACCUM_VAL_HI;
+		tmp_val[1] = buf[1] & BD71891_MASK_ADC_SACCUM_VAL_HI;
+		tmp_val[2] = buf[0] & BD71891_MASK_ADC_SACCUM_VAL_HI;
+	} else {
+		tmp_cnt[0] = buf[3];
+		tmp_cnt[1] = buf[4];
+
+		tmp_val[1] = buf[0] & BD71891_MASK_ADC_SACCUM_VAL_HI;
+		tmp_val[2] = buf[1] & BD71891_MASK_ADC_SACCUM_VAL_HI;
+		tmp_val[3] = buf[2] & BD71891_MASK_ADC_SACCUM_VAL_HI;
+	}
+
+	printf("Raw SACCUM value %u (0x%x), count %u, average (val/count) = %u\n",
+	       val, val, cnt, val / cnt);
+
+	return CMD_RET_SUCCESS;
+}
+
+static int do_saccum_start(struct cmd_tbl *cmdtp, int flag, int argc,
+			char *const argv[])
+{
+	int ret;
+
+	ret = bd71891_clrsetbits(BD71891_REG_ADC_SACCUM_KICK, 0, BD71891_MASK_ADC_SACCUM_KICK);
+	return cmd_ret(ret);
+}
+
+static int do_saccum_stop(struct cmd_tbl *cmdtp, int flag, int argc,
+		       char *const argv[])
+{
+	int ret;
+
+	ret = bd71891_clrsetbits(BD71891_REG_ADC_SACCUM_KICK, 0, BD71891_MASK_ADC_SACCUM_STOP);
+	return cmd_ret(ret);
+}
+
+static int do_saccum_count(struct cmd_tbl *cmdtp, int flag, int argc,
+			    char *const argv[])
+{
+	unsigned int num_samples;
+	char *eptr;
+	int ret;
+
+	if (argc == 1) {
+		char buf[2] __attribute__((aligned(2)));
+		u16 *s;
+
+		ret = bd71891_reg_read(BD71891_REG_ADC_SACCUM_KICK);
+		if (ret < 0)
+			return cmd_failure(ret);
+
+		if (ret & BD71891_SACCUM_MODE_CONT)
+			printf("ADC Short accumulator uses continuous mode\n");
+		else
+			printf("ADC Short accumulator uses count mode\n");
+
+		ret = bd71891_pmic_read(BD71891_REG_ADC_SACCUM_NUM_HI, buf, 2);
+		if (ret)
+			return ret;
+
+		buf[0] &= BD71891_MASK_ADC_SACCUM_NUM_HI;
+		s = (u16 *)&buf[0];
+
+		printf("ADC Short accum num samples set to %hd\n", be16_to_cpu(*s));
+		return cmd_ret(ret);
+	}
+
+	if (argc != 2)
+		return CMD_RET_USAGE;
+
+	ret = saccum_running();
+	if (ret < 0)
+		return cmd_failure(ret);
+	if (ret)
+		return cmd_failure(-EBUSY);
+
+        num_samples = simple_strtol(argv[1], &eptr, 10);
+        if (!*argv[1] || *eptr)
+		return CMD_RET_USAGE;
+
+	if (!num_samples)
+		return bd71891_set_sa_mode(BD71891_SACCUM_MODE_CONT);
+
+	if (num_samples > 1023)
+		return cmd_failure(-ERANGE);
+
+	ret = bd71891_set_sa_mode(BD71891_SACCUM_MODE_NUM);
+	if (ret)
+		return cmd_failure(ret);
+
+	return bd71891_set_sa_num_samples(num_samples);
+}
+
+static int do_saccum_source(struct cmd_tbl *cmdtp, int flag, int argc,
+			    char *const argv[])
+{
+	char *src;
+	int ret, val;
+
+	if (argc == 1) {
+		ret = bd71891_reg_read(BD71891_REG_ADC_CTRL1);
+		if (ret >= 0) {
+			if (ret & BD71891_ADC_SACCUM_SRC_VOLT)
+				printf("ADC Short accumulator source set to 'voltage'\n");
+			else
+				printf("ADC Short accumulator source set to 'power'\n");
+		}
+
+		return cmd_ret(ret);
+	}
+
+	if (argc != 2)
+		return CMD_RET_USAGE;
+
+	src = argv[1];
+
+	if (!strcmp(src, "voltage")) {
+		val = BD71891_ADC_SACCUM_SRC_VOLT;
+	} else if (!strcmp(src, "power")) {
+		val = BD71891_ADC_SACCUM_SRC_POWER;
+	} else {
+		printf("Unsupported Short accum source\n");
+
+		return CMD_RET_USAGE;
+	}
+
+	ret = bd71891_clrsetbits(BD71891_REG_ADC_CTRL1,
+				 BD71891_MASK_ADC_SACCUM_SRC, val);
+
+	return cmd_ret(ret);
+}
+
 static int do_adc_source(struct cmd_tbl *cmdtp, int flag, int argc,
 			 char *const argv[])
 {
@@ -2010,6 +2206,11 @@ static struct cmd_tbl subcmd[] = {
 	U_BOOT_CMD_MKENT(hpd_idle_ctrl, 2, 1, do_hpd_idle_ctrl, "", ""),
 	U_BOOT_CMD_MKENT(hpd_pin_ctrl, 2, 1, do_hpd_pin_ctrl, HPD_PINCTRL_USAGE, HPD_PINCTRL_HELP),
 	U_BOOT_CMD_MKENT(adc_source, 2, 1, do_adc_source, "", ""),
+	U_BOOT_CMD_MKENT(saccum_source, 2, 1, do_saccum_source, "", ""),
+	U_BOOT_CMD_MKENT(saccum_count, 2, 1, do_saccum_count, "", ""),
+	U_BOOT_CMD_MKENT(saccum_start, 1, 1, do_saccum_start, "", ""),
+	U_BOOT_CMD_MKENT(saccum_stop, 1, 1, do_saccum_stop, "", ""),
+	U_BOOT_CMD_MKENT(saccum_read, 1, 1, do_saccum_read, "", ""),
 	U_BOOT_CMD_MKENT(adc_state, 2, 1, do_adc_state, "", ""),
 	U_BOOT_CMD_MKENT(adc_gain, 2, 1, do_adc_gain, "", ""),
 	U_BOOT_CMD_MKENT(adc_vol_source, 2, 1, do_adc_vol_source, "", ""),
@@ -2054,6 +2255,11 @@ U_BOOT_CMD(bd71891, CONFIG_SYS_MAXARGS, 1, do_bd71891,
 	"bd71891 hpd_idle_ctrl [1,0] - Query or set HDMI detector's IDLE control\n"
 	"bd71891 hpd_pin_ctrl - Query or configure HDMI pins\n"
 	"bd71891 adc_source [voltage power current] - Query or configure ADC ACCUM source\n"
+	"bd71891 saccum_source [voltage power] - Query or configure ADC Short ACCUM source\n"
+	"bd71891 saccum_count [0, 1-1023] - Query or configure ADC Short ACCUM source, 0 => continuous mode\n"
+	"bd71891 saccum_start - Start short accumulator\n"
+	"bd71891 saccum_stop - Stop short accumulator\n"
+	"bd71891 saccum_read - Read results from short accumulator\n"
 	"bd71891 adc_state - get or set ADC accum state (start, stop)\n"
 	"bd71891 adc_gain - get or set gain for ADC current accumulator\n"
 	"bd71891 adc_vol_source - get or set ADC accum voltage source\n"
