@@ -99,6 +99,16 @@ static const struct regulator_vrange buck124_vranges_0[] = {
 	BD_RANGE(1300000, 0, 0xa1, 0xff),
 };
 
+static const struct regulator_vrange buck2_DS1_ERRATA_vranges_0[] = {
+	BD_RANGE(520000, 5000, 0, 0xa0),
+	BD_RANGE(1320000, 0, 0xa1, 0xff),
+};
+
+static const struct regulator_vrange buck2_DS1_ERRATA_vranges_1[] = {
+	BD_RANGE(1340000, 10000, 0, 0x46),
+	BD_RANGE(2040000, 0, 0x47, 0xff),
+};
+
 static const struct regulator_vrange buck124_vranges_1[] = {
 	BD_RANGE(1300000, 10000, 0, 0x46),
 	BD_RANGE(2000000, 0, 0x47, 0xff),
@@ -134,6 +144,20 @@ static const struct regulator_vrange ldo_vranges[] = {
 	BD_RANGE(500000, 5000, 0x0, 0x9f),
 	BD_RANGE(1300000, 10000, 0xa0, 0xd2),
 	BD_RANGE(1800000, 0, 0xd3, 0xff),
+};
+
+static const struct regulator_picked_range buck2_DS1_ERRATA_ranges[] = {
+	{
+		.ranges = buck2_DS1_ERRATA_vranges_0,
+		.num_ranges = ARRAY_SIZE(buck2_DS1_ERRATA_vranges_0),
+		.pick_reg_val = 0,
+		.pick_reg_mask = BIT(0),
+	}, {
+		.ranges = buck2_DS1_ERRATA_vranges_1,
+		.num_ranges = ARRAY_SIZE(buck2_DS1_ERRATA_vranges_1),
+		.pick_reg_val = 1,
+		.pick_reg_mask = BIT(0),
+	},
 };
 
 static const struct regulator_picked_range buck124_ranges[] = {
@@ -188,15 +212,6 @@ static const struct regulator_picked_range ldo_ranges[] = {
 		.ranges = ldo_vranges,
 		.num_ranges = ARRAY_SIZE(ldo_vranges),
 	},
-};
-
-static struct bd71892_plat bd71892_reg_data[] = {
-	BD_DATA(BUCK1, buck124_ranges),
-	BD_DATA(BUCK2, buck124_ranges),
-	BD_DATA(BUCK3, buck3_ranges),
-	BD_DATA(BUCK4, buck124_ranges),
-	BD_DATA(BUCK5, buck5_ranges),
-	BD_DATA(LDO1, ldo_ranges),
 };
 
 static int __bd71892_get_enable(struct udevice *dev, int mask)
@@ -424,8 +439,6 @@ static int bd71892_set_enable(struct udevice *dev, bool enable)
 	return __bd71892_set_enable(dev, enable, BD71892_MASK_RUN_ON);
 }
 
-
-
 static const struct dm_regulator_ops bd71892_buck_ops = {
 	.get_value		= bd71892_get_buck_volt_value,
 	.set_value		= bd71892_set_volt_value,
@@ -456,10 +469,27 @@ static const struct dm_regulator_ops bd71892_ldo_ops = {
 
 static int bd71892_regulator_probe(struct udevice *dev)
 {
+	static struct bd71892_plat bd71892_reg_data[] = {
+		BD_DATA(BUCK1, buck124_ranges),
+		BD_DATA(BUCK2, buck124_ranges),
+		BD_DATA(BUCK3, buck3_ranges),
+		BD_DATA(BUCK4, buck124_ranges),
+		BD_DATA(BUCK5, buck5_ranges),
+		BD_DATA(LDO1, ldo_ranges),
+	};
+	static struct bd71892_plat bd71892_DS1_BUCK2_ERRATA_reg_data[] = {
+		BD_DATA(BUCK1, buck124_ranges),
+		BD_DATA(BUCK2, buck2_DS1_ERRATA_ranges),
+		BD_DATA(BUCK3, buck3_ranges),
+		BD_DATA(BUCK4, buck124_ranges),
+		BD_DATA(BUCK5, buck5_ranges),
+		BD_DATA(LDO1, ldo_ranges),
+	};
+	struct bd71892_plat *plat_template;
 	struct bd71892_plat *plat = dev_get_plat(dev);
 	struct dm_regulator_uclass_plat *uc_pdata;
 	int data_amnt = BD71892_REGULATOR_AMOUNT;
-	int i, vendor, prod_id;
+	int i, vendor, prod_id, revision;
 	struct udevice *parent;
 
 	parent = dev_get_parent(dev);
@@ -479,20 +509,29 @@ static int bd71892_regulator_probe(struct udevice *dev)
 	if (prod_id != BD71892_PROD_ID_VAL || vendor != BD71892_VENDOR_VAL)
 		printf("Unknown product/vendor\n");
 
+	revision = pmic_reg_read(parent, BD71892_REG_PMIC_REV_NUM);
+	if (revision < 0)
+		return revision;
+
+	if (revision == BD71892_REV_DS1)
+		plat_template = bd71892_DS1_BUCK2_ERRATA_reg_data;
+	else
+		plat_template = bd71892_reg_data;
+
 	for (i = 0; i < data_amnt; i++) {
-		if (!strcmp(dev->name, bd71892_reg_data[i].name)) {
+		if (!strcmp(dev->name, plat_template[i].name)) {
 			printf("Probed '%s'\n", dev->name);
-			*plat = bd71892_reg_data[i];
+			*plat = plat_template[i];
 
 			uc_pdata = dev_get_uclass_plat(dev);
-			if (bd71892_reg_data[i].id < LDO1) {
+			if (plat->id < LDO1) {
 				uc_pdata->mode = &bd71892_buck_modes[0];
 				uc_pdata->mode_count = ARRAY_SIZE(bd71892_buck_modes);
-				printf("Set mode ptr for buck id %d\n", bd71892_reg_data[i].id);
+				printf("Set mode ptr for buck id %d\n", plat->id);
 			} else {
 				uc_pdata->mode = &bd71892_ldo_modes[0];
 				uc_pdata->mode_count = ARRAY_SIZE(bd71892_ldo_modes);
-				printf("Set mode ptr for ldo id %d\n", bd71892_reg_data[i].id);
+				printf("Set mode ptr for ldo id %d\n", plat->id);
 			}
 			return bd71892_set_enable(dev, !!(uc_pdata->boot_on ||
 						  uc_pdata->always_on));
