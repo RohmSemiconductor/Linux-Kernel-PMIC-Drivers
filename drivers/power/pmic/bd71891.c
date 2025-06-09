@@ -741,14 +741,14 @@ static int do_set_idle_state(struct cmd_tbl *cmdtp, int flag, int argc,
 	char *new_state;
 	int ret;
 
+	if (argc != 2)
+		return CMD_RET_USAGE;
+
 	if (hdmi_hotplug_controls_idle()) {
 		printf("IDLE controlled by HDMI hot-plug\n");
 
 		return cmd_failure(-EBUSY);
 	}
-
-	if (argc != 2)
-		return CMD_RET_USAGE;
 
 	new_state = argv[1];
 
