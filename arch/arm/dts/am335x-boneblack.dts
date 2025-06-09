@@ -15,9 +15,9 @@
 
 /* MVa Added */
 &i2c2 {
-	companionpmic: companion@47 {
+	companionpmic: companion@2a {
 		compatible = "rohm,bd71892";
-		reg = <0x47>;
+		reg = <0x2a>;
 		/* GPIO 1_29 - (connector 8, pin 26) for irq */
 /*		interrupt-parent = <&gpio1>; */
 /*		interrupts = <29 GPIO_ACTIVE_LOW>; */
@@ -68,13 +68,15 @@
 			};
 		};
 	};
-	bdpmic: pmic@4b { /* the "test" defined as child of the i2c1 bus */
+	bdpmic: pmic@20 { /* the "test" defined as child of the i2c1 bus */
 		compatible = "rohm,bd71891";
-		reg = <0x4b>;
+		reg = <0x20>;
 		/* GPIO 1_29 - (connector 8, pin 26) for irq */
 /*		interrupt-parent = <&gpio1>; */
 /*		interrupts = <29 GPIO_ACTIVE_LOW>; */
 /*		interrupts = <29 8>; */
+		/* Just a random value for testing. Please replace with one you use on your system */
+		rohm,sense-resistor-mohms = <30>;
 /*		rohm,short-press-ms = <30>;
 		rohm,mid-press-ms = <1000>;
 		rohm,long-press-ms = <5000>;
