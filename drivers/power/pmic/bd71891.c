@@ -19,7 +19,7 @@
 #include <power/bd71891.h>
 #include "bdxxxx.h"
 
-#define PMIC_DT_NAME "pmic@4b"
+#define PMIC_DT_NAME "pmic@20"
 
 /* Add debug checks to detect overflows in computations */
 #define CHECK_OVERFLOW 1
@@ -1357,7 +1357,7 @@ static int do_dt_init(struct cmd_tbl *cmdtp, int flag, int argc, char *const arg
 	if (!ret)
 		printf("R_sense set to %u milli ohms\n", g_r_sense);
 	else
-		printf("No sense resistor value found\n");
+		printf("No sense resistor value found, err %d\n", ret);
 
 	return 0;
 }
