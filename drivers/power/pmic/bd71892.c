@@ -20,7 +20,7 @@
 #include <power/bd71892.h>
 #include "bdxxxx.h"
 
-#define PMIC_DT_NAME "companion@47"
+#define PMIC_DT_NAME "companion@2a"
 
 /*
  * Wait 10 mS before rechecking if state was changed
@@ -595,8 +595,9 @@ U_BOOT_CMD(bd71892, CONFIG_SYS_MAXARGS, 1, do_bd71892,
 	"BD71892 sub-system",
 	"bd71892 chipinfo - recorded power-on reasons and current power state\n"
 	"bd71892 set_idle_state [idle, run] - set run mode\n"
-	"bd71885 adc_meas - measure VSYS using ADC\n"
-	"bd71885 read_temp - read the latest measured temperature\n"
+	"bd71892 adc_meas - measure VSYS using ADC\n"
+	"bd71892 read_temp - read the latest measured temperature\n"
+	"bd71892 temp_limit - read or write temperature limit\n"
 	/*
 	"bd71892 dt_init - initialize PMIC based on DT values\n"
 	"bd71885 adc_state - get or set ADC accum state (start, stop)\n"
