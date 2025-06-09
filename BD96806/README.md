@@ -1,7 +1,7 @@
 ---
 permalink: /BD96806/
 patchlink: https://lore.kernel.org/all/cover.1744090658.git.mazziesaccount@gmail.com/
-expectupstreamed: v6.16
+upstreamed: v6.16-rc1
 configs:
   - config: CONFIG_MFD_ROHM_BD96801
     subsystem: mfd
