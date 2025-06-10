@@ -641,6 +641,9 @@ static int do_hpd_pin_set(int argc, char *const argv[])
 	const char *op = argv[2];
 	int is_i2c;
 
+	printf("argc = %d, argv[0] = '%s',  argv[1] = '%s' \n",
+		argc, argv[0], argv[1]);
+
 	switch (argc)
 	{
 	case 4:
@@ -699,6 +702,9 @@ static int do_hpd_pin_ctrl(struct cmd_tbl *cmdtp, int flag, int argc,
 			    char *const argv[])
 {
 	int ret;
+
+	printf("argc = %d, argv[0] = '%s',  argv[1] = '%s' \n",
+		argc, argv[0], argv[1]);
 
 	if (argc > 2)
 		return do_hpd_pin_set(argc, argv);
@@ -2204,7 +2210,7 @@ static struct cmd_tbl subcmd[] = {
 	U_BOOT_CMD_MKENT(chipinfo, 1, 1, do_chipinfo, "", ""),
 	U_BOOT_CMD_MKENT(set_idle_state, 2, 1, do_set_idle_state, "", ""),
 	U_BOOT_CMD_MKENT(hpd_idle_ctrl, 2, 1, do_hpd_idle_ctrl, "", ""),
-	U_BOOT_CMD_MKENT(hpd_pin_ctrl, 2, 1, do_hpd_pin_ctrl, HPD_PINCTRL_USAGE, HPD_PINCTRL_HELP),
+	U_BOOT_CMD_MKENT(hpd_pin_ctrl, 5, 1, do_hpd_pin_ctrl, HPD_PINCTRL_USAGE, HPD_PINCTRL_HELP),
 	U_BOOT_CMD_MKENT(adc_source, 2, 1, do_adc_source, "", ""),
 	U_BOOT_CMD_MKENT(saccum_source, 2, 1, do_saccum_source, "", ""),
 	U_BOOT_CMD_MKENT(saccum_count, 2, 1, do_saccum_count, "", ""),
