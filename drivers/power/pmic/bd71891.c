@@ -1184,10 +1184,14 @@ static int get_adc_gain(void)
 	int ret;
 
 	ret = __get_adc_gain_idx();
-	if (ret > 0)
-		printf("ADC gain set to '%ld'\n", bd71891_adc_gain[ret]);
+	if (ret < 0) {
+		printf("Failed to get gain\n");
+		cmd_failure(ret);
+	}
 
-	return cmd_ret(ret);
+	printf("ADC gain set to '%ld'\n", bd71891_adc_gain[ret]);
+
+	return cmd_ret(0);
 }
 
 static int do_adc_gain(struct cmd_tbl *cmdtp, int flag, int argc,
