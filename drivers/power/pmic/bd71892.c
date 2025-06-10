@@ -440,20 +440,20 @@ int is_hiawatha(void)
 	return *tmp;
 }
 
-static int limit2regval(int limit, char *regs)
+static int limit2regval(int limit, u8 *regs)
 {
 	int reg;
 
 	/*
 	 * limit_mC = 351300 - 2310 * regs / 4
 	 *
-	 *        (351300 - limit_mC) * 4
+	 *        (351300 - limit_mC) * 2
 	 * regs = ----------------------
-	 *               2310
+	 *               1155
 	 */
 
-	reg = (351300 - limit) * 4;
-	reg /= 4;
+	reg = (351300 - limit) * 2;
+	reg /= 1155;
 
 	if ((reg & BD71892_MASK_ADC_TEMP_LIMIT) != reg) {
 		printf("Unsupported limit %d\n", limit);
@@ -461,12 +461,12 @@ static int limit2regval(int limit, char *regs)
 	}
 
 	if (is_hiawatha()) {
-		unsigned int tmp = limit;
+		unsigned int tmp = reg;
 
 		regs[0] = tmp >> 8;
 		regs[1] = tmp;
 	} else {
-		unsigned int tmp = limit;
+		unsigned int tmp = reg;
 
 		regs[1] = tmp >> 8;
 		regs[0] = tmp;
@@ -567,7 +567,7 @@ static struct cmd_tbl subcmd[] = {
 	U_BOOT_CMD_MKENT(set_idle_state, 2, 1, do_set_idle_state, "", ""),
 	U_BOOT_CMD_MKENT(adc_meas, 1, 1, do_adc_meas, "", ""),
 	U_BOOT_CMD_MKENT(read_temp, 1, 1, do_read_temp, "", ""),
-	U_BOOT_CMD_MKENT(temp_limit, 1, 1, do_temp_limit, "", ""),
+	U_BOOT_CMD_MKENT(temp_limit, 2, 1, do_temp_limit, "", ""),
 	/*U_BOOT_CMD_MKENT(dt_init, 1, 1, do_dt_init, "", ""),
 	U_BOOT_CMD_MKENT(hibernate, 1, 1, do_hibernate, "", ""),
 	U_BOOT_CMD_MKENT(adc_state, 2, 1, do_adc_state, "", ""),
