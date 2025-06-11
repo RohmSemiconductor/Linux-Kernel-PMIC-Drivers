@@ -63,18 +63,17 @@ struct bd71892_plat {
 	*/
 };
 
-#define BD_DATA(_id, _range) \
+#define BD_DATA(_id, _uppercase_id, _range) \
 { \
 	.name = __stringify(_id),			\
 	.pranges = (_range),				\
 	.num_pranges = ARRAY_SIZE(_range),		\
-	.id = (_id),					\
-	.en_reg = BD71892_REG_##_id##_ON,		\
-	.vsel_reg = BD71892_REG_##_id##_ON + 3,		\
+	.id = (_uppercase_id),					\
+	.en_reg = BD71892_REG_##_uppercase_id##_ON,		\
+	.vsel_reg = BD71892_REG_##_uppercase_id##_ON + 3,		\
 	.sel_mask = 0xff,	\
-	/* TODO: Check from HQ, spec is unclear */	\
-	.pickreg = BD71892_REG_##_id##_ON + 2,		\
-	.dvs = (_id) < LDO1,				\
+	.pickreg = BD71892_REG_##_uppercase_id##_ON + 2,		\
+	.dvs = (_uppercase_id) < LDO1,				\
 }
 
 enum {
@@ -470,20 +469,20 @@ static const struct dm_regulator_ops bd71892_ldo_ops = {
 static int bd71892_regulator_probe(struct udevice *dev)
 {
 	static struct bd71892_plat bd71892_reg_data[] = {
-		BD_DATA(BUCK1, buck124_ranges),
-		BD_DATA(BUCK2, buck124_ranges),
-		BD_DATA(BUCK3, buck3_ranges),
-		BD_DATA(BUCK4, buck124_ranges),
-		BD_DATA(BUCK5, buck5_ranges),
-		BD_DATA(LDO1, ldo_ranges),
+		BD_DATA(buck1, BUCK1, buck124_ranges),
+		BD_DATA(buck2, BUCK2, buck124_ranges),
+		BD_DATA(buck3, BUCK3, buck3_ranges),
+		BD_DATA(buck4, BUCK4, buck124_ranges),
+		BD_DATA(buck5, BUCK5, buck5_ranges),
+		BD_DATA(ldo1, LDO1, ldo_ranges),
 	};
 	static struct bd71892_plat bd71892_DS1_BUCK2_ERRATA_reg_data[] = {
-		BD_DATA(BUCK1, buck124_ranges),
-		BD_DATA(BUCK2, buck2_DS1_ERRATA_ranges),
-		BD_DATA(BUCK3, buck3_ranges),
-		BD_DATA(BUCK4, buck124_ranges),
-		BD_DATA(BUCK5, buck5_ranges),
-		BD_DATA(LDO1, ldo_ranges),
+		BD_DATA(buck1, BUCK1, buck124_ranges),
+		BD_DATA(buck2, BUCK2, buck2_DS1_ERRATA_ranges),
+		BD_DATA(buck3, BUCK3, buck3_ranges),
+		BD_DATA(buck4, BUCK4, buck124_ranges),
+		BD_DATA(buck5, BUCK5, buck5_ranges),
+		BD_DATA(ldo1, LDO1, ldo_ranges),
 	};
 	struct bd71892_plat *plat_template;
 	struct bd71892_plat *plat = dev_get_plat(dev);
