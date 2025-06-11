@@ -104,7 +104,6 @@ int bd718xx_gpio_direction_output(const struct bd718xx_gpio *gc,
 				  struct udevice *dev, unsigned int gpio,
 				  int value)
 {
-	struct udevice *pmic = dev_get_parent(dev);
 	int err;
 
 	if (gpio >= gc->num_gpios)
@@ -112,7 +111,7 @@ int bd718xx_gpio_direction_output(const struct bd718xx_gpio *gc,
 
 	/* TODO: Check the purpose of 'value' param */
 	/* TODO: Handling of GPIO polarity? */
-	err = bd718xx_gpio_set_value(gc, pmic, gpio, value);
+	err = bd718xx_gpio_set_value(gc, dev, gpio, value);
 	if (err < 0) {
 		pr_err("failed to set GPIO#%u to %s: %d\n", gpio,
 		       value ? "high" : "low", err);
@@ -184,7 +183,4 @@ int bd718xx_gpio_set_flags(const struct bd718xx_gpio *gc, struct udevice *dev,
 
 	return -EINVAL;
 }
-
-
-
 
