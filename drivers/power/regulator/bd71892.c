@@ -201,11 +201,16 @@ static const struct regulator_picked_range buck5_ranges[] = {
 	{
 		.ranges = buck5_vranges_0,
 		.num_ranges = ARRAY_SIZE(buck5_vranges_0),
+		.pick_reg_val = 0,
+		.pick_reg_mask = BIT(0),
 	}, {
 		.ranges = buck5_vranges_1,
 		.num_ranges = ARRAY_SIZE(buck5_vranges_1),
+		.pick_reg_val = 1,
+		.pick_reg_mask = BIT(0),
 	},
 };
+
 static const struct regulator_picked_range ldo_ranges[] = {
 	{
 		.ranges = ldo_vranges,
