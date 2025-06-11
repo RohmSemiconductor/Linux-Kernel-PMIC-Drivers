@@ -19,52 +19,51 @@
 		compatible = "rohm,bd71892";
 		reg = <0x2a>;
 		/* GPIO 1_29 - (connector 8, pin 26) for irq */
-/*		interrupt-parent = <&gpio1>; */
-/*		interrupts = <29 GPIO_ACTIVE_LOW>; */
-/*		interrupts = <29 8>; */
 
 		regulators {
 			buck1 {
-				regulator-name = "buck1";
-/*
+				regulator-name = "BUCK1";
 				regulator-min-microvolt = <500000>;
-				regulator-max-microvolt = <1350000>;
-*/
+				regulator-max-microvolt = <2000000>;
 /*				regulator-boot-on; */
 /*				regulator-always-on; */
 				regulator-ramp-delay = <1250>;
 			};
 			buck2 {
-				regulator-name = "buck2";
+				regulator-name = "BUCK2";
+				regulator-min-microvolt = <520000>;
+				regulator-max-microvolt = <2040000>;
 /*
-				regulator-min-microvolt = <500000>;
-				regulator-max-microvolt = <1350000>;
 				regulator-always-on;
 				regulator-ramp-delay = <1250>;
 */
 			};
 			buck3 {
-				regulator-name = "buck3";
-/*
-				regulator-min-microvolt = <500000>;
-				regulator-max-microvolt = <1350000>;
+				regulator-name = "BUCK3";
+				regulator-min-microvolt = <300000>;
+				regulator-max-microvolt = <2000000>;
 		//		regulator-boot-on;
+/*
 				rohm,no-regulator-enable-control;
 */
 			};
 			buck4 {
-				regulator-name = "buck4";
-/*
+				regulator-name = "BUCK4";
 				regulator-min-microvolt = <500000>;
-				regulator-max-microvolt = <1850000>;
+				regulator-max-microvolt = <2000000>;
+/*
 				regulator-boot-on;
 */
 			};
 			buck5 {
-				regulator-name = "buck5";
+				regulator-name = "BUCK5";
+				regulator-min-microvolt = <1200000>;
+				regulator-max-microvolt = <3300000>;
 			};
 			ldo1 {
-				regulator-name = "ldo1";
+				regulator-name = "LDO1";
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <1800000>;
 			};
 		};
 	};
@@ -85,61 +84,62 @@
 		regulators {
 			buck1: BUCK1 {
 				regulator-name = "buck1";
-/*
+
 				regulator-min-microvolt = <500000>;
-				regulator-max-microvolt = <1300000>;
-*/
+				regulator-max-microvolt = <2000000>;
+
 /*				regulator-boot-on; */
 /*				regulator-always-on; */
 /*				regulator-ramp-delay = <1250>; */
 			};
 			buck2: BUCK2 {
 				regulator-name = "buck2";
-/*				regulator-min-microvolt = <500000>;
-				regulator-max-microvolt = <1300000>;
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <2000000>;
+				/*
 				regulator-always-on;
 				regulator-ramp-delay = <1250>;
-*/
+				*/
 			};
 			buck3: BUCK3 {
 				regulator-name = "buck3";
+				regulator-min-microvolt = <300000>;
+				regulator-max-microvolt = <2000000>;
 /*
-				regulator-min-microvolt = <500000>;
-				regulator-max-microvolt = <1300000>;
-		//		regulator-boot-on;
+				regulator-boot-on;
 				rohm,no-regulator-enable-control;
 */
 			};
 			buck4: BUCK4 {
 				regulator-name = "buck4";
-/*				regulator-min-microvolt = <500000>;
-				regulator-max-microvolt = <1300000>;
-				regulator-boot-on;
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <3300000>;
+/*				regulator-boot-on;
 */
 			};
 			boost: BOOST {
 				regulator-name = "boost";
+				regulator-min-microvolt = <4800000>;
+				regulator-max-microvolt = <5250000>;
 /*
-				regulator-min-microvolt = <300000>;
-				regulator-max-microvolt = <1300000>;
 				regulator-boot-on;
 */
 			};
 
 			ldo1: LDO1 {
 				regulator-name = "ldo1";
-/*
-				regulator-min-microvolt = <1500000>;
-				regulator-max-microvolt = <3500000>;
-				regulator-boot-on;
+
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <1800000>;
+/*				regulator-boot-on;
 */
 			};
 
 			ldo2: LDO2 {
 				regulator-name = "ldo2";
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <1800000>;
 /*
-				regulator-min-microvolt = <1500000>;
-				regulator-max-microvolt = <3500000>;
 				regulator-boot-on;
 */
 			};
