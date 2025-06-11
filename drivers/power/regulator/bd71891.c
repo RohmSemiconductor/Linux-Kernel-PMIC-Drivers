@@ -156,22 +156,22 @@ static const struct regulator_picked_range buck3_ranges[] = {
 		.ranges = buck3_vranges_0,
 		.num_ranges = ARRAY_SIZE(buck3_vranges_0),
 		.pick_reg_val = 0,
-		.pick_reg_mask = BIT(0),
+		.pick_reg_mask = GENMASK(1,0),
 	}, {
 		.ranges = buck3_vranges_1,
 		.num_ranges = ARRAY_SIZE(buck3_vranges_1),
 		.pick_reg_val = 1,
-		.pick_reg_mask = BIT(0),
+		.pick_reg_mask = GENMASK(1,0),
 	}, {
 		.ranges = buck3_vranges_23,
 		.num_ranges = ARRAY_SIZE(buck3_vranges_23),
 		.pick_reg_val = 2,
-		.pick_reg_mask = BIT(0),
+		.pick_reg_mask = GENMASK(1,0),
 	}, {
 		.ranges = buck3_vranges_23,
 		.num_ranges = ARRAY_SIZE(buck3_vranges_23),
 		.pick_reg_val = 3,
-		.pick_reg_mask = BIT(0),
+		.pick_reg_mask = GENMASK(1,0),
 	},
 };
 
