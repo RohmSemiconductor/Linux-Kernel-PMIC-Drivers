@@ -13,6 +13,7 @@
 #include <log.h>
 #include <asm/global_data.h>
 #include <dm/read.h>
+#include <dm/lists.h>
 #include <linux/delay.h>
 #include <power/pmic.h>
 #include <power/regulator.h>
@@ -117,9 +118,29 @@ enum {
 	#define TYPE_MAX TYPE_TEMPERATURE
 };
 
+static int bd71891_gpio_bind(struct udevice *dev)
+{
+	struct udevice *gpio_dev;
+	int ret;
+
+	ret = device_bind_driver(dev, "gpio_bd71891", "gpio_bd71891", &gpio_dev);
+	if (ret)
+		debug("%s: Cannot bind GPIOs (ret=%d)\n", __func__, ret);
+
+	return ret;
+}
+
 static int bd71891_bind(struct udevice *dev)
 {
-	return bdxxxx_bind(dev, pmic_children_info);
+	int ret;
+
+	ret = bdxxxx_bind(dev, pmic_children_info);
+	if (ret) {
+		printf("PMIC bind failed %d\n", ret);
+		return ret;
+	}
+
+	return bd71891_gpio_bind(dev);
 }
 
 static int bd71891_reg_count(struct udevice *dev)
