@@ -381,7 +381,7 @@ static int wait_adc_meas_complete(void)
 	int kick;
 
 	for (kick = bd71892_reg_read(BD71892_REG_ADC_KICK);
-	     kick > -1;
+	     kick > 0;
 	     kick = bd71892_reg_read(BD71892_REG_ADC_KICK))
 		/* We could add small delay here to not choke the I2C */;
 
