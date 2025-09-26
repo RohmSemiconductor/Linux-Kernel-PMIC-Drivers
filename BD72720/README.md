@@ -56,5 +56,16 @@ amount of available GPIOs depend on what are the other enabled functions
 
 {% include source_upstream_status.md %}
 
+The driver is currently implementing:
+- MFD core handling sub-device driver loading and probing.
+- GPIO handlin. UNTESTED as OTP variant used for driver development didn't allow using the GPIOs.
+- RTC time setting and getting
+- CLK pin configuration
+- sending LID event based on HALL sensor IRQ
+- Charger / Battery handling.
+- Experimental software fuel-gauge based on Coulomb Counter.
+
+NOTE: The fuel-gauge relies on battery parameters which must be specified based on the used battery. Furthermore, the accuracy can't be guaranteed as the coulomb counter calibration procedure can depend on the device usage.
+
 {% include kernel_conf_tbl.md %}
 
