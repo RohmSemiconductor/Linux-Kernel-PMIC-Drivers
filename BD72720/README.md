@@ -1,5 +1,16 @@
 ---
 permalink: /BD72720/
+bindings:
+  - link: https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/bd72720-reference-driver-v1/Documentation/devicetree/bindings/mfd/rohm,bd72720-pmic.yaml
+    linktext: Main MFD node documentation.
+  - link: regulator/rohm,bd72720-regulator.yaml
+    linktext: Regulator documentation.
+  - link: leds/rohm,bd71828-leds.yaml
+    linktext: LED node documentation.
+  - link: https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/bd72720-reference-driver-v1/DOC_bd72720
+    linktext: Extra non YAML documentation. Mostly for the battery fuel-gauge.
+  - link: https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/blob/bd72720-reference-driver-v1/bd72720_test.dts
+    linktext: Dummy device-tree used for testing a BD72720 connected to a Beagle Bone Black.
 configs:
   - config: CONFIG_MFD_ROHM_BD71828
     subsystem: mfd
@@ -38,6 +49,8 @@ Interrupt capable GPIOs*.
 
 (*)Available functions depend on OTP configuration. The pins are shared and
 amount of available GPIOs depend on what are the other enabled functions
+
+{% include pmicdt.md %}
 
 ## Linux:
 
