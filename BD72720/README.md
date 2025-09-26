@@ -33,7 +33,7 @@ configs:
   - config: CONFIG_CHARGER_BD71828
     subsystem: power-supply
 downstreamlink: https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/bd72720-reference-driver-v1
-downstreamunstable: true
+downstreamunstable: false
 ---
 
 # ROHM Power Management IC BD72720
