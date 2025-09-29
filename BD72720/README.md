@@ -67,5 +67,7 @@ The driver is currently implementing:
 
 NOTE: The fuel-gauge relies on battery parameters which must be specified based on the used battery. Furthermore, the accuracy can't be guaranteed as the coulomb counter calibration procedure can depend on the device usage.
 
+Please, read the [tag message](https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/releases/tag/bd72720-reference-driver-v1).
+
 {% include kernel_conf_tbl.md %}
 
