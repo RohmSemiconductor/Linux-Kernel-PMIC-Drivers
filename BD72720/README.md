@@ -32,6 +32,7 @@ configs:
     subsystem: led
   - config: CONFIG_CHARGER_BD71828
     subsystem: power-supply
+patchlink: https://lore.kernel.org/all/cover.1763022807.git.mazziesaccount@gmail.com/
 downstreamlink: https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/bd72720-reference-driver-v1
 downstreamunstable: false
 ---
@@ -58,12 +59,13 @@ amount of available GPIOs depend on what are the other enabled functions
 
 The driver is currently implementing:
 - MFD core handling sub-device driver loading and probing.
-- GPIO handlin. UNTESTED as OTP variant used for driver development didn't allow using the GPIOs.
+- regulator control. (RUN-level control in downstream reference-driver only)
+- GPIO handling. UNTESTED as OTP variant used for driver development didn't allow using the GPIOs.
 - RTC time setting and getting
 - CLK pin configuration
-- sending LID event based on HALL sensor IRQ
-- Charger / Battery handling.
-- Experimental software fuel-gauge based on Coulomb Counter.
+- sending LID event based on HALL sensor IRQ (downstream reference-driver only)
+- Charger / Battery handling. (partially upstreamed)
+- Experimental software fuel-gauge based on Coulomb Counter. (downstream reference-driver only)
 
 NOTE: The fuel-gauge relies on battery parameters which must be specified based on the used battery. Furthermore, the accuracy can't be guaranteed as the coulomb counter calibration procedure can depend on the device usage.
 
