@@ -24,7 +24,7 @@ to upstream the Linux drivers for some of our power components.
 | [BD71851](BD71851) Generic PMIC       | _Under development_     | Development version for study |
 | [BD96811](BD96811) Scalable PMIC      | Planned <sup>2025</sup> | Development version for study |
 | [BD99954](BD99954) Charger            | Fully upstreamed        |                           |
-| [BD72720](BD72720)                    | Downstream only         | Downstream only           |
+| [BD72720](BD72720)                    | Being upstreamed        | ROHM extensions available |
 | [BD2657](BD2657) Specific purpose PMIC | Downstream only        | Downstream only           |
 | [BD71827](BD71827) PMIC               | Downstream only         | Downstream only           |
 | [~~BD70528 PMIC~~](BD70528) <sup>Obsolete</sup> | ~~Upstream~~ removed | No extensions |
