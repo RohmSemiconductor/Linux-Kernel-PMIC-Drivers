@@ -3,9 +3,9 @@ permalink: /BD72720/
 bindings:
   - link: https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/bd72720-reference-driver-v1/Documentation/devicetree/bindings/mfd/rohm,bd72720-pmic.yaml
     linktext: Main MFD node documentation.
-  - link: regulator/rohm,bd72720-regulator.yaml
+  - link: https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/bd72720-reference-driver-v1/Documentation/devicetree/bindings/regulator/rohm,bd72720-regulator.yaml
     linktext: Regulator documentation.
-  - link: leds/rohm,bd71828-leds.yaml
+  - link: https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/bd72720-reference-driver-v1/Documentation/devicetree/bindings/leds/rohm,bd71828-leds.yaml
     linktext: LED node documentation.
   - link: https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/bd72720-reference-driver-v1/DOC_bd72720
     linktext: Extra non YAML documentation. Mostly for the battery fuel-gauge.
