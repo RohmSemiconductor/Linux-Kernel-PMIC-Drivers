@@ -32,7 +32,7 @@ configs:
     subsystem: led
   - config: CONFIG_CHARGER_BD71828
     subsystem: power-supply
-patchlink: https://lore.kernel.org/all/cover.1763022807.git.mazziesaccount@gmail.com/
+upstreamed: Linux v7.0
 downstreamlink: https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/bd72720-reference-driver-v1
 downstreamunstable: false
 ---
