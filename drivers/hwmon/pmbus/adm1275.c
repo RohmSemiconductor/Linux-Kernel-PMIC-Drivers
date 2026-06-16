@@ -137,27 +137,22 @@ static const struct coefficients adm1272_coefficients[] = {
 };
 
 /*
- * BD12790 coefficients derived from datasheet Table 1 (p.18) and the PMBus
- * direct-format relationship X = (Y * 10^(-R) - b) / m.
+ * BD12790 coefficients derived from preliminary datasheet, Table 1 (p.18)
+ * and the PMBus direct-format relationship X = (Y * 10^(-R) - b) / m.
  *
  * Voltage: V[V] = 14.77e-3 * code (60V) / 24.62e-3 * code (100V)
  *   -> m = 6770, R=-2 / m = 4062, R=-2
  * Current: code = I[A] * RS * 132802.1 + 2048 (15mV) / * 66401.06 + 2048 (30mV)
- *   -> m = 1326, b = 2048 * 10^(-R) = 20480, R=-1 / m = 663, same b and R
+ *   -> m = 1328, b = 2048 * 10^(-R) = 20480, R=-1 / m = 664, same b and R
  * Power: code = k * RS * PIN, k = 35119.94 / 17559.97 / 21071.44 / 10535.72
  *   -> m = round(k / 10^(-R)), R=-2 for 60V/15mV, R=-3 for the other three
  * Temperature: code = 4.2 * T + 3188 -> m = 42, b = 3188 * 10 = 31880, R=-1
- *
- * Differs from adm1272_coefficients in the power 60V/30mV and 100V/30mV m
- * values (17560/10536 vs. 17561/10535) and in the temperature b value
- * (31880 vs. 31871), reflecting slightly different rounding in the respective
- * datasheets.
  */
 static const struct coefficients bd12790_coefficients[] = {
 	[0] = { 6770, 0, -2 },		/* voltage, vrange 60V */
 	[1] = { 4062, 0, -2 },		/* voltage, vrange 100V */
-	[2] = { 1326, 20480, -1 },	/* current, vsense range 15mV */
-	[3] = { 663, 20480, -1 },	/* current, vsense range 30mV */
+	[2] = { 1328, 20480, -1 },	/* current, vsense range 15mV */
+	[3] = { 664, 20480, -1 },	/* current, vsense range 30mV */
 	[4] = { 3512, 0, -2 },		/* power, vrange 60V, irange 15mV */
 	[5] = { 21071, 0, -3 },		/* power, vrange 100V, irange 15mV */
 	[6] = { 17560, 0, -3 },		/* power, vrange 60V, irange 30mV */
