@@ -8,8 +8,9 @@ configs:
     subsystem: PMBus hwmon
     description: enables driver supporting PMBus based hardware monitoring
 
-patchlink: https://lore.kernel.org/all/cover.1781591132.git.mazziesaccount@gmail.com/
+patchlink: https://lore.kernel.org/all/cover.1782458224.git.mazziesaccount@gmail.com/
 downstreamlink: https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/releases/tag/bd127x0-v0.1
+expectupstreamed: v7.2
 ---
 
 # ROHM BD12780 Hot-Swap controller Linux device drivers.
