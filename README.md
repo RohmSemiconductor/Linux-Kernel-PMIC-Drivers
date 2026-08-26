@@ -17,7 +17,7 @@ to upstream the Linux drivers for some of our power components.
 | [BD71847](BD718XX) PMIC                   | Fully upstreamed        |                           |
 | [BD71850](BD718XX) PMIC                   | Fully upstreamed        |                           |
 | [BD71879 PMICs](BD71879) PMIC             | Upstream                | ROHM extensions available |
-| [BD72720](BD72720) PMIC                   | Upstream                | ROHM extensions available |
+| [BD72720 / BD79300](BD72720) PMIC         | Upstream                | ROHM extensions available |
 | [BD96801](BD96801) Scalable PMIC          | Upstream                | ROHM extensions available |
 | [BD96802](BD96802) Scalable PMIC          | Upstream                | Development version for study |
 | [BD96805](BD96805) Scalable PMIC          | Upstream                | Development version for study |

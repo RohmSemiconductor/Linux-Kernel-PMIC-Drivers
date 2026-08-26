@@ -37,7 +37,7 @@ downstreamlink: https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/t
 downstreamunstable: false
 ---
 
-# ROHM Power Management IC BD72720
+# ROHM Power Management IC BD72720 and BD73900
 
 The ROHM BD72720 is a Power Management IC which can be controlled using I2C. Features integrated in the PMIC include:
 10 BUCK regulators and 11 LDOs.
@@ -50,6 +50,8 @@ Interrupt capable GPIOs*.
 
 (*)Available functions depend on OTP configuration. The pins are shared and
 amount of available GPIOs depend on what are the other enabled functions
+
+The BD73900 is updated variant, supported by the same Linux software.
 
 {% include pmicdt.md %}
 
