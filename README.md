@@ -7,27 +7,28 @@ to upstream the Linux drivers for some of our power components.
 
 ## Upstream driver status
 
-| IC information                        | upstream status         | downstream extensions     |
-|---------------------------------------|-------------------------|---------------------------|
-| [BD9573](BD957XMUF) PMIC              | Fully upstreamed        |                           |
-| [BD9576](BD957XMUF) PMIC              | Fully upstreamed        |                           |
-| [BD71815AGW](BD71815) PMIC            | Upstream                | ROHM extensions available |
-| [BD71828 / BD71878](BD71828) PMICs    | Upstream                | ROHM extensions available |
-| [BD71837](BD718XX) PMIC               | Fully upstreamed        |                           |
-| [BD71847](BD718XX) PMIC               | Fully upstreamed        |                           |
-| [BD71850](BD718XX) PMIC               | Fully upstreamed        |                           |
-| [BD71879 PMICs](BD71879) PMIC         | Upstream                | ROHM extensions available |
-| [BD72720](BD72720) PMIC               | Upstream                | ROHM extensions available |
-| [BD96801](BD96801) Scalable PMIC      | Upstream                | ROHM extensions available |
-| [BD96802](BD96802) Scalable PMIC      | Upstream                | Development version for study |
-| [BD96805](BD96805) Scalable PMIC      | Upstream                | Development version for study |
-| [BD96806](BD96806) Scalable PMIC      | Upstream                | Development version for study |
-| [BD71851](BD71851) Generic PMIC       | _Under development_     | Development version for study |
-| [BD96811](BD96811) Scalable PMIC      | Planned <sup>2025</sup> | Development version for study |
-| [BD99954](BD99954) Charger            | Fully upstreamed        |                           |
-| [BD2657](BD2657) Specific purpose PMIC | Downstream only        | Downstream only           |
-| [BD71827](BD71827) PMIC               | Downstream only         | Downstream only           |
-| [BD12780](BD12780) Hot-Swap controller| Being upstreamed        | Development version for study |
+| IC information                            | upstream status         | downstream extensions     |
+|-------------------------------------------|-------------------------|---------------------------|
+| [BD9573](BD957XMUF) PMIC                  | Fully upstreamed        |                           |
+| [BD9576](BD957XMUF) PMIC                  | Fully upstreamed        |                           |
+| [BD71815AGW](BD71815) PMIC                | Upstream                | ROHM extensions available |
+| [BD71828 / BD71878](BD71828) PMICs        | Upstream                | ROHM extensions available |
+| [BD71837](BD718XX) PMIC                   | Fully upstreamed        |                           |
+| [BD71847](BD718XX) PMIC                   | Fully upstreamed        |                           |
+| [BD71850](BD718XX) PMIC                   | Fully upstreamed        |                           |
+| [BD71879 PMICs](BD71879) PMIC             | Upstream                | ROHM extensions available |
+| [BD72720](BD72720) PMIC                   | Upstream                | ROHM extensions available |
+| [BD96801](BD96801) Scalable PMIC          | Upstream                | ROHM extensions available |
+| [BD96802](BD96802) Scalable PMIC          | Upstream                | Development version for study |
+| [BD96805](BD96805) Scalable PMIC          | Upstream                | Development version for study |
+| [BD96806](BD96806) Scalable PMIC          | Upstream                | Development version for study |
+| [BD71851 / BD73800](BD71851) Generic PMIC | Being upstreamed        |                           |
+| [BD96811](BD96811) Scalable PMIC          | Planned <sup>2025</sup> | Development version for study |
+| [BD99954](BD99954) Charger                | Fully upstreamed        |                           |
+| [BD12780](BD12780) Hot-Swap controller    | Fully upstreamed        |                           |
+| [BD12790](BD12790) Hot-Swap controller    | Fully upstreamed        |                           |
+| [BD2657](BD2657) Specific purpose PMIC    | Downstream only         | Downstream only           |
+| [BD71827](BD71827) PMIC                   | Downstream only         | Downstream only           |
 | [~~BD70528 PMIC~~](BD70528) <sup>Obsolete</sup> | ~~Upstream~~ removed | No extensions |
 
 ## Upstream driver questions

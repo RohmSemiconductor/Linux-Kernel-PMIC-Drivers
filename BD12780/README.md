@@ -1,16 +1,14 @@
 ---
 permalink: /BD12780/
 bindings:
-  - link: https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/blob/bd127x0-v0.1/Documentation/devicetree/bindings/hwmon/adi%2Cadm1275.yaml
+  - link: https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/Documentation/devicetree/bindings/hwmon/adi,adm1275.yaml
     linktext: BD12780 (and other similar ICs) binding documentation
 configs:
   - config: CONFIG_SENSORS_ADM1275
     subsystem: PMBus hwmon
     description: enables driver supporting PMBus based hardware monitoring
 
-patchlink: https://lore.kernel.org/all/cover.1782458224.git.mazziesaccount@gmail.com/
-downstreamlink: https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/releases/tag/bd127x0-v0.1
-expectupstreamed: v7.2
+upstreamed: Linux v7.2
 ---
 
 # ROHM BD12780 Hot-Swap controller Linux device drivers.
