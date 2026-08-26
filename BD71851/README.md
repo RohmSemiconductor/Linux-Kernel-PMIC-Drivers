@@ -14,7 +14,7 @@ configs:
 downstreamlink: https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/bd71851-v1
 patchlink: https://lore.kernel.org/all/cover.1785838584.git.mazziesaccount@gmail.com/
 downstreamunstable: true
-expectupstreamed: Linux v7.3
+expectupstreamed: v7.3
 ---
 
 # ROHM Power Management IC BD71851 and BD73800

@@ -8,7 +8,7 @@ configs:
     subsystem: PMBus hwmon
     description: enables driver supporting PMBus based hardware monitoring
 
-upstreamed: Linux v7.2
+upstreamed: v7.2
 ---
 
 # ROHM BD12780 Hot-Swap controller Linux device drivers.
