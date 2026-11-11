@@ -7,14 +7,11 @@ configs:
     subsystem: regulator
   - config: CONFIG_COMMON_CLK_BD718XX
     subsystem: clk
-  - config: CONFIG_GPIO_BD71851
+  - config: CONFIG_GPIO_BD73800
     subsystem: gpio
   - config: CONFIG_RTC_DRV_BD70528
     subsystem: rtc
-downstreamlink: https://github.com/RohmSemiconductor/Linux-Kernel-PMIC-Drivers/tree/bd71851-v1
-patchlink: https://lore.kernel.org/all/cover.1785838584.git.mazziesaccount@gmail.com/
-downstreamunstable: true
-expectupstreamed: v7.3
+upstreamed: v7.4-rc1
 ---
 
 # ROHM Power Management IC BD71851 and BD73800

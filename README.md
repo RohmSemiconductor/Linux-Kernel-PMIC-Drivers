@@ -22,8 +22,8 @@ to upstream the Linux drivers for some of our power components.
 | [BD96802](BD96802) Scalable PMIC          | Upstream                | Development version for study |
 | [BD96805](BD96805) Scalable PMIC          | Upstream                | Development version for study |
 | [BD96806](BD96806) Scalable PMIC          | Upstream                | Development version for study |
-| [BD71851 / BD73800](BD71851) Generic PMIC | Being upstreamed        |                           |
-| [BD96811](BD96811) Scalable PMIC          | Planned <sup>2025</sup> | Development version for study |
+| [BD71851 / BD73800](BD71851) Generic PMIC | Upstream                | uBoot based example code for study |
+| [BD96811](BD96811) Scalable PMIC          | Planned <sup>2027</sup> | Development version for study |
 | [BD99954](BD99954) Charger                | Fully upstreamed        |                           |
 | [BD12780](BD12780) Hot-Swap controller    | Fully upstreamed        |                           |
 | [BD12790](BD12790) Hot-Swap controller    | Fully upstreamed        |                           |
